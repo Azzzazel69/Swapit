@@ -1,0 +1,5 @@
+{
+  "name": "Swapit - No te compliques, !cambialo!",
+  "description": "A modern web application for swapping and bartering items with other users. Features user authentication, item management, and an exchange system, built with a secure backend and a responsive frontend.",
+  "requestFramePermissions": []
+}
