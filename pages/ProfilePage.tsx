@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/Button';
@@ -56,34 +55,34 @@ const ProfilePage: React.FC = () => {
         setPrefsSaved(true);
         setTimeout(() => setPrefsSaved(false), 2000); // Hide message after 2s
     } catch (error) {
-        console.error("Failed to save preferences", error);
+        console.error("Error al guardar las preferencias", error);
     } finally {
         setIsSavingPrefs(false);
     }
   };
 
   if (!user) {
-    return <p>Loading profile...</p>;
+    return <p>Cargando perfil...</p>;
   }
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">My Profile</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Mi Perfil</h1>
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Name</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Nombre</h3>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{user.name}</p>
         </div>
         <div className="border-t border-gray-200 dark:border-gray-700"></div>
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Email</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Correo Electrónico</h3>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{user.email}</p>
         </div>
         <div className="border-t border-gray-200 dark:border-gray-700"></div>
         <div>
-           <h3 className="text-lg font-medium text-gray-900 dark:text-white">My Interests</h3>
-           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">Select categories you're interested in for a personalized homepage.</p>
+           <h3 className="text-lg font-medium text-gray-900 dark:text-white">Mis Intereses</h3>
+           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">Selecciona las categorías que te interesan para personalizar tu página de inicio.</p>
            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {CATEGORIES.map(category => (
                 <label key={category} className="flex items-center space-x-2 cursor-pointer">
@@ -98,36 +97,36 @@ const ProfilePage: React.FC = () => {
               ))}
            </div>
            <div className="mt-4 flex items-center gap-4">
-              <Button onClick={handleSavePreferences} isLoading={isSavingPrefs}>Save Preferences</Button>
-              {prefsSaved && <span className="text-green-600 text-sm">Preferences saved!</span>}
+              <Button onClick={handleSavePreferences} isLoading={isSavingPrefs}>Guardar Preferencias</Button>
+              {prefsSaved && <span className="text-green-600 text-sm">¡Preferencias guardadas!</span>}
            </div>
         </div>
         <div className="border-t border-gray-200 dark:border-gray-700"></div>
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Phone Verification</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Verificación de Teléfono</h3>
           {phoneVerified ? (
             <div className="mt-2 flex items-center gap-2 text-green-600 dark:text-green-400">
               {ICONS.checkCircle}
-              <span>Your phone number is verified.</span>
+              <span>Tu número de teléfono está verificado.</span>
             </div>
           ) : (
             <div className="mt-2 space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Verify your phone number to increase trust and unlock more features.
+                Verifica tu número de teléfono para aumentar la confianza y desbloquear más funciones.
               </p>
               {!verificationSent ? (
                 <form onSubmit={handleSendCode} className="flex items-end gap-2">
                   <div className="flex-grow">
-                    <Input id="phone" label="Phone Number" type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+1 (555) 123-4567" />
+                    <Input id="phone" label="Número de Teléfono" type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+34 600 123 456" />
                   </div>
-                  <Button type="submit" isLoading={isVerifying}>Send Code</Button>
+                  <Button type="submit" isLoading={isVerifying}>Enviar Código</Button>
                 </form>
               ) : (
                 <form onSubmit={handleVerifyCode} className="flex items-end gap-2">
                   <div className="flex-grow">
-                    <Input id="code" label="Verification Code" type="text" value={code} onChange={e => setCode(e.target.value)} required placeholder="Enter 6-digit code" />
+                    <Input id="code" label="Código de Verificación" type="text" value={code} onChange={e => setCode(e.target.value)} required placeholder="Introduce el código de 6 dígitos" />
                   </div>
-                  <Button type="submit" isLoading={isVerifying}>Verify</Button>
+                  <Button type="submit" isLoading={isVerifying}>Verificar</Button>
                 </form>
               )}
             </div>

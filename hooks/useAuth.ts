@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { api } from '../services/api';
@@ -10,6 +9,7 @@ interface AuthContextType {
   login: (token: string) => Promise<void>;
   logout: () => void;
   updateUser: (updatedUser: User) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,10 +34,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = await api.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error('Failed to fetch user on login:', error);
+      console.error('Fallo al obtener el usuario al iniciar sesión:', error);
       logout(); // Logout if user fetch fails
     }
   }, [logout]);
+
+  const refreshUser = async () => {
+    try {
+        const currentUser = await api.getCurrentUser();
+        setUser(currentUser);
+    } catch(error) {
+        console.error("Fallo al refrescar el usuario", error);
+        logout();
+    }
+  };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
@@ -49,7 +59,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedToken = localStorage.getItem('jwt_token');
       if (storedToken) {
         try {
-          await login(storedToken);
+          setToken(storedToken);
+          api.setToken(storedToken);
+          await refreshUser();
         } catch (error) {
           // Token might be expired or invalid
           logout();
@@ -63,13 +75,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   // FIX: The file has a .ts extension but contained JSX, which caused parsing errors. Replaced JSX with React.createElement to make it valid TypeScript.
-  return React.createElement(AuthContext.Provider, { value: { user, token, loading, login, logout, updateUser } }, children);
+  return React.createElement(AuthContext.Provider, { value: { user, token, loading, login, logout, updateUser, refreshUser } }, children);
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
   }
   return context;
 };

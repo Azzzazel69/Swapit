@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '../services/api';
 import { Item } from '../types';
@@ -22,7 +21,7 @@ const HomePage: React.FC = () => {
         setItems(otherUsersItems);
         setError(null);
       } catch (err) {
-        setError('Failed to fetch items. Please try again later.');
+        setError('Error al cargar los artículos. Por favor, inténtalo de nuevo más tarde.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -65,18 +64,18 @@ const HomePage: React.FC = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Items Available for Swap</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Artículos Disponibles para Intercambiar</h1>
         <div className="flex items-center gap-2">
-          <FilterButton type="all" label="All Items" />
-          <FilterButton type="recommended" label="Recommended for You" />
+          <FilterButton type="all" label="Todos los Artículos" />
+          <FilterButton type="recommended" label="Recomendado para Ti" />
         </div>
       </div>
 
       {filteredItems.length === 0 ? (
         <p className="text-center text-gray-500 dark:text-gray-400 mt-10">
           {filter === 'recommended' 
-            ? "No items match your preferences. Try adjusting your interests in your profile!" 
-            : "No items available from other users right now."}
+            ? "No hay artículos que coincidan con tus preferencias. ¡Intenta ajustar tus intereses en tu perfil!" 
+            : "No hay artículos disponibles de otros usuarios en este momento."}
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
@@ -11,6 +10,8 @@ import ExchangesPage from './pages/ExchangesPage';
 import ProfilePage from './pages/ProfilePage';
 import Spinner from './components/Spinner';
 import ItemDetailPage from './pages/ItemDetailPage';
+import OnboardingPage from './pages/OnboardingPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 const App: React.FC = () => {
   return (
@@ -22,7 +23,7 @@ const App: React.FC = () => {
             <AppRoutes />
           </main>
           <footer className="text-center p-4 text-gray-500 text-sm">
-            © 2024 Swapit. All rights reserved.
+            © 2024 Swapit. Todos los derechos reservados.
           </footer>
         </div>
       </HashRouter>
@@ -45,6 +46,8 @@ const AppRoutes: React.FC = () => {
     <Routes>
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
       <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />
+      <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to="/" />} />
+      <Route path="/onboarding" element={<OnboardingGuard><OnboardingPage /></OnboardingGuard>} />
       
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/item/:itemId" element={<ProtectedRoute><ItemDetailPage /></ProtectedRoute>} />
@@ -63,10 +66,32 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user } = useAuth();
+  const location = useLocation();
+
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
+
+  if (!user.emailVerified || !user.phoneVerified) {
+    return <Navigate to="/onboarding" state={{ from: location }} replace />;
+  }
+
   return children;
+};
+
+const OnboardingGuard: React.FC<ProtectedRouteProps> = ({ children }) => {
+    const { user } = useAuth();
+    const location = useLocation();
+
+    if (!user) {
+        return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
+    if (user.emailVerified && user.phoneVerified) {
+        return <Navigate to="/" replace />;
+    }
+
+    return children;
 };
 
 

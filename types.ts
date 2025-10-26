@@ -4,8 +4,14 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
-  phoneVerified?: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
   preferences: string[];
+  location?: {
+    country: string;
+    city: string;
+    postalCode: string;
+  };
 }
 
 export interface Item {
@@ -13,7 +19,7 @@ export interface Item {
   userId: string;
   title: string;
   description: string;
-  imageUrl: string;
+  imageUrls: string[];
   category: string;
   createdAt: string;
   ownerName: string;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const ICONS = {
@@ -8,15 +7,44 @@ export const ICONS = {
   plus: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>,
   checkCircle: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>,
   xCircle: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>,
+  location: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>,
+  close: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>,
 };
 
-export const CATEGORIES = [
-  'Electronics',
-  'Books',
-  'Vehicles',
-  'Music',
-  'Furniture',
-  'Clothing',
-  'Home Goods',
-  'Other',
+export const CATEGORIES_WITH_SUBCATEGORIES = [
+  {
+    name: 'Electrónica',
+    sub: ['Móviles', 'Ordenadores', 'Videojuegos', 'Cámaras', 'Audio'],
+  },
+  {
+    name: 'Libros',
+    sub: ['Ficción', 'No Ficción', 'Ciencia Ficción', 'Cómics', 'Libros de texto'],
+  },
+  {
+    name: 'Vehículos',
+    sub: ['Coches', 'Motos', 'Bicicletas', 'Patinetes'],
+  },
+  {
+    name: 'Música',
+    sub: ['Instrumentos', 'Vinilos', 'Equipamiento', 'Coleccionables'],
+  },
+  {
+    name: 'Muebles',
+    sub: ['Sillas', 'Mesas', 'Almacenamiento', 'Camas', 'Decoración'],
+  },
+  {
+    name: 'Ropa',
+    sub: ['Hombre', 'Mujer', 'Niños', 'Accesorios', 'Zapatos'],
+  },
+  {
+    name: 'Hogar',
+    sub: ['Cocina', 'Jardín', 'Herramientas', 'Electrodomésticos'],
+  },
+  {
+    name: 'Otros',
+    sub: [],
+  },
 ];
+
+// Flattened for simple dropdowns if needed
+export const CATEGORIES = CATEGORIES_WITH_SUBCATEGORIES.map(c => c.name);

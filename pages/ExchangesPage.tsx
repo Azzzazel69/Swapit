@@ -26,11 +26,11 @@ const ExchangeCard: React.FC<ExchangeCardProps> = ({ exchange, perspective, onAc
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex-1 text-center sm:text-left">
                 {isOwner ? (
-                    <p><strong>{exchange.requesterName}</strong> wants your <strong>{exchange.requestedItem.title}</strong></p>
+                    <p><strong>{exchange.requesterName}</strong> quiere tu <strong>{exchange.requestedItem.title}</strong></p>
                 ) : (
-                    <p>You requested <strong>{exchange.requestedItem.title}</strong> from <strong>{exchange.ownerName}</strong></p>
+                    <p>Solicitaste <strong>{exchange.requestedItem.title}</strong> de <strong>{exchange.ownerName}</strong></p>
                 )}
-                <p className="text-sm text-gray-500 dark:text-gray-400">in exchange for your <strong>{exchange.offeredItem.title}</strong>.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">a cambio de tu <strong>{exchange.offeredItem.title}</strong>.</p>
             </div>
             <div className="flex flex-col items-center gap-2">
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColor[exchange.status]}`}>
@@ -38,8 +38,8 @@ const ExchangeCard: React.FC<ExchangeCardProps> = ({ exchange, perspective, onAc
                 </span>
                 {isOwner && exchange.status === ExchangeStatus.Pending && (
                     <div className="flex gap-2 mt-2">
-                        <Button size="sm" variant="primary" onClick={() => onAccept(exchange.id)} isLoading={isUpdating}>Accept</Button>
-                        <Button size="sm" variant="danger" onClick={() => onReject(exchange.id)} isLoading={isUpdating}>Reject</Button>
+                        <Button size="sm" variant="primary" onClick={() => onAccept(exchange.id)} isLoading={isUpdating}>Aceptar</Button>
+                        <Button size="sm" variant="danger" onClick={() => onReject(exchange.id)} isLoading={isUpdating}>Rechazar</Button>
                     </div>
                 )}
             </div>
@@ -65,7 +65,7 @@ const ExchangesPage: React.FC = () => {
       setOutgoing(allExchanges.filter(ex => ex.requesterId === user.id));
       setError(null);
     } catch (err) {
-      setError('Failed to fetch exchanges.');
+      setError('Error al cargar los intercambios.');
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ const ExchangesPage: React.FC = () => {
         await api.updateExchangeStatus(exchangeId, status);
         await fetchExchanges();
     } catch (err) {
-        setError((err as Error).message || `Failed to update exchange status.`);
+        setError((err as Error).message || `Error al actualizar el estado del intercambio.`);
     } finally {
         setUpdatingExchangeId(null);
     }
@@ -101,11 +101,11 @@ const ExchangesPage: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">My Exchanges</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Mis Intercambios</h1>
 
       <div className="space-y-8">
         <div>
-          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600">Incoming Requests</h2>
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600">Solicitudes Entrantes</h2>
           {incoming.length > 0 ? (
             <div className="space-y-4">
               {incoming.map(ex => (
@@ -120,12 +120,12 @@ const ExchangesPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">You have no incoming exchange requests.</p>
+            <p className="text-gray-500 dark:text-gray-400">No tienes solicitudes de intercambio entrantes.</p>
           )}
         </div>
 
         <div>
-          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600">Outgoing Requests</h2>
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600">Solicitudes Salientes</h2>
           {outgoing.length > 0 ? (
             <div className="space-y-4">
               {outgoing.map(ex => (
@@ -140,7 +140,7 @@ const ExchangesPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">You have not made any exchange requests.</p>
+            <p className="text-gray-500 dark:text-gray-400">No has realizado ninguna solicitud de intercambio.</p>
           )}
         </div>
       </div>
