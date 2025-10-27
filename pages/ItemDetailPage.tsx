@@ -11,14 +11,24 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.js';
 
 const ImageLightbox = ({ imageUrl, onClose }) => {
-// FIX: Corrected syntax for passing children to React.createElement for intrinsic elements.
-  return React.createElement("div", { 
+  // FIX: Changed `children` from a prop to subsequent arguments in `React.createElement` to resolve a TypeScript overload issue.
+  return React.createElement("div", 
+    { 
       className: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50",
       onClick: onClose
     },
-    React.createElement("div", { className: "relative max-w-4xl max-h-4/5 p-4", onClick: e => e.stopPropagation() },
-      React.createElement("img", { key: "img", src: imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
-      React.createElement("button", { key: "btn", onClick: onClose, className: "absolute top-4 right-4 text-white hover:text-gray-300" },
+    React.createElement("div", 
+      { 
+        className: "relative max-w-4xl max-h-4/5 p-4", 
+        onClick: e => e.stopPropagation()
+      },
+      React.createElement("img", { key: "img-lightbox", src: imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
+      React.createElement("button", 
+        { 
+          key: "close-lightbox",
+          onClick: onClose, 
+          className: "absolute top-4 right-4 text-white hover:text-gray-300"
+        },
         ICONS.close
       )
     )
