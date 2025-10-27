@@ -78,7 +78,6 @@ const OnboardingPage = () => {
             const success = await api.verifyPhoneCode(code);
             if (success) {
                 await refreshUser();
-                 setStep('location');
             } else {
                 setError('Código de verificación incorrecto.');
             }
@@ -108,7 +107,6 @@ const OnboardingPage = () => {
         try {
             await api.updateUserLocation({ country, city, postalCode });
             await refreshUser(); // Refresh user to get location data
-            setStep('preferences');
         } catch (err) { setError(err.message); } 
         finally { setIsLoading(false); }
     };

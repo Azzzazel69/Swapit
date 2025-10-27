@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 // FIX: Changed import from useAuth.js to useAuth.tsx
@@ -67,7 +68,9 @@ const ProtectedRoute = ({ children }) => {
     return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
   }
 
-  if (!user.emailVerified || !user.phoneVerified) {
+  const isFullyOnboarded = user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0;
+
+  if (!isFullyOnboarded) {
     return React.createElement(Navigate, { to: "/onboarding", state: { from: location }, replace: true });
   }
 
@@ -82,7 +85,9 @@ const OnboardingGuard = ({ children }) => {
         return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
     }
 
-    if (user.emailVerified && user.phoneVerified) {
+    const isFullyOnboarded = user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0;
+
+    if (isFullyOnboarded) {
         return React.createElement(Navigate, { to: "/", replace: true });
     }
 

@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 // FIX: Changed import from useAuth.js to useAuth.tsx
@@ -35,7 +37,7 @@ const Header = () => {
             React.createElement(Link, { to: "/my-items?action=add", className: `flex-shrink-0 flex items-center gap-2 text-2xl font-bold ${theme.textGradient}` },
               React.createElement("span", { className: "transform rotate-12" }, ICONS.swap),
               "Swapit",
-              React.createElement("span", { className: "text-xs font-mono text-gray-400 dark:text-gray-500 ml-2 self-end mb-1" }, "v2.0")
+              React.createElement("span", { className: "text-xs font-mono text-gray-400 dark:text-gray-500 ml-2 self-end mb-1" }, "v2.3")
             )
           ),
           React.createElement("div", { className: "hidden md:block" },
