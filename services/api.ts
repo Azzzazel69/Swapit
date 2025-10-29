@@ -12,9 +12,9 @@ const setupInitialData = () => {
     exchanges = [];
     chats = [];
 
-    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
-    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Vehículos'] };
-    const admin = { id: '3', name: 'Admin', email: 'admin@example.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
+    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
+    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Vehículos'] };
+    const admin = { id: '3', name: 'Admin', email: 'admin@example.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
 
     users.push(alice, bob, admin);
 
@@ -28,6 +28,7 @@ const setupInitialData = () => {
     ];
 };
 
+// Reinicia los datos cada vez que el script se carga para asegurar un estado limpio para pruebas.
 setupInitialData();
 
 class ApiClient {
@@ -167,17 +168,21 @@ class ApiClient {
       };
       exchanges.unshift(newExchange);
       
+      const offeredItemsDetails = proposal.offeredItemIds.map(id => items.find(item => item.id === id));
+      
+      const initialMessage = {
+          id: `msg-${Date.now()}`,
+          senderId: requester.id,
+          timestamp: new Date().toISOString(),
+          type: 'PROPOSAL',
+          offeredItems: offeredItemsDetails.map(item => ({ id: item.id, title: item.title, imageUrl: item.imageUrls[0] })),
+          text: proposal.message,
+      };
+
       const newChat = {
           id: newExchange.id, // Use exchange ID as chat ID
           participantIds: [requester.id, owner.id],
-          messages: [
-              {
-                  id: `msg-${Date.now()}`,
-                  senderId: requester.id,
-                  text: proposal.message,
-                  timestamp: new Date().toISOString(),
-              }
-          ]
+          messages: [initialMessage]
       };
       chats.unshift(newChat);
 
@@ -188,22 +193,57 @@ class ApiClient {
       await this.simulateDelay();
       const exchange = exchanges.find(ex => ex.id === exchangeId);
       if (!exchange) throw new Error('Intercambio no encontrado');
+      
       const currentUser = this._getCurrentUserFromToken();
       if (currentUser?.id !== exchange.ownerId) throw new Error('Permiso denegado.');
+      
       exchange.status = status;
+
+      const chat = chats.find(c => c.id === exchangeId);
+      if (chat) {
+          let systemMessageText = '';
+          if (status === ExchangeStatus.Accepted) {
+              const owner = users.find(u => u.id === exchange.ownerId);
+              const requester = users.find(u => u.id === exchange.requesterId);
+              systemMessageText = `¡TRATO ACEPTADO! Aquí están los datos para coordinar el intercambio: ${owner.name} (tel: ${owner.phone}) y ${requester.name} (tel: ${requester.phone}).`;
+          } else if (status === ExchangeStatus.Rejected) {
+              systemMessageText = `Trato rechazado por ${currentUser.name}.`;
+          }
+
+          if (systemMessageText) {
+              chat.messages.push({
+                  id: `msg-system-${Date.now()}`,
+                  senderId: 'system',
+                  text: systemMessageText,
+                  timestamp: new Date().toISOString(),
+                  type: 'SYSTEM',
+              });
+          }
+      }
+
       return { ...exchange };
   }
   
-  async getChat(chatId) {
+  async getChatAndExchangeDetails(chatId) {
     await this.simulateDelay(200);
     const currentUser = this._getCurrentUserFromToken();
     if (!currentUser) throw new Error('Autenticación requerida');
 
     const chat = chats.find(c => c.id === chatId);
-    if (!chat || !chat.participantIds.includes(currentUser.id)) {
+    const exchange = exchanges.find(ex => ex.id === chatId);
+
+    if (!chat || !exchange || !chat.participantIds.includes(currentUser.id)) {
         throw new Error('Chat no encontrado o acceso denegado.');
     }
-    return chat;
+    
+    // Populate full item details in the exchange part of the response
+    const detailedExchange = {
+        ...exchange,
+        requestedItem: items.find(item => item.id === exchange.requestedItemId),
+        offeredItems: exchange.offeredItemIds.map(id => items.find(item => item.id === id)),
+    };
+    
+    return { chat, exchange: detailedExchange };
   }
   
   async sendMessage(chatId, text) {
@@ -221,6 +261,7 @@ class ApiClient {
           senderId: currentUser.id,
           text,
           timestamp: new Date().toISOString(),
+          type: 'TEXT',
       };
       
       chat.messages.push(newMessage);

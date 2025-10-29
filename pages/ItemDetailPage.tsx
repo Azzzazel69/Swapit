@@ -1,16 +1,5 @@
-
-
-
-
-
-
-
-
-
-
-
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api.js';
 import Spinner from '../components/Spinner.js';
 import Button from '../components/Button.js';
@@ -59,6 +48,7 @@ const ItemDetailPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userItems, setUserItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [noItemsError, setNoItemsError] = useState(false);
   
   useEffect(() => {
     const fetchItem = async () => {
@@ -90,7 +80,7 @@ const ItemDetailPage = () => {
     if (!user) return;
     const currentUserItems = await api.getUserItems(user.id);
     if (currentUserItems.length === 0) {
-      alert("Necesitas tener artículos subidos para poder proponer un intercambio.");
+      setNoItemsError(true);
       return;
     }
     setUserItems(currentUserItems);
@@ -139,6 +129,37 @@ const ItemDetailPage = () => {
         onSubmit: handleSubmitProposal,
         isLoading: isSubmitting,
     }),
+    noItemsError && React.createElement("div", {
+      className: "fixed bottom-5 right-5 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 dark:bg-yellow-900/50 dark:border-yellow-500 dark:text-yellow-200 p-4 rounded-r-lg shadow-lg flex items-start gap-3 z-50 max-w-sm transition-opacity duration-300",
+      role: "alert"
+    },
+      React.createElement("div", { className: "flex-shrink-0 pt-0.5" },
+        React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+          React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" })
+        )
+      ),
+      React.createElement("div", { className: "flex-grow" },
+        React.createElement("p", { className: "font-bold" }, "Necesitas un artículo para intercambiar"),
+        React.createElement("p", { className: "text-sm mt-1" }, "Para proponer un intercambio, primero debes añadir un artículo a tu perfil."),
+        React.createElement(Link, {
+          to: "/my-items?action=add",
+          onClick: () => setNoItemsError(false),
+          className: `block mt-2 text-sm font-semibold ${theme.textColor} ${theme.hoverTextColor} underline`
+        }, "Añadir un artículo ahora →")
+      ),
+      React.createElement("div", { className: "ml-auto pl-3" },
+        React.createElement("button", { 
+          onClick: () => setNoItemsError(false), 
+          className: "-mx-1.5 -my-1.5 bg-yellow-100 dark:bg-yellow-900/0 text-yellow-500 rounded-lg focus:ring-2 focus:ring-yellow-400 p-1.5 hover:bg-yellow-200 dark:hover:bg-yellow-800/50 inline-flex h-8 w-8",
+          "aria-label":"Cerrar"
+        },
+          React.createElement("span", { className: "sr-only" }, "Cerrar"),
+          React.createElement("svg", { className: "h-5 w-5", xmlns: "http://www.w3.org/2000/svg", fill: "currentColor", viewBox: "0 0 20 20" },
+            React.createElement("path", { fillRule:"evenodd", d:"M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z", clipRule:"evenodd" })
+          )
+        )
+      )
+    ),
     React.createElement("button", { onClick: () => navigate(-1), className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline mb-4` },
       "← Volver a los artículos"
     ),
@@ -178,7 +199,7 @@ const ItemDetailPage = () => {
         ),
         !isOwnItem && React.createElement("div", { className: "mt-6" },
 // FIX: Pass children as a prop to the Button component to satisfy the type checker.
-          React.createElement(Button, { size: "lg", onClick: handleSwapClick, className: "w-full", children: React.createElement("div", { className: "flex items-center gap-2" },
+          React.createElement(Button, { size: "lg", onClick: handleSwapClick, className: "w-full", children: React.createElement("div", { className: "flex items-center justify-center gap-2" },
               ICONS.swap,
               "!te lo cambio!"
             )

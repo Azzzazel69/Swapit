@@ -1,11 +1,3 @@
-
-
-
-
-
-
-
-
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api.js';
@@ -80,7 +72,8 @@ const MyItemsPage = () => {
               return;
           }
 
-          filesArray.forEach(file => {
+          // FIX: Explicitly type 'file' as File to resolve properties 'size', 'name' and allow its use in readAsDataURL.
+          filesArray.forEach((file: File) => {
               if (file.size > 10 * 1024 * 1024) { // 10MB limit
                   setError(`La imagen ${file.name} es demasiado grande (máx 10MB).`);
                   return;
