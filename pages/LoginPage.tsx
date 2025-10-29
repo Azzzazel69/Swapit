@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -31,6 +32,25 @@ const LoginPage = () => {
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleSkipLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Pick a random user to login
+      const randomUser = Math.random() > 0.5 
+        ? { email: 'ana@example.com', pass: 'Password123' } 
+        : { email: 'benito@example.com', pass: 'Password456' };
+      
+      const { token } = await api.login(randomUser.email, randomUser.pass);
+      await login(token);
+      navigate('/');
+    } catch (err) {
+      setError("Error en el inicio de sesión de desarrollo.");
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +107,15 @@ const LoginPage = () => {
         React.createElement(Link, { to: "/register", className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
           "crea una nueva cuenta"
         )
+      ),
+      React.createElement("div", {className: "mt-4"},
+        React.createElement(Button, { 
+          onClick: handleSkipLogin, 
+          isLoading: isLoading, 
+          variant: "secondary",
+          className: "w-full", 
+          children: "Omitir Registro (Desarrollo)" 
+        })
       )
     )
   );

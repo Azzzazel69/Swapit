@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo } from 'react';
 import { api } from '../services/api.js';
 import { Link, useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -56,6 +58,10 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!agreedToTerms) {
+        setError("Debes aceptar los Términos de Servicio para registrarte.");
+        return;
+    }
     if (!isPasswordValid) {
         setError("La contraseña no cumple los requisitos de seguridad.");
         return;
@@ -90,6 +96,25 @@ const RegisterPage = () => {
     }
   };
 
+  const handleSkipLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Pick a random user to login
+      const randomUser = Math.random() > 0.5 
+        ? { email: 'ana@example.com', pass: 'Password123' } 
+        : { email: 'benito@example.com', pass: 'Password456' };
+      
+      const { token } = await api.login(randomUser.email, randomUser.pass);
+      await login(token);
+      navigate('/');
+    } catch (err) {
+      setError("Error en el inicio de sesión de desarrollo.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return React.createElement("div", { className: "flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" },
     React.createElement("div", { className: "max-w-md w-full space-y-8 p-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg" },
       React.createElement("div", null,
@@ -108,9 +133,32 @@ const RegisterPage = () => {
           ),
           React.createElement(Input, { id: "confirm-password", label: "Confirmar Contraseña", name: "confirm-password", type: "password", autoComplete: "new-password", required: true, value: confirmPassword, onChange: (e) => setConfirmPassword(e.target.value), placeholder: "Confirmar Contraseña" })
         ),
+        React.createElement("div", { className: "flex items-start" },
+            React.createElement("div", { className: "flex items-center h-5" },
+                React.createElement("input", {
+                    id: "terms",
+                    name: "terms",
+                    type: "checkbox",
+                    checked: agreedToTerms,
+                    onChange: (e) => setAgreedToTerms(e.target.checked),
+                    className: `h-4 w-4 rounded border-gray-300 ${theme.textColor} ${theme.focus}`
+                })
+            ),
+            React.createElement("div", { className: "ml-3 text-sm" },
+                React.createElement("label", { htmlFor: "terms", className: "font-medium text-gray-700 dark:text-gray-300" },
+                    "He leído y acepto los ",
+                    React.createElement(Link, {
+                        to: "/terms-of-service",
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        className: `font-medium ${theme.textColor} ${theme.hoverTextColor} underline`
+                    }, "Términos de Servicio")
+                )
+            )
+        ),
         React.createElement("div", null,
 // FIX: Pass children as a prop to the Button component to satisfy the type checker.
-          React.createElement(Button, { type: "submit", isLoading: isLoading, className: "w-full", disabled: !isPasswordValid || password !== confirmPassword, children: "Crear Cuenta" })
+          React.createElement(Button, { type: "submit", isLoading: isLoading, className: "w-full", disabled: !isPasswordValid || password !== confirmPassword || !agreedToTerms, children: "Crear Cuenta" })
         )
       ),
       React.createElement("p", { className: "mt-2 text-center text-sm text-gray-600 dark:text-gray-400" },
@@ -119,6 +167,15 @@ const RegisterPage = () => {
         React.createElement(Link, { to: "/login", className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
           "Inicia sesión"
         )
+      ),
+      React.createElement("div", {className: "mt-4"},
+        React.createElement(Button, { 
+          onClick: handleSkipLogin, 
+          isLoading: isLoading, 
+          variant: "secondary",
+          className: "w-full", 
+          children: "Omitir Registro (Desarrollo)" 
+        })
       )
     )
   );

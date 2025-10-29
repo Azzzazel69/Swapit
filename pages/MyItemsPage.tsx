@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api.js';
@@ -8,7 +10,6 @@ import Spinner from '../components/Spinner.js';
 import Button from '../components/Button.js';
 import Input from '../components/Input.js';
 import { ICONS, CATEGORIES } from '../constants.js';
-// FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.js';
 
@@ -26,6 +27,8 @@ const MyItemsPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  // FIX: Explicitly type the 'images' state as an array of strings.
+  const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { user } = useAuth();
@@ -59,8 +62,49 @@ const MyItemsPage = () => {
     }
   }, [location.search]);
 
-  const handleAddItem = async (e) => {
+  const MAX_IMAGES = 5;
+
+  // FIX: Add type for the event parameter to correctly infer 'e.target.files' and 'file' types.
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+          setError(null);
+          const filesArray = Array.from(e.target.files);
+          
+          if (images.length + filesArray.length > MAX_IMAGES) {
+              setError(`No puedes subir más de ${MAX_IMAGES} imágenes.`);
+              return;
+          }
+
+          filesArray.forEach(file => {
+              if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                  setError(`La imagen ${file.name} es demasiado grande (máx 10MB).`);
+                  return;
+              }
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                  // FIX: The result of FileReader can be an ArrayBuffer, so we need to ensure it's a string before updating state.
+                  if (typeof reader.result === 'string') {
+                    setImages(prevImages => [...prevImages, reader.result]);
+                  }
+              };
+              reader.readAsDataURL(file);
+          });
+          // FIX: Set target value to null to allow selecting the same file again.
+          e.target.value = null; // To allow selecting the same file again
+      }
+  };
+
+  const handleRemoveImage = (index) => {
+      setImages(images.filter((_, i) => i !== index));
+  };
+
+  // FIX: Add type for the form event.
+  const handleAddItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (images.length === 0) {
+        setError('Debes subir al menos una foto.');
+        return;
+    }
     if (!category) {
         setError('Por favor, selecciona una categoría.');
         return;
@@ -68,10 +112,11 @@ const MyItemsPage = () => {
     setError(null);
     setIsSubmitting(true);
     try {
-      await api.createItem({ title, description, category });
+      await api.createItem({ title, description, category, imageUrls: images });
       setTitle('');
       setDescription('');
       setCategory('');
+      setImages([]);
       setShowForm(false);
       await fetchUserItems(); // Refresh list
     } catch (err) {
@@ -88,7 +133,6 @@ const MyItemsPage = () => {
   return React.createElement("div", null,
     React.createElement("div", { className: "flex justify-between items-center mb-6" },
       React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Mis Artículos"),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
       React.createElement(Button, { 
         onClick: () => setShowForm(!showForm),
         children: React.createElement("div", { className: "flex items-center gap-2" },
@@ -100,24 +144,50 @@ const MyItemsPage = () => {
     showForm && React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
       React.createElement("form", { onSubmit: handleAddItem, className: "space-y-4" },
         React.createElement("h2", { className: "text-xl font-semibold" }, "Detalles del Nuevo Artículo"),
-        error && React.createElement("p", { className: "text-red-500 text-sm text-center" }, error),
-        // FIX: Cast e.target to HTMLInputElement to access value property.
-        React.createElement(Input, { id: "title", label: "Título", type: "text", value: title, onChange: e => setTitle((e.target as HTMLInputElement).value), required: true }),
-        // FIX: The `children` prop for a DOM element was causing a TS overload error, and e.target needed casting.
+        error && React.createElement("p", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
+        React.createElement(Input, { id: "title", label: "Título", type: "text", value: title, onChange: e => setTitle(e.target.value), required: true }),
         React.createElement("div", null,
-          React.createElement("label", { key: "description-label", htmlFor: "description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
-          React.createElement("textarea", { key: "description-textarea", id: "description", value: description, onChange: e => setDescription((e.target as HTMLTextAreaElement).value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
+          React.createElement("label", { htmlFor: "description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
+          // FIX: Add explicit type for the onChange event to help TypeScript resolve the correct overload for createElement.
+          React.createElement("textarea", { id: "description", value: description, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
         ),
-        // FIX: The `children` prop for a DOM element was causing a TS overload error, and e.target needed casting.
         React.createElement("div", null,
-          React.createElement("label", { key: "category-label", htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-          React.createElement("select", { key: "category-select", id: "category", value: category, onChange: e => setCategory((e.target as HTMLSelectElement).value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
-            React.createElement("option", { value: "", disabled: true, key: "disabled" }, "-- Selecciona una Categoría --"),
+          React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
+          // FIX: Add explicit type for the onChange event to help TypeScript resolve the correct overload for createElement.
+          React.createElement("select", { id: "category", value: category, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+            React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
             ...CATEGORIES.map(cat => React.createElement("option", { key: cat, value: cat }, cat))
           )
         ),
+        React.createElement("div", null,
+          React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Imágenes (mín. 1, máx. 5)"),
+          React.createElement("div", { className: "mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md" },
+            React.createElement("div", { className: "space-y-1 text-center" },
+              React.createElement("svg", { className: "mx-auto h-12 w-12 text-gray-400", stroke: "currentColor", fill: "none", viewBox: "0 0 48 48", "aria-hidden": "true" },
+                React.createElement("path", { d: "M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" })
+              ),
+              React.createElement("div", { className: "flex text-sm text-gray-600 dark:text-gray-400" },
+                React.createElement("label", { htmlFor: "file-upload", className: `relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium ${theme.textColor} ${theme.hoverTextColor} focus-within:outline-none` },
+                  React.createElement("span", null, "Sube tus archivos"),
+                  React.createElement("input", { id: "file-upload", name: "file-upload", type: "file", className: "sr-only", multiple: true, accept: "image/*", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
+                ),
+                React.createElement("p", { className: "pl-1" }, "o arrástralos aquí")
+              ),
+              React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-500" }, "PNG, JPG, GIF hasta 10MB")
+            )
+          ),
+          images.length > 0 && React.createElement("div", { className: "mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4" },
+            images.map((image, index) => React.createElement("div", { key: index, className: "relative group" },
+              React.createElement("img", { src: image, alt: `Preview ${index}`, className: "h-24 w-24 object-cover rounded-md" }),
+              React.createElement("button", { type: "button", onClick: () => handleRemoveImage(index), className: "absolute -top-1 -right-1 p-1 bg-red-600 text-white rounded-full opacity-75 group-hover:opacity-100 transition-opacity", "aria-label": "Eliminar imagen" },
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-3 w-3", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+                  React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" })
+                )
+              )
+            ))
+          )
+        ),
         React.createElement("div", { className: "flex justify-end" },
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
           React.createElement(Button, { type: "submit", isLoading: isSubmitting, children: "Añadir Artículo" })
         )
       )

@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,8 @@ import Input from '../components/Input.js';
 import Spinner from '../components/Spinner.js';
 import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.js';
 import { useColorTheme } from '../hooks/useColorTheme.js';
+import AutocompleteInput from '../components/AutocompleteInput.js';
+import { locations } from '../data/locations.js';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
@@ -28,6 +30,7 @@ const OnboardingPage = () => {
     const [country, setCountry] = useState('');
     const [city, setCity] = useState('');
     const [postalCode, setPostalCode] = useState('');
+    const [address, setAddress] = useState('');
     const [isLocating, setIsLocating] = useState(false);
 
     // Preferences state
@@ -89,9 +92,11 @@ const OnboardingPage = () => {
         setIsLocating(true); setError('');
         navigator.geolocation.getCurrentPosition(
             (position) => {
+                // Mocked response for demo
                 setCountry("España");
                 setCity("Madrid");
                 setPostalCode("28013");
+                setAddress("Plaza Mayor, 1");
                 setIsLocating(false);
             },
             (error) => {
@@ -101,11 +106,34 @@ const OnboardingPage = () => {
         );
     };
 
+    useEffect(() => {
+        if (step === 'location' && !country && !city && !postalCode) {
+            handleAutoDetectLocation();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step]);
+    
+    const handleCountryChange = (selectedCountry) => {
+        setCountry(selectedCountry);
+        setCity(''); // Reset city when country changes
+        setError(''); // Clear error on country change
+    };
+
+    const countries = useMemo(() => Object.keys(locations), []);
+    const citiesForSelectedCountry = useMemo(() => {
+        return country && locations[country] ? locations[country] : [];
+    }, [country]);
+
+
     const handleSaveLocation = async (e) => {
         e.preventDefault();
+        if (country !== 'España') {
+            setError('Lo sentimos, Swapit de momento solo está disponible en España.');
+            return;
+        }
         setIsLoading(true); setError('');
         try {
-            await api.updateUserLocation({ country, city, postalCode });
+            await api.updateUserLocation({ country, city, postalCode, address });
             await refreshUser(); // Refresh user to get location data
         } catch (err) { setError(err.message); } 
         finally { setIsLoading(false); }
@@ -161,11 +189,12 @@ const OnboardingPage = () => {
                     React.createElement("h3", { className: "text-xl font-semibold mb-2" }, "Paso 3: Configura tu Ubicación"),
                     React.createElement("p", { className: "mb-4 text-gray-600 dark:text-gray-400" }, "Esto nos ayuda a encontrar intercambios cerca de ti."),
 // FIX: Pass children as a prop to the Button component to satisfy the type checker.
-                    React.createElement(Button, { onClick: handleAutoDetectLocation, isLoading: isLocating, variant: "secondary", className: "mb-4 w-full", children: React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: theme.textColor }, ICONS.location), " Autodetectar mi Ubicación")
+                    React.createElement(Button, { onClick: handleAutoDetectLocation, isLoading: isLocating, variant: "secondary", className: "mb-4 w-full", children: React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: theme.textColor }, ICONS.location), " Reintentar Autodetección")
                     }),
                     React.createElement("form", { onSubmit: handleSaveLocation, className: "space-y-4" },
-                        React.createElement(Input, { id: "country", label: "País", type: "text", value: country, onChange: e => setCountry(e.target.value), required: true }),
-                        React.createElement(Input, { id: "city", label: "Ciudad", type: "text", value: city, onChange: e => setCity(e.target.value), required: true }),
+                        React.createElement(AutocompleteInput, { id: "country", label: "País", value: country, onChange: handleCountryChange, required: true, suggestions: countries, placeholder: "Escribe tu país..." }),
+                        React.createElement(AutocompleteInput, { id: "city", label: "Ciudad", value: city, onChange: setCity, required: true, suggestions: citiesForSelectedCountry, placeholder: "Escribe tu ciudad...", disabled: !country }),
+                        React.createElement(Input, { id: "address", label: "Dirección (Calle, número, piso)", type: "text", value: address, onChange: e => setAddress(e.target.value), required: true, placeholder:"Ej: Calle Principal, 123, 2B" }),
                         React.createElement(Input, { id: "postalCode", label: "Código Postal", type: "text", value: postalCode, onChange: e => setPostalCode(e.target.value), required: true }),
 // FIX: Pass children as a prop to the Button component to satisfy the type checker.
                         React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Guardar Ubicación" })

@@ -10,8 +10,8 @@ const setupInitialData = () => {
     items = [];
     exchanges = [];
 
-    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: false, phoneVerified: false, preferences: [] };
-    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: false, phoneVerified: false, preferences: [] };
+    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
+    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Vehículos'] };
     users.push(alice, bob);
 
     items = [
@@ -36,7 +36,14 @@ setupInitialData();
 
 class ApiClient {
   token = null;
-  currentUser = null;
+
+  _getCurrentUserFromToken() {
+    if (!this.token) {
+        return null;
+    }
+    const userId = this.token.replace('fake-jwt-for-', '');
+    return users.find(u => u.id === userId);
+  }
 
   async simulateDelay(ms = 500) {
       return new Promise(resolve => setTimeout(resolve, ms));
@@ -50,7 +57,6 @@ class ApiClient {
       await this.simulateDelay();
       const user = users.find(u => u.email === email);
       if (user && user.password === password) {
-          this.currentUser = user;
           const dummyToken = `fake-jwt-for-${user.id}`;
           this.setToken(dummyToken);
           return { token: dummyToken };
@@ -87,7 +93,6 @@ class ApiClient {
       const userId = this.token.replace('fake-jwt-for-', '');
       const user = users.find(u => u.id === userId);
       if (user) {
-          this.currentUser = user;
           const { password: _, ...userToReturn } = user;
           return userToReturn;
       }
@@ -111,13 +116,14 @@ class ApiClient {
   
   async createItem(itemData) {
       await this.simulateDelay();
-      if (!this.currentUser) {
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) {
           throw new Error('Autenticación requerida');
       }
       const newItem = {
           id: `item-${Date.now()}`,
-          userId: this.currentUser.id,
-          ownerName: this.currentUser.name,
+          userId: currentUser.id,
+          ownerName: currentUser.name,
           imageUrls: [`https://picsum.photos/seed/${Date.now()}/400/300`, `https://picsum.photos/seed/${Date.now()+1}/400/300`],
           createdAt: new Date().toISOString(),
           ...itemData
@@ -128,55 +134,55 @@ class ApiClient {
   
   async getExchanges() {
       await this.simulateDelay();
-      if (!this.currentUser) {
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) {
           throw new Error('Autenticación requerida');
       }
-      return exchanges.filter(ex => ex.ownerId === this.currentUser.id || ex.requesterId === this.currentUser.id);
+      return exchanges.filter(ex => ex.ownerId === currentUser.id || ex.requesterId === currentUser.id);
   }
 
   async updateExchangeStatus(exchangeId, status) {
       await this.simulateDelay();
       const exchange = exchanges.find(ex => ex.id === exchangeId);
       if (!exchange) throw new Error('Intercambio no encontrado');
-      if (this.currentUser?.id !== exchange.ownerId) throw new Error('Permiso denegado.');
+      const currentUser = this._getCurrentUserFromToken();
+      if (currentUser?.id !== exchange.ownerId) throw new Error('Permiso denegado.');
       exchange.status = status;
       return { ...exchange };
   }
 
   async updateUserPreferences(preferences) {
       await this.simulateDelay();
-      if (!this.currentUser) throw new Error('Autenticación requerida');
-      const user = users.find(u => u.id === this.currentUser.id);
-      if (!user) throw new Error('Usuario no encontrado');
-      user.preferences = preferences;
-      this.currentUser = user;
-      const { password: _, ...userToReturn } = user;
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      currentUser.preferences = preferences;
+      const { password: _, ...userToReturn } = currentUser;
       return userToReturn;
   }
 
   async verifyEmail() {
       await this.simulateDelay();
-      if (!this.currentUser) throw new Error('Autenticación requerida');
-      const user = users.find(u => u.id === this.currentUser.id);
-      if(user) user.emailVerified = true;
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      currentUser.emailVerified = true;
       return true;
   }
 
   async sendPhoneVerificationCode(phone) {
       await this.simulateDelay();
-      if (!this.currentUser) throw new Error('Autenticación requerida');
-      const user = users.find(u => u.id === this.currentUser.id);
-      if(user) user.phone = phone;
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      currentUser.phone = phone;
       console.log(`SIMULACIÓN: Enviando código a ${phone}. El código es 123456`);
       return "123456";
   }
 
   async verifyPhoneCode(code) {
       await this.simulateDelay();
-      if (!this.currentUser) throw new Error('Autenticación requerida');
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
       if (code === "123456") {
-          const user = users.find(u => u.id === this.currentUser.id);
-          if (user) user.phoneVerified = true;
+          currentUser.phoneVerified = true;
           return true;
       }
       return false;
@@ -184,11 +190,10 @@ class ApiClient {
   
   async updateUserLocation(location) {
       await this.simulateDelay();
-      if (!this.currentUser) throw new Error('Autenticación requerida');
-      const user = users.find(u => u.id === this.currentUser.id);
-      if (!user) throw new Error('Usuario no encontrado');
-      user.location = location;
-      const { password: _, ...userToReturn } = user;
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      currentUser.location = location;
+      const { password: _, ...userToReturn } = currentUser;
       return userToReturn;
   }
 

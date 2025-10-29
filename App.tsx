@@ -1,8 +1,5 @@
-
-
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-// FIX: Changed import from useAuth.js to useAuth.tsx
+import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { ColorThemeProvider } from './hooks/useColorTheme.js';
 import Header from './components/Header.js';
@@ -16,6 +13,10 @@ import Spinner from './components/Spinner.js';
 import ItemDetailPage from './pages/ItemDetailPage.js';
 import OnboardingPage from './pages/OnboardingPage.js';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
+import TermsOfServicePage from './pages/TermsOfServicePage.js';
+import CookiePolicyPage from './pages/CookiePolicyPage.js';
+import CookieBanner from './components/CookieBanner.js';
+import { useColorTheme } from './hooks/useColorTheme.js';
 
 const App = () => {
   return React.createElement(AuthProvider, null,
@@ -26,10 +27,24 @@ const App = () => {
           React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6" },
             React.createElement(AppRoutes, null)
           ),
-          React.createElement("footer", { className: "text-center p-4 text-gray-500 text-sm" },
-            "© 2024 Swapit. Todos los derechos reservados."
-          )
+          React.createElement(AppFooter, null),
+          React.createElement(CookieBanner, null)
         )
+      )
+    )
+  );
+};
+
+const AppFooter = () => {
+  const { theme } = useColorTheme();
+
+  return (
+    React.createElement("footer", { className: "text-center p-4 text-gray-500 text-sm border-t border-gray-200 dark:border-gray-700" },
+      "© 2024 Swapit. Todos los derechos reservados.",
+      React.createElement("div", { className: "mt-2" },
+        React.createElement(Link, { to: "/terms-of-service", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Términos de Servicio"),
+        "|",
+        React.createElement(Link, { to: "/cookie-policy", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Política de Cookies")
       )
     )
   );
@@ -50,6 +65,9 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/forgot-password", element: !user ? React.createElement(ForgotPasswordPage, null) : React.createElement(Navigate, { to: "/" }) }),
     React.createElement(Route, { path: "/onboarding", element: React.createElement(OnboardingGuard, null, React.createElement(OnboardingPage, null)) }),
     
+    React.createElement(Route, { path: "/terms-of-service", element: React.createElement(TermsOfServicePage, null) }),
+    React.createElement(Route, { path: "/cookie-policy", element: React.createElement(CookiePolicyPage, null) }),
+
     React.createElement(Route, { path: "/", element: React.createElement(ProtectedRoute, null, React.createElement(HomePage, null)) }),
     React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ItemDetailPage, null)) }),
     React.createElement(Route, { path: "/my-items", element: React.createElement(ProtectedRoute, null, React.createElement(MyItemsPage, null)) }),
