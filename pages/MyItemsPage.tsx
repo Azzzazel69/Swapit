@@ -2,6 +2,10 @@
 
 
 
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api.js';
@@ -30,6 +34,7 @@ const MyItemsPage = () => {
   // FIX: Explicitly type the 'images' state as an array of strings.
   const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const { user } = useAuth();
   const { theme } = useColorTheme();
@@ -82,9 +87,11 @@ const MyItemsPage = () => {
               }
               const reader = new FileReader();
               reader.onloadend = () => {
-                  // FIX: The result of FileReader can be an ArrayBuffer, so we need to ensure it's a string before updating state.
+                  // FIX: The result of FileReader can be an ArrayBuffer. We capture the narrowed string type in a constant
+                  // to ensure TypeScript correctly infers its type inside the state updater callback.
                   if (typeof reader.result === 'string') {
-                    setImages(prevImages => [...prevImages, reader.result]);
+                    const newImage = reader.result;
+                    setImages(prevImages => [...prevImages, newImage]);
                   }
               };
               reader.readAsDataURL(file);
@@ -119,6 +126,8 @@ const MyItemsPage = () => {
       setImages([]);
       setShowForm(false);
       await fetchUserItems(); // Refresh list
+      setSuccessMessage('¡Artículo añadido con éxito!');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       setError('Error al crear el artículo.');
     } finally {
@@ -198,6 +207,15 @@ const MyItemsPage = () => {
       React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
         items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true }))
       )
+    ),
+    successMessage && React.createElement("div", {
+        className: "fixed bottom-5 right-5 bg-green-100 border border-green-400 text-green-700 dark:bg-green-800 dark:border-green-600 dark:text-green-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50",
+        role: "alert"
+      },
+      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" })
+      ),
+      React.createElement("span", { className: "font-medium" }, successMessage)
     )
   );
 };

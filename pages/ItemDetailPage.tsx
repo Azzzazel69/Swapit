@@ -5,6 +5,7 @@
 
 
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
@@ -15,31 +16,28 @@ import { ICONS } from '../constants.js';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.js';
 
-// FIX: Changed component signature to use a single `props` argument instead of destructuring. This helps TypeScript's type inference and resolves the overload error for `React.createElement` on the inner `div`.
+// FIX: Refactored React.createElement calls to pass children as arguments instead of a prop
+// to resolve TypeScript overload ambiguity for intrinsic elements like 'div'.
 const ImageLightbox = (props) => {
-  // FIX: Pass children as a prop to fix React.createElement overload resolution issues.
   return React.createElement("div", 
     { 
       className: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50",
-      onClick: props.onClose,
-      children: React.createElement("div", 
+      onClick: props.onClose
+    },
+    React.createElement("div", 
+      { 
+        className: "relative max-w-4xl max-h-4/5 p-4", 
+        onClick: e => e.stopPropagation()
+      },
+      React.createElement("img", { src: props.imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
+      React.createElement("button", 
         { 
-          className: "relative max-w-4xl max-h-4/5 p-4", 
-          onClick: e => e.stopPropagation(),
-          children: [
-            // FIX: Removed unnecessary key prop that could interfere with type inference.
-            React.createElement("img", { src: props.imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
-            React.createElement("button", 
-              { 
-                onClick: props.onClose, 
-                className: "absolute top-4 right-4 text-white hover:text-gray-300"
-              },
-              ICONS.close
-            )
-          ]
-        }
+          onClick: props.onClose, 
+          className: "absolute top-4 right-4 text-white hover:text-gray-300"
+        },
+        ICONS.close
       )
-    }
+    )
   );
 };
 
