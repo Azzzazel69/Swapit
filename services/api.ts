@@ -19,12 +19,13 @@ const setupInitialData = () => {
     users.push(alice, bob, admin);
 
     items = [
-        { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Una bicicleta de carretera clásica de 10 velocidades de los años 80. Bien cuidada y recién revisada.', imageUrls: ['https://images.unsplash.com/photo-1559348349-36de83b9e11e?w=500', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500'], category: 'Vehículos', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
-        { id: '102', userId: '1', ownerName: 'Ana', title: 'Guitarra Acústica', description: 'Guitarra acústica Yamaha, ideal para principiantes. Incluye funda y afinador.', imageUrls: ['https://images.unsplash.com/photo-1510915361894-db8b60106945?w=500', 'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=500'], category: 'Música', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
-        { id: '103', userId: '2', ownerName: 'Benito', title: 'Colección de Libros Antiguos', description: 'Lote de 20 novelas clásicas de la literatura. Incluye obras de Tolstoy, Dickens y Austen.', imageUrls: ['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500', 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500'], category: 'Libros', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() },
-        { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Nintendo Switch con poco uso, incluye dos juegos: Zelda y Mario Kart 8.', imageUrls: ['https://images.unsplash.com/photo-1612036782180-6f0b6cd84627?w=500', 'https://images.unsplash.com/photo-1589254065909-b7086229d08c?w=500'], category: 'Electrónica', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString() },
-        { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Dron compacto y potente, perfecto para principiantes. Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: ['https://images.unsplash.com/photo-1607621247161-1e24a5b9b8b0?w=500', 'https://images.unsplash.com/photo-1507563589139-d3c2e7d7a2e8?w=500'], category: 'Electrónica', createdAt: new Date().toISOString() },
-        { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada, en excelentes condiciones. Estilo atemporal.', imageUrls: ['https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?w=500', 'https://images.unsplash.com/photo-1611312449412-6cefac5dc2d0?w=500'], category: 'Ropa', createdAt: new Date().toISOString() },
+        { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Una bicicleta de carretera clásica de 10 velocidades de los años 80. Bien cuidada y recién revisada.', imageUrls: ['https://images.unsplash.com/photo-1559348349-36de83b9e11e?w=500', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500'], category: 'Vehículos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
+        { id: '102', userId: '1', ownerName: 'Ana', title: 'Guitarra Acústica', description: 'Guitarra acústica Yamaha, ideal para principiantes. Incluye funda y afinador.', imageUrls: ['https://images.unsplash.com/photo-1510915361894-db8b60106945?w=500', 'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=500'], category: 'Música', status: 'AVAILABLE', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
+        { id: '103', userId: '2', ownerName: 'Benito', title: 'Colección de Libros Antiguos', description: 'Lote de 20 novelas clásicas de la literatura. Incluye obras de Tolstoy, Dickens y Austen.', imageUrls: ['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500', 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500'], category: 'Libros', status: 'AVAILABLE', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() },
+        { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Nintendo Switch con poco uso, incluye dos juegos: Zelda y Mario Kart 8.', imageUrls: ['https://images.unsplash.com/photo-1612036782180-6f0b6cd84627?w=500', 'https://images.unsplash.com/photo-1589254065909-b7086229d08c?w=500'], category: 'Electrónica', status: 'EXCHANGED', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString() },
+        { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Dron compacto y potente, perfecto para principiantes. Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: ['https://images.unsplash.com/photo-1607621247161-1e24a5b9b8b0?w=500', 'https://images.unsplash.com/photo-1507563589139-d3c2e7d7a2e8?w=500'], category: 'Electrónica', status: 'AVAILABLE', createdAt: new Date().toISOString() },
+        { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada, en excelentes condiciones. Estilo atemporal.', imageUrls: ['https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?w=500', 'https://images.unsplash.com/photo-1611312449412-6cefac5dc2d0?w=500'], category: 'Ropa', status: 'AVAILABLE', createdAt: new Date().toISOString() },
+        { id: '107', userId: '3', ownerName: 'Admin', title: 'Clases de guitarra online', description: 'Ofrezco una hora de clase de guitarra para principiantes a través de videollamada. Todos los niveles son bienvenidos.', imageUrls: ['https://images.unsplash.com/photo-1550291652-6ea9114a47b1?w=500'], category: 'Servicios', status: 'AVAILABLE', createdAt: new Date().toISOString() },
     ];
 };
 
@@ -98,7 +99,7 @@ class ApiClient {
   
   async getAllItems() {
       await this.simulateDelay();
-      return [...items];
+      return items.filter(item => item.status === 'AVAILABLE');
   }
   
   async getItemById(itemId) {
@@ -122,6 +123,7 @@ class ApiClient {
           userId: currentUser.id,
           ownerName: currentUser.name,
           ...itemData,
+          status: 'AVAILABLE',
           createdAt: new Date().toISOString(),
       };
       items.unshift(newItem);
@@ -139,8 +141,8 @@ class ApiClient {
       // Populate item details
       return userExchanges.map(ex => ({
           ...ex,
-          requestedItem: items.find(item => item.id === ex.requestedItemId),
-          offeredItems: ex.offeredItemIds.map(id => items.find(item => item.id === id)),
+          requestedItem: items.find(item => item.id === ex.requestedItemId) || { title: 'Artículo eliminado', status: 'DELETED' },
+          offeredItems: ex.offeredItemIds.map(id => items.find(item => item.id === id)).filter(Boolean),
       }));
   }
 
@@ -150,7 +152,7 @@ class ApiClient {
       if (!requester) throw new Error('Autenticación requerida');
       
       const requestedItem = await this.getItemById(proposal.requestedItemId);
-      if (!requestedItem) throw new Error('Artículo solicitado no encontrado.');
+      if (!requestedItem || requestedItem.status !== 'AVAILABLE') throw new Error('Este artículo no está disponible para intercambio.');
 
       const owner = users.find(u => u.id === requestedItem.userId);
       if (!owner) throw new Error('Propietario del artículo no encontrado.');
@@ -164,6 +166,8 @@ class ApiClient {
           requestedItemId: proposal.requestedItemId,
           offeredItemIds: proposal.offeredItemIds,
           status: ExchangeStatus.Pending,
+          votedByOwner: false,
+          votedByRequester: false,
           createdAt: new Date().toISOString(),
       };
       exchanges.unshift(newExchange);
@@ -198,6 +202,25 @@ class ApiClient {
       if (currentUser?.id !== exchange.ownerId) throw new Error('Permiso denegado.');
       
       exchange.status = status;
+
+      if (status === ExchangeStatus.Accepted) {
+        const involvedItemIds = [exchange.requestedItemId, ...exchange.offeredItemIds];
+        
+        items.forEach(item => {
+            if (involvedItemIds.includes(item.id)) {
+                item.status = 'EXCHANGED';
+            }
+        });
+
+        exchanges.forEach(ex => {
+            if (ex.id !== exchangeId && ex.status === ExchangeStatus.Pending) {
+                const otherInvolvedItems = [ex.requestedItemId, ...ex.offeredItemIds];
+                if (otherInvolvedItems.some(id => involvedItemIds.includes(id))) {
+                    ex.status = ExchangeStatus.Rejected;
+                }
+            }
+        });
+      }
 
       const chat = chats.find(c => c.id === exchangeId);
       if (chat) {
@@ -266,6 +289,33 @@ class ApiClient {
       
       chat.messages.push(newMessage);
       return newMessage;
+  }
+
+  async voteForExchange(exchangeId) {
+    await this.simulateDelay();
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+
+    const exchange = exchanges.find(ex => ex.id === exchangeId);
+    if (!exchange || exchange.status !== ExchangeStatus.Accepted) {
+        throw new Error('No se puede votar en este intercambio.');
+    }
+
+    if (exchange.ownerId === currentUser.id) {
+        exchange.votedByOwner = true;
+    } else if (exchange.requesterId === currentUser.id) {
+        exchange.votedByRequester = true;
+    } else {
+        throw new Error('No eres parte de este intercambio.');
+    }
+
+    if (exchange.votedByOwner && exchange.votedByRequester) {
+        exchange.status = ExchangeStatus.Completed;
+        const involvedItemIds = [exchange.requestedItemId, ...exchange.offeredItemIds];
+        items = items.filter(item => !involvedItemIds.includes(item.id));
+    }
+
+    return exchange;
   }
 
   async updateUserPreferences(preferences) {

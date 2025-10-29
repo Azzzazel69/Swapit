@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api.js';
@@ -12,7 +9,7 @@ import Button from '../components/Button.js';
 
 // FIX: Changed component signature to use props object directly to avoid TypeScript overload resolution issues with React.createElement.
 const ExchangeCard = (props) => {
-    const { exchange, perspective, onAccept, onReject, isUpdating } = props;
+    const { exchange, perspective, onAccept, onReject, onVote, isUpdating } = props;
     const isOwner = perspective === 'owner';
     const statusColor = {
         [ExchangeStatus.Pending]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
@@ -22,6 +19,9 @@ const ExchangeCard = (props) => {
     };
     
     const offeredItemsPreview = exchange.offeredItems?.map(item => item.title).join(', ') || 'un artículo';
+
+    const canVote = (isOwner && !exchange.votedByOwner) || (!isOwner && !exchange.votedByRequester);
+    const hasVoted = (isOwner && exchange.votedByOwner) || (!isOwner && exchange.votedByRequester);
 
     return React.createElement(Link, { to: `/chat/${exchange.id}`, className: "block bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow" },
       React.createElement("div", { className: "flex flex-col sm:flex-row justify-between items-center gap-4" },
@@ -45,6 +45,15 @@ const ExchangeCard = (props) => {
 // FIX: Pass children as a prop to the Button component to satisfy the type checker.
                     React.createElement(Button, { size: "sm", variant: "danger", onClick: () => onReject(exchange.id), isLoading: isUpdating, children: "Rechazar" })
                 )
+            ),
+            exchange.status === ExchangeStatus.Accepted && (
+                React.createElement("div", { className: "flex items-center gap-2 mt-2", onClick: (e) => e.preventDefault() },
+                    canVote && React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => onVote(exchange.id), isLoading: isUpdating, children: "Valorar Trueque" }),
+                    hasVoted && React.createElement("span", { className: "text-sm text-green-600 dark:text-green-400 flex items-center gap-1" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })), "Votado")
+                )
+            ),
+            exchange.status === ExchangeStatus.Completed && (
+                React.createElement("span", { className: "text-sm text-blue-500 mt-2" }, "Intercambio Completado")
             )
         )
       )
@@ -90,6 +99,19 @@ const ExchangesPage = () => {
     }
   };
 
+  const handleVote = async (exchangeId) => {
+    setUpdatingExchangeId(exchangeId);
+    try {
+        await api.voteForExchange(exchangeId);
+        await fetchExchanges();
+    } catch (err) {
+        setError(err.message || `Error al votar.`);
+    } finally {
+        setUpdatingExchangeId(null);
+    }
+  };
+
+
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
   }
@@ -111,6 +133,7 @@ const ExchangesPage = () => {
                 perspective: "owner", 
                 onAccept: (id) => handleUpdateStatus(id, ExchangeStatus.Accepted),
                 onReject: (id) => handleUpdateStatus(id, ExchangeStatus.Rejected),
+                onVote: handleVote,
                 isUpdating: updatingExchangeId === ex.id
             }))
           )
@@ -128,7 +151,8 @@ const ExchangesPage = () => {
                 perspective: "requester",
                 onAccept: () => {}, 
                 onReject: () => {},
-                isUpdating: false 
+                onVote: handleVote,
+                isUpdating: updatingExchangeId === ex.id
             }))
           )
         ) : (

@@ -42,6 +42,10 @@ export const CATEGORIES_WITH_SUBCATEGORIES = [
     sub: ['Cocina', 'Jardín', 'Herramientas', 'Electrodomésticos'],
   },
   {
+    name: 'Servicios',
+    sub: ['Manitas', 'Masajes', 'Tratamientos estéticos', 'Clases particulares', 'Cuidado de mascotas'],
+  },
+  {
     name: 'Otros',
     sub: [],
   },

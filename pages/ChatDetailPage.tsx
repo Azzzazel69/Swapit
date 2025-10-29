@@ -6,7 +6,7 @@ import Spinner from '../components/Spinner.js';
 import Button from '../components/Button.js';
 import { useColorTheme } from '../hooks/useColorTheme.js';
 import { ExchangeStatus } from '../types.js';
-import Confetti from '../components/Confetti.js';
+import { useConfetti } from '../hooks/useConfetti.tsx';
 
 const ChatDetailPage = () => {
     const { exchangeId } = useParams();
@@ -21,7 +21,7 @@ const ChatDetailPage = () => {
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-    const [showConfetti, setShowConfetti] = useState(false);
+    const { showConfetti } = useConfetti();
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -71,8 +71,7 @@ const ChatDetailPage = () => {
         try {
             await api.updateExchangeStatus(exchangeId, status);
             if (status === ExchangeStatus.Accepted) {
-                setShowConfetti(true);
-                setTimeout(() => setShowConfetti(false), 5000); // Confeti por 5 segundos
+                showConfetti();
             } else if (status === ExchangeStatus.Rejected) {
                 // Navegar después de un breve retraso para que el usuario vea el mensaje
                 setTimeout(() => navigate('/exchanges'), 2000);
@@ -154,7 +153,6 @@ const ChatDetailPage = () => {
 
     return (
         React.createElement("div", { className: "max-w-2xl mx-auto h-[calc(100vh-12rem)] flex flex-col" },
-            showConfetti && React.createElement(Confetti, null),
             React.createElement(Link, { to: "/exchanges", className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline mb-4` },
                 "← Volver al buzón"
             ),

@@ -18,18 +18,21 @@ import CookiePolicyPage from './pages/CookiePolicyPage.js';
 import CookieBanner from './components/CookieBanner.js';
 import { useColorTheme } from './hooks/useColorTheme.js';
 import ChatDetailPage from './pages/ChatDetailPage.js';
+import { ConfettiProvider } from './hooks/useConfetti.tsx';
 
 const App = () => {
   return React.createElement(AuthProvider, null,
     React.createElement(ColorThemeProvider, null,
-      React.createElement(HashRouter, null,
-        React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
-          React.createElement(Header, null),
-          React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6" },
-            React.createElement(AppRoutes, null)
-          ),
-          React.createElement(AppFooter, null),
-          React.createElement(CookieBanner, null)
+      React.createElement(ConfettiProvider, null,
+        React.createElement(HashRouter, null,
+          React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
+            React.createElement(Header, null),
+            React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6" },
+              React.createElement(AppRoutes, null)
+            ),
+            React.createElement(AppFooter, null),
+            React.createElement(CookieBanner, null)
+          )
         )
       )
     )

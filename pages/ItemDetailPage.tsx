@@ -79,11 +79,12 @@ const ItemDetailPage = () => {
   const handleSwapClick = async () => {
     if (!user) return;
     const currentUserItems = await api.getUserItems(user.id);
-    if (currentUserItems.length === 0) {
+    const availableItems = currentUserItems.filter(i => i.status === 'AVAILABLE');
+    if (availableItems.length === 0) {
       setNoItemsError(true);
       return;
     }
-    setUserItems(currentUserItems);
+    setUserItems(availableItems);
     setIsModalOpen(true);
   };
 
@@ -118,6 +119,7 @@ const ItemDetailPage = () => {
   }
   
   const isOwnItem = user?.id === item.userId;
+  const isSwapped = item.status === 'EXCHANGED';
 
   return React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl mx-auto p-4 sm:p-6 lg:p-8" },
     lightboxOpen && selectedImage && React.createElement(ImageLightbox, { imageUrl: selectedImage, onClose: () => setLightboxOpen(false) }),
@@ -197,13 +199,20 @@ const ItemDetailPage = () => {
             React.createElement("p", null, "Publicado: ", new Date(item.createdAt).toLocaleDateString())
           )
         ),
-        !isOwnItem && React.createElement("div", { className: "mt-6" },
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
-          React.createElement(Button, { size: "lg", onClick: handleSwapClick, className: "w-full", children: React.createElement("div", { className: "flex items-center justify-center gap-2" },
-              ICONS.swap,
-              "!te lo cambio!"
+        !isOwnItem && (
+          isSwapped ? (
+            React.createElement("div", { className: "mt-6 text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg" },
+              React.createElement("p", { className: "font-semibold text-gray-700 dark:text-gray-200" }, "Este artículo ya ha sido intercambiado.")
             )
-          })
+          ) : (
+            React.createElement("div", { className: "mt-6" },
+              React.createElement(Button, { size: "lg", onClick: handleSwapClick, className: "w-full", children: React.createElement("div", { className: "flex items-center justify-center gap-2" },
+                  ICONS.swap,
+                  "!te lo cambio!"
+                )
+              })
+            )
+          )
         )
       )
     )
