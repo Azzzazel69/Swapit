@@ -11,7 +11,7 @@ const ItemCard = ({ item, isOwnItem = false }) => {
       className: `block bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 group ${isSwapped ? 'opacity-60' : ''}` 
     },
     React.createElement("div", { className: "relative" },
-      React.createElement("img", { className: "w-full h-56 object-cover object-center", src: item.imageUrls[0], alt: item.title }),
+      React.createElement("img", { className: "w-full h-48 object-cover object-center", src: item.imageUrls[0], alt: item.title }),
       isSwapped && (
         React.createElement("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center" },
             React.createElement("span", { className: "text-white text-2xl font-bold border-4 border-white px-4 py-2 rounded-lg transform -rotate-12" }, "SWAPPED!")
@@ -25,9 +25,9 @@ const ItemCard = ({ item, isOwnItem = false }) => {
         )
       )
     ),
-    React.createElement("div", { className: "p-6" },
-      React.createElement("h2", { className: `text-xl font-bold mb-2 text-gray-900 dark:text-white truncate group-hover:${theme.textColor} transition-colors` }, item.title),
-      React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-3 h-16" }, item.description),
+    React.createElement("div", { className: "p-4" },
+      React.createElement("h2", { className: `text-lg font-bold mb-2 text-gray-900 dark:text-white truncate group-hover:${theme.textColor} transition-colors` }, item.title),
+      React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2 h-12" }, item.description),
       React.createElement("div", { className: "flex items-center justify-between mt-auto" },
         React.createElement("div", { className: "text-sm text-gray-500 dark:text-gray-400" },
           React.createElement("p", null, "Propietario: ", React.createElement("strong", null, isOwnItem ? 'Tú' : item.ownerName))

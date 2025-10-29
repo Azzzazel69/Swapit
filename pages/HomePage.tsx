@@ -108,7 +108,7 @@ const HomePage = () => {
         getEmptyMessage()
       )
     ) : (
-      React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
+      React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
         filteredItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item }))
       )
     )

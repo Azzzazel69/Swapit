@@ -197,7 +197,7 @@ const MyItemsPage = () => {
     items.length === 0 ? (
       React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo.")
     ) : (
-      React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
+      React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
         items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true }))
       )
     ),
