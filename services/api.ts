@@ -1,18 +1,22 @@
-import { ExchangeStatus } from './types.js';
-import { CATEGORIES_WITH_SUBCATEGORIES } from './constants.js';
+import { ExchangeStatus } from '../types.js';
+import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.js';
 
 let users = [];
 let items = [];
 let exchanges = [];
+let chats = [];
 
 const setupInitialData = () => {
     users = [];
     items = [];
     exchanges = [];
+    chats = [];
 
     const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
     const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Vehículos'] };
-    users.push(alice, bob);
+    const admin = { id: '3', name: 'Admin', email: 'admin@example.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
+
+    users.push(alice, bob, admin);
 
     items = [
         { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Una bicicleta de carretera clásica de 10 velocidades de los años 80. Bien cuidada y recién revisada.', imageUrls: ['https://images.unsplash.com/photo-1559348349-36de83b9e11e?w=500', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500'], category: 'Vehículos', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
@@ -21,14 +25,6 @@ const setupInitialData = () => {
         { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Nintendo Switch con poco uso, incluye dos juegos: Zelda y Mario Kart 8.', imageUrls: ['https://images.unsplash.com/photo-1612036782180-6f0b6cd84627?w=500', 'https://images.unsplash.com/photo-1589254065909-b7086229d08c?w=500'], category: 'Electrónica', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString() },
         { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Dron compacto y potente, perfecto para principiantes. Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: ['https://images.unsplash.com/photo-1607621247161-1e24a5b9b8b0?w=500', 'https://images.unsplash.com/photo-1507563589139-d3c2e7d7a2e8?w=500'], category: 'Electrónica', createdAt: new Date().toISOString() },
         { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada, en excelentes condiciones. Estilo atemporal.', imageUrls: ['https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?w=500', 'https://images.unsplash.com/photo-1611312449412-6cefac5dc2d0?w=500'], category: 'Ropa', createdAt: new Date().toISOString() },
-        { id: '107', userId: '1', ownerName: 'Ana', title: 'Teclado Mecánico', description: 'Teclado mecánico Keychron K2 con switches marrones. Inalámbrico y retroiluminado. Gran experiencia de escritura.', imageUrls: ['https://images.unsplash.com/photo-1618384887924-2c8ab63a6739?w=500', 'https://images.unsplash.com/photo-1595044485097-6a1b39923831?w=500'], category: 'Electrónica', createdAt: new Date().toISOString() },
-        { id: '108', userId: '2', ownerName: 'Benito', title: 'Telescopio', description: 'Telescopio Celestron AstroMaster 70AZ. Bueno para ver la luna y los planetas. Viene con trípode.', imageUrls: ['https://images.unsplash.com/photo-1534951332095-78e8a2a1d827?w=500', 'https://images.unsplash.com/photo-1608222351213-8241470205ed?w=500'], category: 'Otros', createdAt: new Date().toISOString() },
-        { id: '109', userId: '1', ownerName: 'Ana', title: 'Juego de Cuchillos de Cocina', description: 'Juego de cuchillos de acero inoxidable de alto carbono. Incluye 6 cuchillos, tijeras y afilador.', imageUrls: ['https://images.unsplash.com/photo-1620714243144-2ab34f653452?w=500', 'https://images.unsplash.com/photo-1587116986950-a7810e4a7433?w=500'], category: 'Hogar', createdAt: new Date().toISOString() },
-        { id: '110', userId: '2', ownerName: 'Benito', title: 'Esterilla de Yoga', description: 'Esterilla de yoga gruesa y antideslizante. Material ecológico. Incluye correa de transporte. Poco uso.', imageUrls: ['https://images.unsplash.com/photo-1599447462852-c2c62c041cb3?w=500', 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500'], category: 'Otros', createdAt: new Date().toISOString() },
-        { id: '111', userId: '1', ownerName: 'Ana', title: 'Estantería Moderna', description: 'Estantería de 5 niveles de estilo industrial. Marco de madera y metal. Fácil de montar.', imageUrls: ['https://images.unsplash.com/photo-1594294314781-58356b6070e6?w=500', 'https://images.unsplash.com/photo-1618221354067-852c00ac3438?w=500'], category: 'Muebles', createdAt: new Date().toISOString() },
-        { id: '112', userId: '2', ownerName: 'Benito', title: 'Auriculares Sony WH-1000XM4', description: 'Auriculares con cancelación de ruido líder en la industria. Excelente calidad de sonido y duración de la batería.', imageUrls: ['https://images.unsplash.com/photo-1623998061093-a45457f84860?w=500', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'], category: 'Electrónica', createdAt: new Date().toISOString() },
-        { id: '113', userId: '1', ownerName: 'Ana', title: 'Olla Instant Pot', description: 'Olla a presión eléctrica 7 en 1. Capacidad de 6 litros. Usada un par de veces, funciona perfectamente.', imageUrls: ['https://images.unsplash.com/photo-1632223871926-c2057d1d2833?w=500', 'https://images.unsplash.com/photo-1604542568894-850f39e32560?w=500'], category: 'Hogar', createdAt: new Date().toISOString() },
-        { id: '114', userId: '2', ownerName: 'Benito', title: 'MacBook Air M1', description: 'MacBook Air 2020 con chip M1, 8GB RAM, 256GB SSD. Color Gris Espacial. Excelente estado con caja original.', imageUrls: ['https://images.unsplash.com/photo-1622438867332-3f173b75a13d?w=500', 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500'], category: 'Electrónica', createdAt: new Date().toISOString() },
     ];
 };
 
@@ -124,9 +120,8 @@ class ApiClient {
           id: `item-${Date.now()}`,
           userId: currentUser.id,
           ownerName: currentUser.name,
-          imageUrls: [`https://picsum.photos/seed/${Date.now()}/400/300`, `https://picsum.photos/seed/${Date.now()+1}/400/300`],
+          ...itemData,
           createdAt: new Date().toISOString(),
-          ...itemData
       };
       items.unshift(newItem);
       return newItem;
@@ -138,7 +133,55 @@ class ApiClient {
       if (!currentUser) {
           throw new Error('Autenticación requerida');
       }
-      return exchanges.filter(ex => ex.ownerId === currentUser.id || ex.requesterId === currentUser.id);
+      const userExchanges = exchanges.filter(ex => ex.ownerId === currentUser.id || ex.requesterId === currentUser.id);
+
+      // Populate item details
+      return userExchanges.map(ex => ({
+          ...ex,
+          requestedItem: items.find(item => item.id === ex.requestedItemId),
+          offeredItems: ex.offeredItemIds.map(id => items.find(item => item.id === id)),
+      }));
+  }
+
+  async createExchangeProposal(proposal) {
+      await this.simulateDelay();
+      const requester = this._getCurrentUserFromToken();
+      if (!requester) throw new Error('Autenticación requerida');
+      
+      const requestedItem = await this.getItemById(proposal.requestedItemId);
+      if (!requestedItem) throw new Error('Artículo solicitado no encontrado.');
+
+      const owner = users.find(u => u.id === requestedItem.userId);
+      if (!owner) throw new Error('Propietario del artículo no encontrado.');
+
+      const newExchange = {
+          id: `ex-${Date.now()}`,
+          requesterId: requester.id,
+          requesterName: requester.name,
+          ownerId: owner.id,
+          ownerName: owner.name,
+          requestedItemId: proposal.requestedItemId,
+          offeredItemIds: proposal.offeredItemIds,
+          status: ExchangeStatus.Pending,
+          createdAt: new Date().toISOString(),
+      };
+      exchanges.unshift(newExchange);
+      
+      const newChat = {
+          id: newExchange.id, // Use exchange ID as chat ID
+          participantIds: [requester.id, owner.id],
+          messages: [
+              {
+                  id: `msg-${Date.now()}`,
+                  senderId: requester.id,
+                  text: proposal.message,
+                  timestamp: new Date().toISOString(),
+              }
+          ]
+      };
+      chats.unshift(newChat);
+
+      return newExchange;
   }
 
   async updateExchangeStatus(exchangeId, status) {
@@ -149,6 +192,39 @@ class ApiClient {
       if (currentUser?.id !== exchange.ownerId) throw new Error('Permiso denegado.');
       exchange.status = status;
       return { ...exchange };
+  }
+  
+  async getChat(chatId) {
+    await this.simulateDelay(200);
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat || !chat.participantIds.includes(currentUser.id)) {
+        throw new Error('Chat no encontrado o acceso denegado.');
+    }
+    return chat;
+  }
+  
+  async sendMessage(chatId, text) {
+      await this.simulateDelay(150);
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      
+      const chat = chats.find(c => c.id === chatId);
+      if (!chat || !chat.participantIds.includes(currentUser.id)) {
+          throw new Error('Chat no encontrado o acceso denegado.');
+      }
+      
+      const newMessage = {
+          id: `msg-${Date.now()}`,
+          senderId: currentUser.id,
+          text,
+          timestamp: new Date().toISOString(),
+      };
+      
+      chat.messages.push(newMessage);
+      return newMessage;
   }
 
   async updateUserPreferences(preferences) {

@@ -19,7 +19,7 @@ const Header = () => {
     React.createElement(React.Fragment, null,
       React.createElement(NavLink, { to: "/", className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}` }, "Inicio"),
       React.createElement(NavLink, { to: "/my-items", className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}` }, "Mis Artículos"),
-      React.createElement(NavLink, { to: "/exchanges", className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}` }, "Intercambios"),
+      React.createElement(NavLink, { to: "/exchanges", className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}` }, "Buzón"),
       React.createElement(NavLink, { to: "/profile", className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}` }, "Perfil")
     )
   );

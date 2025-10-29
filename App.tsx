@@ -17,6 +17,7 @@ import TermsOfServicePage from './pages/TermsOfServicePage.js';
 import CookiePolicyPage from './pages/CookiePolicyPage.js';
 import CookieBanner from './components/CookieBanner.js';
 import { useColorTheme } from './hooks/useColorTheme.js';
+import ChatDetailPage from './pages/ChatDetailPage.js';
 
 const App = () => {
   return React.createElement(AuthProvider, null,
@@ -72,6 +73,7 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ItemDetailPage, null)) }),
     React.createElement(Route, { path: "/my-items", element: React.createElement(ProtectedRoute, null, React.createElement(MyItemsPage, null)) }),
     React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ExchangesPage, null)) }),
+    React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ChatDetailPage, null)) }),
     React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),
 
     React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })

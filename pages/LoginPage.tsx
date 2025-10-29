@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -37,16 +38,11 @@ const LoginPage = () => {
     }
   };
   
-  const handleSkipLogin = async () => {
+  const handleDevLogin = async (userEmail, userPass) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Pick a random user to login
-      const randomUser = Math.random() > 0.5 
-        ? { email: 'ana@example.com', pass: 'Password123' } 
-        : { email: 'benito@example.com', pass: 'Password456' };
-      
-      const { token } = await api.login(randomUser.email, randomUser.pass);
+      const { token } = await api.login(userEmail, userPass);
       await login(token);
       navigate('/');
     } catch (err) {
@@ -108,14 +104,11 @@ const LoginPage = () => {
           "crea una nueva cuenta"
         )
       ),
-      React.createElement("div", {className: "mt-4"},
-        React.createElement(Button, { 
-          onClick: handleSkipLogin, 
-          isLoading: isLoading, 
-          variant: "secondary",
-          className: "w-full", 
-          children: "Omitir Registro (Desarrollo)" 
-        })
+      React.createElement("div", {className: "mt-6 border-t pt-4 space-y-2"},
+        React.createElement("p", {className: "text-center text-xs text-gray-500"}, "ACCESO RÁPIDO (DESARROLLO)"),
+        React.createElement(Button, { onClick: () => handleDevLogin('ana@example.com', 'Password123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Ana" }),
+        React.createElement(Button, { onClick: () => handleDevLogin('benito@example.com', 'Password456'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Benito" }),
+        React.createElement(Button, { onClick: () => handleDevLogin('admin@example.com', 'AdminPassword123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Admin" })
       )
     )
   );

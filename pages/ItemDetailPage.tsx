@@ -6,6 +6,9 @@
 
 
 
+
+
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
@@ -15,6 +18,7 @@ import { ICONS } from '../constants.js';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.js';
+import ExchangeProposalModal from '../components/ExchangeProposalModal.js';
 
 // FIX: Refactored React.createElement calls to pass children as arguments instead of a prop
 // to resolve TypeScript overload ambiguity for intrinsic elements like 'div'.
@@ -27,7 +31,8 @@ const ImageLightbox = (props) => {
     React.createElement("div", 
       { 
         className: "relative max-w-4xl max-h-4/5 p-4", 
-        onClick: e => e.stopPropagation()
+        // FIX: Added type to event object to help TypeScript infer correct element type.
+        onClick: (e: React.MouseEvent) => e.stopPropagation()
       },
       React.createElement("img", { src: props.imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
       React.createElement("button", 
@@ -51,7 +56,10 @@ const ItemDetailPage = () => {
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userItems, setUserItems] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   useEffect(() => {
     const fetchItem = async () => {
       if (!itemId) {
@@ -78,8 +86,33 @@ const ItemDetailPage = () => {
     fetchItem();
   }, [itemId]);
   
-  const handleSwapClick = () => {
-    alert(`Proponiendo un intercambio por ${item?.title}. Por favor, selecciona uno de tus artículos.`);
+  const handleSwapClick = async () => {
+    if (!user) return;
+    const currentUserItems = await api.getUserItems(user.id);
+    if (currentUserItems.length === 0) {
+      alert("Necesitas tener artículos subidos para poder proponer un intercambio.");
+      return;
+    }
+    setUserItems(currentUserItems);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitProposal = async ({ offeredItemIds, message }) => {
+      if (!itemId) return;
+      setIsSubmitting(true);
+      try {
+          const newExchange = await api.createExchangeProposal({
+              requestedItemId: itemId,
+              offeredItemIds,
+              message,
+          });
+          setIsModalOpen(false);
+          navigate(`/chat/${newExchange.id}`);
+      } catch (err) {
+          setError(err.message || 'Error al crear la propuesta.');
+      } finally {
+          setIsSubmitting(false);
+      }
   };
 
   if (loading) {
@@ -98,6 +131,14 @@ const ItemDetailPage = () => {
 
   return React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl mx-auto p-4 sm:p-6 lg:p-8" },
     lightboxOpen && selectedImage && React.createElement(ImageLightbox, { imageUrl: selectedImage, onClose: () => setLightboxOpen(false) }),
+    isModalOpen && React.createElement(ExchangeProposalModal, {
+        isOpen: isModalOpen,
+        onClose: () => setIsModalOpen(false),
+        userItems: userItems,
+        targetItem: item,
+        onSubmit: handleSubmitProposal,
+        isLoading: isSubmitting,
+    }),
     React.createElement("button", { onClick: () => navigate(-1), className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline mb-4` },
       "← Volver a los artículos"
     ),
@@ -139,7 +180,7 @@ const ItemDetailPage = () => {
 // FIX: Pass children as a prop to the Button component to satisfy the type checker.
           React.createElement(Button, { size: "lg", onClick: handleSwapClick, className: "w-full", children: React.createElement("div", { className: "flex items-center gap-2" },
               ICONS.swap,
-              "Proponer Intercambio"
+              "!te lo cambio!"
             )
           })
         )
