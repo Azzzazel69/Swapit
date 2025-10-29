@@ -113,24 +113,24 @@ const Header = () => {
             user ? (
               React.createElement(React.Fragment, null,
                 renderNavLinks(true),
-                React.createElement(NavLink, { 
-                    to: "/exchanges", 
-                    title: "Buzón",
-                    className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-3` 
-                  },
-                    React.createElement("div", { className: "relative" },
-                      ICONS.envelope,
-                      hasNotifications && (
-                        React.createElement("span", { className: "absolute top-0 right-0 block h-2.5 w-2.5 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" })
-                      )
-                    ),
-                    React.createElement("span", null, "Buzón")
-                  ),
                 React.createElement("div", { className: "border-t border-gray-200 dark:border-gray-700 pt-4 pb-3" },
                    React.createElement("div", { className: "flex items-center px-2" },
                       React.createElement("span", { className: "text-gray-600 dark:text-gray-300 text-base font-medium" }, "Hola, ", user.name)
                    ),
                    React.createElement("div", { className: "mt-3 px-2 space-y-1" },
+                      React.createElement(NavLink, { 
+                          to: "/exchanges", 
+                          title: "Buzón",
+                          className: ({ isActive }) => `w-full text-left flex items-center gap-3 rounded-md py-2 px-3 text-base font-medium ${isActive ? activeLinkClass : inactiveLinkClass}`
+                        },
+                          React.createElement("div", { className: "relative" },
+                            ICONS.envelope,
+                            hasNotifications && (
+                              React.createElement("span", { className: "absolute top-0 right-0 block h-2.5 w-2.5 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" })
+                            )
+                          ),
+                          React.createElement("span", null, "Buzón")
+                        ),
                       React.createElement("button", { onClick: logout, className: "w-full text-left flex items-center gap-2 rounded-md py-2 px-3 text-base font-medium text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700" },
                          ICONS.logout, " Cerrar Sesión"
                       )

@@ -9,7 +9,7 @@ import Button from '../components/Button.js';
 
 // FIX: Changed component signature to use props object directly to avoid TypeScript overload resolution issues with React.createElement.
 const ExchangeCard = (props) => {
-    const { exchange, perspective, onAccept, onReject, onVote, isUpdating } = props;
+    const { exchange, perspective, onVote, isUpdating } = props;
     const isOwner = perspective === 'owner';
     const statusColor = {
         [ExchangeStatus.Pending]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
@@ -37,15 +37,6 @@ const ExchangeCard = (props) => {
             React.createElement("span", { className: `px-2 py-1 text-xs font-semibold rounded-full ${statusColor[exchange.status]}` },
                 exchange.status
             ),
-            isOwner && exchange.status === ExchangeStatus.Pending && (
-                // FIX: Added type to event object to help TypeScript infer correct element type.
-                React.createElement("div", { className: "flex gap-2 mt-2", onClick: (e: React.MouseEvent) => e.preventDefault() },
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
-                    React.createElement(Button, { size: "sm", variant: "primary", onClick: () => onAccept(exchange.id), isLoading: isUpdating, children: "Aceptar" }),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
-                    React.createElement(Button, { size: "sm", variant: "danger", onClick: () => onReject(exchange.id), isLoading: isUpdating, children: "Rechazar" })
-                )
-            ),
             exchange.status === ExchangeStatus.Accepted && (
                 React.createElement("div", { className: "flex items-center gap-2 mt-2", onClick: (e) => e.preventDefault() },
                     canVote && React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => onVote(exchange.id), isLoading: isUpdating, children: "Valorar Trueque" }),
@@ -71,7 +62,7 @@ const ExchangesPage = () => {
   const fetchExchanges = useCallback(async () => {
     if (!user) return;
     try {
-      if (loading) setLoading(true); 
+      if (!loading) setLoading(true); 
       const allExchanges = await api.getExchanges();
       setIncoming(allExchanges.filter(ex => ex.ownerId === user.id));
       setOutgoing(allExchanges.filter(ex => ex.requesterId === user.id));
@@ -85,19 +76,8 @@ const ExchangesPage = () => {
 
   useEffect(() => {
     fetchExchanges();
-  }, [fetchExchanges]);
-
-  const handleUpdateStatus = async (exchangeId, status) => {
-    setUpdatingExchangeId(exchangeId);
-    try {
-        await api.updateExchangeStatus(exchangeId, status);
-        await fetchExchanges();
-    } catch (err) {
-        setError(err.message || `Error al actualizar el estado del intercambio.`);
-    } finally {
-        setUpdatingExchangeId(null);
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleVote = async (exchangeId) => {
     setUpdatingExchangeId(exchangeId);
@@ -124,39 +104,35 @@ const ExchangesPage = () => {
     React.createElement("h1", { className: "text-3xl font-bold mb-6 text-gray-900 dark:text-white" }, "Buzón de Intercambios"),
     React.createElement("div", { className: "space-y-8" },
       React.createElement("div", null,
-        React.createElement("h2", { className: "text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600" }, "Solicitudes Entrantes"),
+        React.createElement("h2", { className: "text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600" }, "Propuestas Recibidas"),
         incoming.length > 0 ? (
           React.createElement("div", { className: "space-y-4" },
             incoming.map(ex => React.createElement(ExchangeCard, { 
                 key: ex.id, 
                 exchange: ex, 
                 perspective: "owner", 
-                onAccept: (id) => handleUpdateStatus(id, ExchangeStatus.Accepted),
-                onReject: (id) => handleUpdateStatus(id, ExchangeStatus.Rejected),
                 onVote: handleVote,
                 isUpdating: updatingExchangeId === ex.id
             }))
           )
         ) : (
-          React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, "No tienes solicitudes de intercambio entrantes.")
+          React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, "No tienes propuestas de intercambio recibidas.")
         )
       ),
       React.createElement("div", null,
-        React.createElement("h2", { className: "text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600" }, "Solicitudes Salientes"),
+        React.createElement("h2", { className: "text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600" }, "Propuestas Enviadas"),
         outgoing.length > 0 ? (
           React.createElement("div", { className: "space-y-4" },
             outgoing.map(ex => React.createElement(ExchangeCard, { 
                 key: ex.id, 
                 exchange: ex, 
                 perspective: "requester",
-                onAccept: () => {}, 
-                onReject: () => {},
                 onVote: handleVote,
                 isUpdating: updatingExchangeId === ex.id
             }))
           )
         ) : (
-          React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, "No has realizado ninguna solicitud de intercambio.")
+          React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, "No has enviado ninguna propuesta de intercambio.")
         )
       )
     )

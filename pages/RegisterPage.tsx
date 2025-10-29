@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useMemo } from 'react';
 import { api } from '../services/api.js';
 import { Link, useNavigate } from 'react-router-dom';
@@ -74,6 +71,7 @@ const RegisterPage = () => {
     setError(null);
     try {
       await api.register(name, email, password);
+      localStorage.setItem('cookie_consent', 'accepted');
       const { token } = await api.login(email, password);
       await login(token);
       navigate('/onboarding');
@@ -152,7 +150,8 @@ const RegisterPage = () => {
                         target: "_blank",
                         rel: "noopener noreferrer",
                         className: `font-medium ${theme.textColor} ${theme.hoverTextColor} underline`
-                    }, "Términos de Servicio")
+                    }, "Términos de Servicio"),
+                    " y la Política de Cookies."
                 )
             )
         ),

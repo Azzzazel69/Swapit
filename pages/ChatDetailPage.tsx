@@ -20,7 +20,7 @@ const ChatDetailPage = () => {
     const [error, setError] = useState('');
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+    const [updatingItemId, setUpdatingItemId] = useState(null);
     const { showConfetti } = useConfetti();
     const messagesEndRef = useRef(null);
 
@@ -34,12 +34,15 @@ const ChatDetailPage = () => {
             const { chat: chatData, exchange: exchangeData } = await api.getChatAndExchangeDetails(exchangeId);
             setChat(chatData);
             setExchange(exchangeData);
+            if (exchangeData.status === ExchangeStatus.Accepted) {
+                showConfetti();
+            }
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, [exchangeId]);
+    }, [exchangeId, showConfetti]);
 
     useEffect(() => {
         fetchChatDetails();
@@ -64,23 +67,17 @@ const ChatDetailPage = () => {
             setIsSending(false);
         }
     };
-
-    const handleUpdateStatus = async (status) => {
+    
+    const handleUpdateItemStatus = async (itemId, status) => {
         if (!exchangeId) return;
-        setIsUpdatingStatus(true);
+        setUpdatingItemId(itemId);
         try {
-            await api.updateExchangeStatus(exchangeId, status);
-            if (status === ExchangeStatus.Accepted) {
-                showConfetti();
-            } else if (status === ExchangeStatus.Rejected) {
-                // Navegar después de un breve retraso para que el usuario vea el mensaje
-                setTimeout(() => navigate('/exchanges'), 2000);
-            }
+            await api.updateItemInExchange(exchangeId, itemId, status);
             await fetchChatDetails();
         } catch (err) {
             setError(err.message);
         } finally {
-            setIsUpdatingStatus(false);
+            setUpdatingItemId(null);
         }
     };
 
@@ -101,7 +98,61 @@ const ChatDetailPage = () => {
         { id: exchange.ownerId, name: exchange.ownerName };
 
     const isOwner = user.id === exchange.ownerId;
-    const canTakeAction = isOwner && exchange.status === ExchangeStatus.Pending;
+
+    const renderNegotiationItems = () => {
+        const requestedItem = exchange.allItems.find(item => item.id === exchange.requestedItemId);
+        const offeredItems = exchange.allItems.filter(item => item.id !== exchange.requestedItemId);
+        
+        return React.createElement("div", { className: "border rounded-lg p-3 my-4 bg-gray-50 dark:bg-gray-700/50" },
+            React.createElement("h3", { className: "font-bold text-center mb-3 text-lg" }, "Artículos en Negociación"),
+            React.createElement("div", { className: "space-y-4" },
+                React.createElement(NegotiationItemCard, { item: requestedItem, isRequested: true, exchange: exchange, user: user, onUpdate: handleUpdateItemStatus, isUpdating: updatingItemId === requestedItem.id }),
+                React.createElement("div", { className: "flex items-center text-center" },
+                    React.createElement("div", { className: "flex-grow border-t border-gray-300 dark:border-gray-600" }),
+                    React.createElement("span", { className: `flex-shrink mx-2 text-gray-500 dark:text-gray-400 transform transition-transform duration-500 hover:rotate-180`}, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" }))),
+                    React.createElement("div", { className: "flex-grow border-t border-gray-300 dark:border-gray-600" })
+                ),
+                React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3" },
+                    offeredItems.map(item => React.createElement(NegotiationItemCard, { key: item.id, item: item, isRequested: false, exchange: exchange, user: user, onUpdate: handleUpdateItemStatus, isUpdating: updatingItemId === item.id }))
+                )
+            )
+        );
+    };
+    
+    const NegotiationItemCard = ({ item, isRequested, exchange, user, onUpdate, isUpdating }) => {
+        const status = exchange.itemStatus[item.id];
+        const canTakeAction = isOwner && status === 'PENDING' && !isRequested;
+
+        const statusStyles = {
+            PENDING: 'border-gray-300 dark:border-gray-600',
+            ACCEPTED: 'border-green-500 bg-green-50 dark:bg-green-900/50',
+            REJECTED: 'border-red-500 bg-red-50 dark:bg-red-900/50 opacity-70',
+        };
+
+        const StatusBadge = ({status}) => {
+            const badgeStyles = {
+                ACCEPTED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+                REJECTED: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+            };
+            if (status === 'PENDING') return null;
+            return React.createElement("div", {className: `absolute top-1 right-1 text-xs font-bold px-2 py-0.5 rounded-full ${badgeStyles[status]}`}, status);
+        };
+
+        return React.createElement("div", { className: `border-2 rounded-lg p-2 transition-all relative ${statusStyles[status]}` },
+            React.createElement(StatusBadge, { status: status }),
+            React.createElement("div", { className: "flex gap-3 items-center" },
+                React.createElement("img", { src: item.imageUrls[0], alt: item.title, className: "w-16 h-16 object-cover rounded-md" }),
+                React.createElement("div", { className: "flex-grow" },
+                    React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-400" }, isRequested ? `${otherUser.name} quiere:` : `${otherUser.name} ofrece:`),
+                    React.createElement(Link, { to: `/item/${item.id}`, className: "font-semibold hover:underline" }, item.title)
+                )
+            ),
+            canTakeAction && React.createElement("div", { className: "flex justify-end gap-2 mt-2" },
+                React.createElement(Button, { size: "sm", variant: "danger", onClick: () => onUpdate(item.id, 'REJECTED'), isLoading: isUpdating, children: "Rechazar" }),
+                React.createElement(Button, { size: "sm", variant: "primary", onClick: () => onUpdate(item.id, 'ACCEPTED'), isLoading: isUpdating, children: "Aceptar" })
+            )
+        );
+    };
 
     const renderMessage = (message) => {
         const isCurrentUser = message.senderId === user.id;
@@ -113,33 +164,10 @@ const ChatDetailPage = () => {
                 )
             );
         }
-
-        if (message.type === 'PROPOSAL') {
-            return React.createElement("div", { key: message.id, className: "my-2" },
-                React.createElement("div", { className: "text-center" },
-                  React.createElement("span", { className: "text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full" },
-                      `${exchange.requesterName} ha propuesto un intercambio`
-                  )
-                ),
-                React.createElement("p", {className: "text-sm text-gray-600 dark:text-gray-400 my-2"}, "Artículos ofrecidos:"),
-                React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-3 gap-2 my-2" },
-                    message.offeredItems.map(item => (
-                        React.createElement(Link, { to: `/item/${item.id}`, key: item.id, className: "block border rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors", target: "_blank" },
-                            React.createElement("img", { src: item.imageUrl, alt: item.title, className: "w-full h-16 object-cover rounded"}),
-                            React.createElement("p", { className: "text-xs mt-1 truncate font-semibold" }, item.title)
-                        )
-                    ))
-                ),
-                message.text && React.createElement("div", { className: `flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mt-2` },
-                    React.createElement("div", { className: `max-w-xs lg:max-w-md p-3 rounded-lg bg-gray-200 dark:bg-gray-700` },
-                        React.createElement("p", { className: "text-sm" }, message.text),
-                        React.createElement("p", { className: `text-xs mt-1 text-right text-gray-500` }, 
-                            new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        )
-                    )
-                )
-            );
-        }
+        
+        // The initial proposal message is now just text, items are rendered separately.
+        const isInitialProposal = chat.messages.findIndex(m => m.type === 'PROPOSAL') === chat.messages.indexOf(message);
+        if (isInitialProposal && !message.text) return null; // Hide empty initial message
 
         return React.createElement("div", { key: message.id, className: `flex ${isCurrentUser ? 'justify-end' : 'justify-start'}` },
             React.createElement("div", { className: `max-w-xs lg:max-w-md p-3 rounded-lg ${isCurrentUser ? `bg-gradient-to-r ${theme.bg} text-white` : 'bg-gray-200 dark:bg-gray-700'}` },
@@ -158,16 +186,15 @@ const ChatDetailPage = () => {
             ),
             React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-md flex-grow flex flex-col" },
                 React.createElement("div", { className: "p-4 border-b dark:border-gray-700" },
-                    React.createElement("h1", { className: "font-bold text-lg" }, "Conversación con ", React.createElement("span", {className: theme.textColor }, otherUser.name))
+                    React.createElement("h1", { className: "font-bold text-lg" }, 
+                        "Conversación con ", 
+                        React.createElement(Link, { to: `/user/${otherUser.id}?fromExchange=${exchange.id}`, className: `${theme.textColor} ${theme.hoverTextColor} hover:underline` }, otherUser.name)
+                    )
                 ),
                 React.createElement("div", { className: "flex-grow p-4 overflow-y-auto space-y-4" },
+                    renderNegotiationItems(),
                     chat.messages.map(renderMessage),
                     React.createElement("div", { ref: messagesEndRef })
-                ),
-
-                canTakeAction && React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-900 border-t dark:border-gray-700 flex justify-center gap-4" },
-                    React.createElement(Button, { variant: "danger", onClick: () => handleUpdateStatus(ExchangeStatus.Rejected), isLoading: isUpdatingStatus, children: "Rechazar Trato" }),
-                    React.createElement(Button, { variant: "primary", onClick: () => handleUpdateStatus(ExchangeStatus.Accepted), isLoading: isUpdatingStatus, children: "Aceptar Trato" })
                 ),
                 
                 React.createElement("div", { className: "p-4 border-t dark:border-gray-700" },
@@ -184,7 +211,7 @@ const ChatDetailPage = () => {
                         React.createElement(Button, { type: "submit", isLoading: isSending, children: "Enviar" })
                     ) :
                     React.createElement("p", { className: "text-center text-sm text-gray-500 dark:text-gray-400 font-semibold" },
-                        `Este intercambio fue ${exchange.status === ExchangeStatus.Accepted ? 'aceptado' : 'rechazado'}. El chat está cerrado.`
+                        `Negociación completada. El chat está cerrado.`
                     )
                 )
             )

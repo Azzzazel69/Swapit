@@ -15,9 +15,9 @@ import OnboardingPage from './pages/OnboardingPage.js';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
 import TermsOfServicePage from './pages/TermsOfServicePage.js';
 import CookiePolicyPage from './pages/CookiePolicyPage.js';
-import CookieBanner from './components/CookieBanner.js';
 import { useColorTheme } from './hooks/useColorTheme.js';
 import ChatDetailPage from './pages/ChatDetailPage.js';
+import UserProfilePage from './pages/UserProfilePage.js';
 import { ConfettiProvider } from './hooks/useConfetti.tsx';
 
 const App = () => {
@@ -30,8 +30,7 @@ const App = () => {
             React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6" },
               React.createElement(AppRoutes, null)
             ),
-            React.createElement(AppFooter, null),
-            React.createElement(CookieBanner, null)
+            React.createElement(AppFooter, null)
           )
         )
       )
@@ -78,6 +77,7 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ExchangesPage, null)) }),
     React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ChatDetailPage, null)) }),
     React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),
+    React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(UserProfilePage, null)) }),
 
     React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
   );

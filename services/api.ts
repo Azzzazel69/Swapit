@@ -111,6 +111,15 @@ class ApiClient {
       await this.simulateDelay();
       return items.filter(item => item.userId === userId);
   }
+
+  async getUserProfile(userId) {
+      await this.simulateDelay();
+      const user = users.find(u => u.id === userId);
+      if (!user) throw new Error("Usuario no encontrado.");
+      const userItems = items.filter(item => item.userId === userId && item.status === 'AVAILABLE');
+      const { password, email, ...publicProfile } = user;
+      return { ...publicProfile, items: userItems };
+  }
   
   async createItem(itemData) {
       await this.simulateDelay();
@@ -136,7 +145,9 @@ class ApiClient {
       if (!currentUser) {
           throw new Error('Autenticación requerida');
       }
-      const userExchanges = exchanges.filter(ex => ex.ownerId === currentUser.id || ex.requesterId === currentUser.id);
+      const userExchanges = exchanges.filter(ex => 
+        ex.requesterId === currentUser.id || ex.ownerId === currentUser.id
+      );
 
       // Populate item details
       return userExchanges.map(ex => ({
@@ -157,6 +168,12 @@ class ApiClient {
       const owner = users.find(u => u.id === requestedItem.userId);
       if (!owner) throw new Error('Propietario del artículo no encontrado.');
 
+      const allItemIdsInvolved = [proposal.requestedItemId, ...proposal.offeredItemIds];
+      const itemStatus = allItemIdsInvolved.reduce((acc, id) => {
+        acc[id] = 'PENDING';
+        return acc;
+      }, {});
+
       const newExchange = {
           id: `ex-${Date.now()}`,
           requesterId: requester.id,
@@ -165,6 +182,7 @@ class ApiClient {
           ownerName: owner.name,
           requestedItemId: proposal.requestedItemId,
           offeredItemIds: proposal.offeredItemIds,
+          itemStatus: itemStatus,
           status: ExchangeStatus.Pending,
           votedByOwner: false,
           votedByRequester: false,
@@ -179,7 +197,6 @@ class ApiClient {
           senderId: requester.id,
           timestamp: new Date().toISOString(),
           type: 'PROPOSAL',
-          offeredItems: offeredItemsDetails.map(item => ({ id: item.id, title: item.title, imageUrl: item.imageUrls[0] })),
           text: proposal.message,
       };
 
@@ -192,60 +209,6 @@ class ApiClient {
 
       return newExchange;
   }
-
-  async updateExchangeStatus(exchangeId, status) {
-      await this.simulateDelay();
-      const exchange = exchanges.find(ex => ex.id === exchangeId);
-      if (!exchange) throw new Error('Intercambio no encontrado');
-      
-      const currentUser = this._getCurrentUserFromToken();
-      if (currentUser?.id !== exchange.ownerId) throw new Error('Permiso denegado.');
-      
-      exchange.status = status;
-
-      if (status === ExchangeStatus.Accepted) {
-        const involvedItemIds = [exchange.requestedItemId, ...exchange.offeredItemIds];
-        
-        items.forEach(item => {
-            if (involvedItemIds.includes(item.id)) {
-                item.status = 'EXCHANGED';
-            }
-        });
-
-        exchanges.forEach(ex => {
-            if (ex.id !== exchangeId && ex.status === ExchangeStatus.Pending) {
-                const otherInvolvedItems = [ex.requestedItemId, ...ex.offeredItemIds];
-                if (otherInvolvedItems.some(id => involvedItemIds.includes(id))) {
-                    ex.status = ExchangeStatus.Rejected;
-                }
-            }
-        });
-      }
-
-      const chat = chats.find(c => c.id === exchangeId);
-      if (chat) {
-          let systemMessageText = '';
-          if (status === ExchangeStatus.Accepted) {
-              const owner = users.find(u => u.id === exchange.ownerId);
-              const requester = users.find(u => u.id === exchange.requesterId);
-              systemMessageText = `¡TRATO ACEPTADO! Aquí están los datos para coordinar el intercambio: ${owner.name} (tel: ${owner.phone}) y ${requester.name} (tel: ${requester.phone}).`;
-          } else if (status === ExchangeStatus.Rejected) {
-              systemMessageText = `Trato rechazado por ${currentUser.name}.`;
-          }
-
-          if (systemMessageText) {
-              chat.messages.push({
-                  id: `msg-system-${Date.now()}`,
-                  senderId: 'system',
-                  text: systemMessageText,
-                  timestamp: new Date().toISOString(),
-                  type: 'SYSTEM',
-              });
-          }
-      }
-
-      return { ...exchange };
-  }
   
   async getChatAndExchangeDetails(chatId) {
     await this.simulateDelay(200);
@@ -255,16 +218,14 @@ class ApiClient {
     const chat = chats.find(c => c.id === chatId);
     const exchange = exchanges.find(ex => ex.id === chatId);
 
-    if (!chat || !exchange || !chat.participantIds.includes(currentUser.id)) {
+    if (!chat || !exchange || (chat.participantIds.indexOf(currentUser.id) === -1)) {
         throw new Error('Chat no encontrado o acceso denegado.');
     }
     
-    // Populate full item details in the exchange part of the response
-    const detailedExchange = {
-        ...exchange,
-        requestedItem: items.find(item => item.id === exchange.requestedItemId),
-        offeredItems: exchange.offeredItemIds.map(id => items.find(item => item.id === id)),
-    };
+    const allItemIds = [...new Set([exchange.requestedItemId, ...exchange.offeredItemIds])];
+    const allItems = allItemIds.map(id => items.find(item => item.id === id)).filter(Boolean);
+
+    const detailedExchange = { ...exchange, allItems };
     
     return { chat, exchange: detailedExchange };
   }
@@ -275,7 +236,7 @@ class ApiClient {
       if (!currentUser) throw new Error('Autenticación requerida');
       
       const chat = chats.find(c => c.id === chatId);
-      if (!chat || !chat.participantIds.includes(currentUser.id)) {
+      if (!chat || (chat.participantIds.indexOf(currentUser.id) === -1)) {
           throw new Error('Chat no encontrado o acceso denegado.');
       }
       
@@ -290,6 +251,81 @@ class ApiClient {
       chat.messages.push(newMessage);
       return newMessage;
   }
+
+    async updateItemInExchange(exchangeId, itemId, status) {
+        await this.simulateDelay();
+        const currentUser = this._getCurrentUserFromToken();
+        const exchange = exchanges.find(ex => ex.id === exchangeId);
+
+        if (!exchange) throw new Error('Intercambio no encontrado');
+        if (currentUser.id !== exchange.ownerId) throw new Error('No autorizado para modificar este intercambio');
+        if (!exchange.itemStatus[itemId]) throw new Error('Artículo no encontrado en este intercambio');
+
+        exchange.itemStatus[itemId] = status;
+
+        // Check if all items have been decided
+        const allDecided = Object.values(exchange.itemStatus).every(s => s !== 'PENDING');
+
+        if (allDecided) {
+            const acceptedItems = Object.keys(exchange.itemStatus).filter(id => exchange.itemStatus[id] === 'ACCEPTED');
+            const acceptedByOwner = acceptedItems.filter(id => exchange.offeredItemIds.includes(id));
+            
+            // For this simplified model, a deal is accepted if the owner accepts at least one item.
+            if (acceptedByOwner.length > 0) {
+                exchange.status = ExchangeStatus.Accepted;
+                const finalTradeItems = [exchange.requestedItemId, ...acceptedByOwner];
+                items.forEach(item => {
+                    if (finalTradeItems.includes(item.id)) {
+                        item.status = 'EXCHANGED';
+                    }
+                });
+                // Auto-reject other exchanges involving these items
+                exchanges.forEach(ex => {
+                    if (ex.id !== exchangeId && ex.status === ExchangeStatus.Pending) {
+                        const otherInvolvedItems = [ex.requestedItemId, ...ex.offeredItemIds];
+                        if (otherInvolvedItems.some(id => finalTradeItems.includes(id))) {
+                            ex.status = ExchangeStatus.Rejected;
+                        }
+                    }
+                });
+                const owner = users.find(u => u.id === exchange.ownerId);
+                const requester = users.find(u => u.id === exchange.requesterId);
+                const systemMessageText = `¡TRATO ACEPTADO! Aquí están los datos para coordinar: ${owner.name} (tel: ${owner.phone}, dir: ${owner.location.address}) y ${requester.name} (tel: ${requester.phone}, dir: ${requester.location.address}).`;
+                chats.find(c => c.id === exchangeId).messages.push({
+                    id: `msg-system-${Date.now()}`, senderId: 'system', text: systemMessageText, timestamp: new Date().toISOString(), type: 'SYSTEM'
+                });
+
+            } else {
+                exchange.status = ExchangeStatus.Rejected;
+                chats.find(c => c.id === exchangeId).messages.push({
+                    id: `msg-system-${Date.now()}`, senderId: 'system', text: 'El trato ha sido rechazado ya que no se aceptó ningún artículo.', timestamp: new Date().toISOString(), type: 'SYSTEM'
+                });
+            }
+        }
+        return exchange;
+    }
+
+    async addCounterOffer(exchangeId, itemIds) {
+        await this.simulateDelay();
+        const exchange = exchanges.find(ex => ex.id === exchangeId);
+        if (!exchange) throw new Error("Intercambio no encontrado");
+
+        itemIds.forEach(itemId => {
+            if (!exchange.offeredItemIds.includes(itemId)) {
+                exchange.offeredItemIds.push(itemId);
+                exchange.itemStatus[itemId] = 'PENDING';
+            }
+        });
+        
+        const counterOfferItems = itemIds.map(id => items.find(i => i.id === id));
+        chats.find(c => c.id === exchangeId).messages.push({
+            id: `msg-system-${Date.now()}`, senderId: 'system', 
+            text: `${exchange.ownerName} ha añadido ${counterOfferItems.map(i => i.title).join(', ')} a la negociación.`, 
+            timestamp: new Date().toISOString(), type: 'SYSTEM'
+        });
+
+        return exchange;
+    }
 
   async voteForExchange(exchangeId) {
     await this.simulateDelay();
@@ -311,8 +347,9 @@ class ApiClient {
 
     if (exchange.votedByOwner && exchange.votedByRequester) {
         exchange.status = ExchangeStatus.Completed;
-        const involvedItemIds = [exchange.requestedItemId, ...exchange.offeredItemIds];
-        items = items.filter(item => !involvedItemIds.includes(item.id));
+        const involvedItemIds = [exchange.requestedItemId, ...exchange.offeredItemIds].filter(id => exchange.itemStatus[id] === 'ACCEPTED');
+        // This logic is simplified; in a real app, you might not delete but archive them.
+        // items = items.filter(item => !involvedItemIds.includes(item.id));
     }
 
     return exchange;
