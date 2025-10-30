@@ -193,7 +193,7 @@ const LoginPage = () => {
         React.createElement("p", {className: "text-center text-xs text-gray-500"}, "ACCESO RÁPIDO (DESARROLLO)"),
         React.createElement(Button, { onClick: () => handleDevLogin('ana@example.com', 'Password123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Ana" }),
         React.createElement(Button, { onClick: () => handleDevLogin('benito@example.com', 'Password456'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Benito" }),
-        React.createElement(Button, { onClick: () => handleDevLogin('admin@example.com', 'AdminPassword123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Admin" })
+        React.createElement(Button, { onClick: () => handleDevLogin('azzazel69@gmail.com', 'AdminPassword123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Admin" })
       )
     )
   );

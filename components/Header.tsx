@@ -30,7 +30,7 @@ const Header = () => {
           ),
 
           // Center: Logo
-          React.createElement("div", { className: "flex-shrink-0 px-4" },
+          React.createElement("div", { className: "flex-shrink-0 px-4 flex items-center gap-2" },
             React.createElement(Link, { 
               to: user ? "/profile?action=add" : "/", 
               className: `flex items-center gap-2 text-3xl font-bold ${theme.textGradient} ${user ? 'transition-transform hover:scale-105' : ''}`,
@@ -38,7 +38,8 @@ const Header = () => {
             },
               React.createElement("span", { className: "transform rotate-12" }, ICONS.swap),
               "Swapit"
-            )
+            ),
+            React.createElement("span", { className: "text-sm italic text-gray-400 self-end mb-1" }, "(beta)")
           ),
 
           // Right side

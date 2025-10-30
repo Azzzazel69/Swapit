@@ -26,7 +26,7 @@ const App = () => {
         React.createElement(HashRouter, null,
           React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
             React.createElement(Header, null),
-            React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6" },
+            React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6 flex flex-col" },
               React.createElement(AppRoutes, null)
             ),
             React.createElement(AppFooter, null)

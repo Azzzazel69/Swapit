@@ -26,10 +26,27 @@ const HomePage = () => {
       }
       try {
         const exchanges = await api.getExchanges();
-        const pendingIncoming = exchanges.some(
-          ex => ex.ownerId === user.id && ex.status === ExchangeStatus.Pending
-        );
-        setHasNotifications(pendingIncoming);
+        
+        // We use two separate lists to track what the user has seen
+        const seenProposals = JSON.parse(localStorage.getItem('seen_proposals') || '[]');
+        const seenAcceptedDeals = JSON.parse(localStorage.getItem('seen_accepted_deals') || '[]');
+        
+        const hasUnreadNotification = exchanges.some(ex => {
+            // Condition 1: A new proposal has arrived for the user
+            const isNewProposal = ex.ownerId === user.id && 
+                                  ex.status === ExchangeStatus.Pending && 
+                                  !seenProposals.includes(ex.id);
+
+            // Condition 2: A proposal sent by the user has been accepted
+            const isDealAccepted = ex.requesterId === user.id && 
+                                   ex.status === ExchangeStatus.Accepted && 
+                                   !seenAcceptedDeals.includes(ex.id);
+            
+            return isNewProposal || isDealAccepted;
+        });
+        
+        setHasNotifications(hasUnreadNotification);
+
       } catch (error) {
         console.error("Failed to check for notifications:", error);
         setHasNotifications(false);
@@ -38,7 +55,7 @@ const HomePage = () => {
 
     if (user) {
         checkNotifications();
-        const intervalId = setInterval(checkNotifications, 30000); // Check every 30 seconds
+        const intervalId = setInterval(checkNotifications, 15000); // Check every 15 seconds
         return () => clearInterval(intervalId);
     }
   }, [user]);

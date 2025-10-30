@@ -1,5 +1,5 @@
-import { ExchangeStatus } from '../types.js';
-import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.js';
+import { ExchangeStatus } from '../types.ts';
+import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 
 let users = [];
 let items = [];
@@ -14,7 +14,7 @@ const setupInitialData = () => {
 
     const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
     const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Vehículos'] };
-    const admin = { id: '3', name: 'Admin', email: 'admin@example.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
+    const admin = { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
 
     users.push(alice, bob, admin);
 
@@ -314,10 +314,16 @@ class ApiClient {
         throw new Error('Chat no encontrado o acceso denegado.');
     }
     
+    const owner = users.find(u => u.id === exchange.ownerId);
+    const requester = users.find(u => u.id === exchange.requesterId);
+    if (!owner || !requester) throw new Error('Participante no encontrado.');
+    const { password: _, ...ownerPublic } = owner;
+    const { password: __, ...requesterPublic } = requester;
+    
     const allItemIds = [...new Set([exchange.requestedItemId, ...exchange.offeredItemIds])];
     const allItems = allItemIds.map(id => items.find(item => item.id === id)).filter(Boolean);
 
-    const detailedExchange = { ...exchange, allItems };
+    const detailedExchange = { ...exchange, allItems, owner: ownerPublic, requester: requesterPublic };
     
     return { chat, exchange: detailedExchange };
   }
@@ -379,7 +385,7 @@ class ApiClient {
                 });
                 const owner = users.find(u => u.id === exchange.ownerId);
                 const requester = users.find(u => u.id === exchange.requesterId);
-                const systemMessageText = `¡TRATO ACEPTADO! Aquí están los datos para coordinar: ${owner.name} (tel: ${owner.phone}, dir: ${owner.location.address}) y ${requester.name} (tel: ${requester.phone}, dir: ${requester.location.address}).`;
+                const systemMessageText = `¡TRATO ACEPTADO! Aquí están los datos para coordinar.`;
                 chats.find(c => c.id === exchangeId).messages.push({
                     id: `msg-system-${Date.now()}`, senderId: 'system', text: systemMessageText, timestamp: new Date().toISOString(), type: 'SYSTEM'
                 });

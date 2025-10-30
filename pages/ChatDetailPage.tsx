@@ -8,6 +8,23 @@ import { useColorTheme } from '../hooks/useColorTheme.js';
 import { ExchangeStatus } from '../types.js';
 import { useConfetti } from '../hooks/useConfetti.tsx';
 
+const DealAcceptedInfo = ({ exchange, currentUser }) => {
+    const otherUser = currentUser.id === exchange.owner.id ? exchange.requester : exchange.owner;
+    
+    return (
+        React.createElement("div", { className: "text-center p-4 my-4 bg-green-50 dark:bg-green-900/50 border-2 border-dashed border-green-400 rounded-lg" },
+            React.createElement("h2", { className: "text-2xl font-bold text-green-700 dark:text-green-300" }, "¡Felicidades, tienes un trato!"),
+            React.createElement("p", { className: "mt-2 text-gray-600 dark:text-gray-300" }, "Aquí están los datos de contacto para coordinar el intercambio:"),
+            React.createElement("div", { className: "mt-4 text-left inline-block bg-white dark:bg-gray-800 p-4 rounded-md shadow" },
+                React.createElement("p", null, React.createElement("strong", null, "Nombre:"), " ", otherUser.name),
+                React.createElement("p", null, React.createElement("strong", null, "Email:"), " ", otherUser.email),
+                React.createElement("p", null, React.createElement("strong", null, "Teléfono:"), " ", otherUser.phone),
+                React.createElement("p", null, React.createElement("strong", null, "Dirección:"), ` ${otherUser.location.address}, ${otherUser.location.city}, ${otherUser.location.postalCode}`)
+            )
+        )
+    );
+};
+
 const ChatDetailPage = () => {
     const { exchangeId } = useParams();
     const { user } = useAuth();
@@ -23,6 +40,7 @@ const ChatDetailPage = () => {
     const [updatingItemId, setUpdatingItemId] = useState(null);
     const { showConfetti } = useConfetti();
     const messagesEndRef = useRef(null);
+    const hasTriggeredConfetti = useRef(false);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,19 +52,50 @@ const ChatDetailPage = () => {
             const { chat: chatData, exchange: exchangeData } = await api.getChatAndExchangeDetails(exchangeId);
             setChat(chatData);
             setExchange(exchangeData);
-            if (exchangeData.status === ExchangeStatus.Accepted) {
-                showConfetti();
-            }
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, [exchangeId, showConfetti]);
+    }, [exchangeId]);
 
     useEffect(() => {
         fetchChatDetails();
     }, [fetchChatDetails]);
+    
+    useEffect(() => {
+        if (exchange && exchange.status === ExchangeStatus.Accepted && !hasTriggeredConfetti.current) {
+            const seenDeals = JSON.parse(localStorage.getItem('seen_accepted_deals') || '[]');
+            if (!seenDeals.includes(exchange.id)) {
+                 showConfetti();
+                 hasTriggeredConfetti.current = true;
+            }
+        }
+    }, [exchange, showConfetti]);
+
+    // This effect handles marking notifications as "read"
+    useEffect(() => {
+        if (!exchange || !user) return;
+        
+        // Mark a new proposal as seen
+        if (exchange.ownerId === user.id && exchange.status === ExchangeStatus.Pending) {
+             const seenProposals = JSON.parse(localStorage.getItem('seen_proposals') || '[]');
+             if (!seenProposals.includes(exchange.id)) {
+                 seenProposals.push(exchange.id);
+                 localStorage.setItem('seen_proposals', JSON.stringify(seenProposals));
+             }
+        }
+        
+        // Mark an accepted deal as seen
+        if (exchange.requesterId === user.id && exchange.status === ExchangeStatus.Accepted) {
+            const seenAcceptedDeals = JSON.parse(localStorage.getItem('seen_accepted_deals') || '[]');
+            if (!seenAcceptedDeals.includes(exchange.id)) {
+                seenAcceptedDeals.push(exchange.id);
+                localStorage.setItem('seen_accepted_deals', JSON.stringify(seenAcceptedDeals));
+            }
+        }
+
+    }, [exchange, user]);
 
     useEffect(() => {
         scrollToBottom();
@@ -180,7 +229,7 @@ const ChatDetailPage = () => {
     };
 
     return (
-        React.createElement("div", { className: "max-w-2xl mx-auto h-[calc(100vh-12rem)] flex flex-col" },
+        React.createElement("div", { className: "max-w-2xl mx-auto w-full flex flex-col flex-grow" },
             React.createElement(Link, { to: "/exchanges", className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline mb-4` },
                 "← Volver al buzón"
             ),
@@ -192,7 +241,9 @@ const ChatDetailPage = () => {
                     )
                 ),
                 React.createElement("div", { className: "flex-grow p-4 overflow-y-auto space-y-4" },
-                    renderNegotiationItems(),
+                    (exchange.status === ExchangeStatus.Accepted || exchange.status === ExchangeStatus.Completed)
+                        ? React.createElement(DealAcceptedInfo, { exchange: exchange, currentUser: user })
+                        : renderNegotiationItems(),
                     chat.messages.map(renderMessage),
                     React.createElement("div", { ref: messagesEndRef })
                 ),

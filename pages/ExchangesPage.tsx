@@ -68,13 +68,14 @@ const ExchangesPage = () => {
   const [error, setError] = useState(null);
   const [updatingExchangeId, setUpdatingExchangeId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const fetchExchanges = useCallback(async () => {
     if (!user) return;
     try {
-      if (!loading) setLoading(true); 
+      setLoading(true);
       const allExchanges = await api.getExchanges();
       setIncoming(allExchanges.filter(ex => ex.ownerId === user.id));
       setOutgoing(allExchanges.filter(ex => ex.requesterId === user.id));
@@ -84,7 +85,7 @@ const ExchangesPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, loading]);
+  }, [user]);
 
   useEffect(() => {
     fetchExchanges();
@@ -113,12 +114,15 @@ const ExchangesPage = () => {
 
   const handleDeleteSelected = async () => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar ${selectedIds.length} conversación(es)? Esta acción solo las eliminará de tu buzón.`)) {
+        setIsDeleting(true);
         try {
             await api.deleteExchanges(selectedIds);
             setSelectedIds([]);
             await fetchExchanges();
         } catch (err) {
             setError(err.message || 'Error al eliminar las conversaciones.');
+        } finally {
+            setIsDeleting(false);
         }
     }
   };
@@ -157,6 +161,7 @@ const ExchangesPage = () => {
         selectedIds.length > 0 && React.createElement(Button, {
             variant: "danger",
             onClick: handleDeleteSelected,
+            isLoading: isDeleting,
             children: `Eliminar (${selectedIds.length})`
         })
     ),
