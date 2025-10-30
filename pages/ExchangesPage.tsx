@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { ExchangeStatus } from '../types.js';
 import Spinner from '../components/Spinner.js';
@@ -9,7 +9,7 @@ import Button from '../components/Button.js';
 
 // FIX: Changed component signature to use props object directly to avoid TypeScript overload resolution issues with React.createElement.
 const ExchangeCard = (props) => {
-    const { exchange, perspective, onVote, isUpdating } = props;
+    const { exchange, perspective, onVote, isUpdating, isSelected, onSelect } = props;
     const isOwner = perspective === 'owner';
     const statusColor = {
         [ExchangeStatus.Pending]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
@@ -23,31 +23,41 @@ const ExchangeCard = (props) => {
     const canVote = (isOwner && !exchange.votedByOwner) || (!isOwner && !exchange.votedByRequester);
     const hasVoted = (isOwner && exchange.votedByOwner) || (!isOwner && exchange.votedByRequester);
 
-    return React.createElement(Link, { to: `/chat/${exchange.id}`, className: "block bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow" },
-      React.createElement("div", { className: "flex flex-col sm:flex-row justify-between items-center gap-4" },
-        React.createElement("div", { className: "flex-1 text-center sm:text-left" },
-            isOwner ? (
-                React.createElement("p", null, React.createElement("strong", null, exchange.requesterName), " quiere tu ", React.createElement("strong", null, exchange.requestedItem.title))
-            ) : (
-                React.createElement("p", null, "Solicitaste ", React.createElement("strong", null, exchange.requestedItem.title), " de ", React.createElement("strong", null, exchange.ownerName))
-            ),
-            React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "a cambio de: ", React.createElement("strong", null, offeredItemsPreview), ".")
+    return React.createElement("div", { className: `relative flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}` },
+        React.createElement("div", { onClick: e => e.stopPropagation() },
+            React.createElement("input", {
+                type: "checkbox",
+                checked: isSelected,
+                onChange: () => onSelect(exchange.id),
+                className: "h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            })
         ),
-        React.createElement("div", { className: "flex flex-col items-center gap-2" },
-            React.createElement("span", { className: `px-2 py-1 text-xs font-semibold rounded-full ${statusColor[exchange.status]}` },
-                exchange.status
-            ),
-            exchange.status === ExchangeStatus.Accepted && (
-                React.createElement("div", { className: "flex items-center gap-2 mt-2", onClick: (e) => e.preventDefault() },
-                    canVote && React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => onVote(exchange.id), isLoading: isUpdating, children: "Valorar Trueque" }),
-                    hasVoted && React.createElement("span", { className: "text-sm text-green-600 dark:text-green-400 flex items-center gap-1" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })), "Votado")
+        React.createElement(Link, { to: `/chat/${exchange.id}`, className: "block flex-grow" },
+            React.createElement("div", { className: "flex flex-col sm:flex-row justify-between items-center gap-4" },
+                React.createElement("div", { className: "flex-1 text-center sm:text-left" },
+                    isOwner ? (
+                        React.createElement("p", null, React.createElement("strong", null, exchange.requesterName), " quiere tu ", React.createElement("strong", null, exchange.requestedItem.title))
+                    ) : (
+                        React.createElement("p", null, "Solicitaste ", React.createElement("strong", null, exchange.requestedItem.title), " de ", React.createElement("strong", null, exchange.ownerName))
+                    ),
+                    React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "a cambio de: ", React.createElement("strong", null, offeredItemsPreview), ".")
+                ),
+                React.createElement("div", { className: "flex flex-col items-center gap-2" },
+                    React.createElement("span", { className: `px-2 py-1 text-xs font-semibold rounded-full ${statusColor[exchange.status]}` },
+                        exchange.status
+                    ),
+                    exchange.status === ExchangeStatus.Accepted && (
+                        React.createElement("div", { className: "flex items-center gap-2 mt-2", onClick: (e) => e.preventDefault() },
+                            canVote && React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => onVote(exchange.id), isLoading: isUpdating, children: "Valorar Trueque" }),
+                            hasVoted && React.createElement("span", { className: "text-sm text-green-600 dark:text-green-400 flex items-center gap-1" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })), "Votado")
+                        )
+                    ),
+                    exchange.status === ExchangeStatus.Completed && (
+                        React.createElement("span", { className: "text-sm text-blue-500 mt-2" }, "Intercambio Completado")
+                    )
                 )
-            ),
-            exchange.status === ExchangeStatus.Completed && (
-                React.createElement("span", { className: "text-sm text-blue-500 mt-2" }, "Intercambio Completado")
             )
         )
-      )
     );
 };
 
@@ -57,7 +67,9 @@ const ExchangesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingExchangeId, setUpdatingExchangeId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchExchanges = useCallback(async () => {
     if (!user) return;
@@ -90,7 +102,26 @@ const ExchangesPage = () => {
         setUpdatingExchangeId(null);
     }
   };
+  
+  const handleSelect = (exchangeId) => {
+    setSelectedIds(prev =>
+        prev.includes(exchangeId)
+            ? prev.filter(id => id !== exchangeId)
+            : [...prev, exchangeId]
+    );
+  };
 
+  const handleDeleteSelected = async () => {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar ${selectedIds.length} conversación(es)? Esta acción solo las eliminará de tu buzón.`)) {
+        try {
+            await api.deleteExchanges(selectedIds);
+            setSelectedIds([]);
+            await fetchExchanges();
+        } catch (err) {
+            setError(err.message || 'Error al eliminar las conversaciones.');
+        }
+    }
+  };
 
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
@@ -100,40 +131,43 @@ const ExchangesPage = () => {
     return React.createElement("div", { className: "text-center text-red-500" }, error);
   }
 
+  const renderExchangeList = (exchanges, perspective) => {
+      if (exchanges.length === 0) {
+          const message = perspective === 'owner' 
+              ? "No tienes propuestas de intercambio recibidas."
+              : "No has enviado ninguna propuesta de intercambio.";
+          return React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, message);
+      }
+      return React.createElement("div", { className: "space-y-4" },
+          exchanges.map(ex => React.createElement(ExchangeCard, { 
+              key: ex.id, 
+              exchange: ex, 
+              perspective: perspective, 
+              onVote: handleVote,
+              isUpdating: updatingExchangeId === ex.id,
+              isSelected: selectedIds.includes(ex.id),
+              onSelect: handleSelect
+          }))
+      );
+  };
+
   return React.createElement("div", null,
-    React.createElement("h1", { className: "text-3xl font-bold mb-6 text-gray-900 dark:text-white" }, "Buzón de Intercambios"),
+    React.createElement("div", { className: "flex justify-between items-center mb-6" },
+        React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Buzón de Intercambios"),
+        selectedIds.length > 0 && React.createElement(Button, {
+            variant: "danger",
+            onClick: handleDeleteSelected,
+            children: `Eliminar (${selectedIds.length})`
+        })
+    ),
     React.createElement("div", { className: "space-y-8" },
       React.createElement("div", null,
         React.createElement("h2", { className: "text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600" }, "Propuestas Recibidas"),
-        incoming.length > 0 ? (
-          React.createElement("div", { className: "space-y-4" },
-            incoming.map(ex => React.createElement(ExchangeCard, { 
-                key: ex.id, 
-                exchange: ex, 
-                perspective: "owner", 
-                onVote: handleVote,
-                isUpdating: updatingExchangeId === ex.id
-            }))
-          )
-        ) : (
-          React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, "No tienes propuestas de intercambio recibidas.")
-        )
+        renderExchangeList(incoming, "owner")
       ),
       React.createElement("div", null,
         React.createElement("h2", { className: "text-2xl font-semibold mb-4 border-b pb-2 border-gray-300 dark:border-gray-600" }, "Propuestas Enviadas"),
-        outgoing.length > 0 ? (
-          React.createElement("div", { className: "space-y-4" },
-            outgoing.map(ex => React.createElement(ExchangeCard, { 
-                key: ex.id, 
-                exchange: ex, 
-                perspective: "requester",
-                onVote: handleVote,
-                isUpdating: updatingExchangeId === ex.id
-            }))
-          )
-        ) : (
-          React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, "No has enviado ninguna propuesta de intercambio.")
-        )
+        renderExchangeList(outgoing, "requester")
       )
     )
   );

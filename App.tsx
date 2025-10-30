@@ -6,7 +6,6 @@ import Header from './components/Header.js';
 import HomePage from './pages/HomePage.js';
 import LoginPage from './pages/LoginPage.js';
 import RegisterPage from './pages/RegisterPage.js';
-import MyItemsPage from './pages/MyItemsPage.js';
 import ExchangesPage from './pages/ExchangesPage.js';
 import ProfilePage from './pages/ProfilePage.js';
 import Spinner from './components/Spinner.js';
@@ -73,7 +72,6 @@ const AppRoutes = () => {
 
     React.createElement(Route, { path: "/", element: React.createElement(ProtectedRoute, null, React.createElement(HomePage, null)) }),
     React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ItemDetailPage, null)) }),
-    React.createElement(Route, { path: "/my-items", element: React.createElement(ProtectedRoute, null, React.createElement(MyItemsPage, null)) }),
     React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ExchangesPage, null)) }),
     React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ChatDetailPage, null)) }),
     React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),

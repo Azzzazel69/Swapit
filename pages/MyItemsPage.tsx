@@ -23,10 +23,9 @@ const MyItemsPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  // FIX: Explicitly type the 'images' state as an array of strings.
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
 
   const { user } = useAuth();
   const { theme } = useColorTheme();
@@ -59,9 +58,22 @@ const MyItemsPage = () => {
     }
   }, [location.search]);
 
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+  };
+  
+  useEffect(() => {
+    if (location.state?.message) {
+        showNotification(location.state.message);
+        window.history.replaceState({}, document.title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
   const MAX_IMAGES = 5;
 
-  // FIX: Add type for the event parameter to correctly infer 'e.target.files' and 'file' types.
+  // FIX: Add type annotation for the event parameter to resolve errors with file properties.
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
           setError(null);
@@ -72,7 +84,7 @@ const MyItemsPage = () => {
               return;
           }
 
-          // FIX: Explicitly type 'file' as File to resolve properties 'size', 'name' and allow its use in readAsDataURL.
+          // FIX: Add explicit type for 'file' to resolve type inference issue.
           filesArray.forEach((file: File) => {
               if (file.size > 10 * 1024 * 1024) { // 10MB limit
                   setError(`La imagen ${file.name} es demasiado grande (máx 10MB).`);
@@ -80,17 +92,13 @@ const MyItemsPage = () => {
               }
               const reader = new FileReader();
               reader.onloadend = () => {
-                  // FIX: The result of FileReader can be an ArrayBuffer. We capture the narrowed string type in a constant
-                  // to ensure TypeScript correctly infers its type inside the state updater callback.
                   if (typeof reader.result === 'string') {
-                    const newImage = reader.result;
-                    setImages(prevImages => [...prevImages, newImage]);
+                    setImages(prevImages => [...prevImages, reader.result]);
                   }
               };
               reader.readAsDataURL(file);
           });
-          // FIX: Set target value to null to allow selecting the same file again.
-          e.target.value = null; // To allow selecting the same file again
+          e.target.value = null;
       }
   };
 
@@ -98,8 +106,7 @@ const MyItemsPage = () => {
       setImages(images.filter((_, i) => i !== index));
   };
 
-  // FIX: Add type for the form event.
-  const handleAddItem = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddItem = async (e) => {
     e.preventDefault();
     if (images.length === 0) {
         setError('Debes subir al menos una foto.');
@@ -118,13 +125,24 @@ const MyItemsPage = () => {
       setCategory('');
       setImages([]);
       setShowForm(false);
-      await fetchUserItems(); // Refresh list
-      setSuccessMessage('¡Artículo añadido con éxito!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      await fetchUserItems();
+      showNotification('¡Artículo añadido con éxito!');
     } catch (err) {
       setError('Error al crear el artículo.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+        try {
+            await api.deleteItem(itemId);
+            showNotification('Artículo eliminado con éxito.');
+            await fetchUserItems();
+        } catch (err) {
+            setError(err.message || 'Error al eliminar el artículo.');
+        }
     }
   };
 
@@ -150,13 +168,11 @@ const MyItemsPage = () => {
         React.createElement(Input, { id: "title", label: "Título", type: "text", value: title, onChange: e => setTitle(e.target.value), required: true }),
         React.createElement("div", null,
           React.createElement("label", { htmlFor: "description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
-          // FIX: Add explicit type for the onChange event to help TypeScript resolve the correct overload for createElement.
-          React.createElement("textarea", { id: "description", value: description, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
+          React.createElement("textarea", { id: "description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
         ),
         React.createElement("div", null,
           React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-          // FIX: Add explicit type for the onChange event to help TypeScript resolve the correct overload for createElement.
-          React.createElement("select", { id: "category", value: category, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+          React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
             React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
             ...CATEGORIES.map(cat => React.createElement("option", { key: cat, value: cat }, cat))
           )
@@ -198,17 +214,17 @@ const MyItemsPage = () => {
       React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo.")
     ) : (
       React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-        items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true }))
+        items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem }))
       )
     ),
-    successMessage && React.createElement("div", {
-        className: "fixed bottom-5 right-5 bg-green-100 border border-green-400 text-green-700 dark:bg-green-800 dark:border-green-600 dark:text-green-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50",
+    notification.show && React.createElement("div", {
+        className: `fixed bottom-5 right-5 ${notification.type === 'success' ? 'bg-green-100 border-green-400 text-green-700 dark:bg-green-800 dark:border-green-600 dark:text-green-200' : 'bg-red-100 border-red-400 text-red-700 dark:bg-red-800 dark:border-red-600 dark:text-red-200'} px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50`,
         role: "alert"
       },
       React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
         React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" })
       ),
-      React.createElement("span", { className: "font-medium" }, successMessage)
+      React.createElement("span", { className: "font-medium" }, notification.message)
     )
   );
 };

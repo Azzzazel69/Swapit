@@ -4,13 +4,11 @@ import { api } from '../services/api.js';
 import Spinner from '../components/Spinner.js';
 import Button from '../components/Button.js';
 import { ICONS } from '../constants.js';
-// FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.js';
 import ExchangeProposalModal from '../components/ExchangeProposalModal.js';
+import EditItemModal from '../components/EditItemModal.js';
 
-// FIX: Refactored React.createElement calls to pass children as arguments instead of a prop
-// to resolve TypeScript overload ambiguity for intrinsic elements like 'div'.
 const ImageLightbox = (props) => {
   return React.createElement("div", 
     { 
@@ -20,8 +18,7 @@ const ImageLightbox = (props) => {
     React.createElement("div", 
       { 
         className: "relative max-w-4xl max-h-4/5 p-4", 
-        // FIX: Added type to event object to help TypeScript infer correct element type.
-        onClick: (e: React.MouseEvent) => e.stopPropagation()
+        onClick: (e) => e.stopPropagation()
       },
       React.createElement("img", { src: props.imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
       React.createElement("button", 
@@ -49,6 +46,9 @@ const ItemDetailPage = () => {
   const [userItems, setUserItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noItemsError, setNoItemsError] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+  const [isDeleting, setIsDeleting] = useState(false);
   
   useEffect(() => {
     const fetchItem = async () => {
@@ -75,6 +75,37 @@ const ItemDetailPage = () => {
     };
     fetchItem();
   }, [itemId]);
+  
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
+  };
+  
+  const handleSaveItem = async (updatedData) => {
+    if (!item) return;
+    try {
+        const updatedItem = await api.updateItem(item.id, updatedData);
+        setItem(updatedItem);
+        showNotification('Artículo actualizado con éxito.');
+    } catch (err) {
+        setError(err.message || 'Error al actualizar el artículo.');
+    }
+  };
+  
+  const handleDeleteItem = async () => {
+    if (!item) return;
+    if (window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+        setIsDeleting(true);
+        try {
+            await api.deleteItem(item.id);
+            navigate('/profile', { state: { message: 'Artículo eliminado con éxito.' } });
+        } catch (err) {
+            setError(err.message || 'Error al eliminar el artículo.');
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+  };
   
   const handleSwapClick = async () => {
     if (!user) return;
@@ -123,6 +154,12 @@ const ItemDetailPage = () => {
 
   return React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl mx-auto p-4 sm:p-6 lg:p-8" },
     lightboxOpen && selectedImage && React.createElement(ImageLightbox, { imageUrl: selectedImage, onClose: () => setLightboxOpen(false) }),
+    React.createElement(EditItemModal, {
+        isOpen: isEditModalOpen,
+        onClose: () => setIsEditModalOpen(false),
+        item: item,
+        onSave: handleSaveItem,
+    }),
     isModalOpen && React.createElement(ExchangeProposalModal, {
         isOpen: isModalOpen,
         onClose: () => setIsModalOpen(false),
@@ -144,7 +181,7 @@ const ItemDetailPage = () => {
         React.createElement("p", { className: "font-bold" }, "Necesitas un artículo para intercambiar"),
         React.createElement("p", { className: "text-sm mt-1" }, "Para proponer un intercambio, primero debes añadir un artículo a tu perfil."),
         React.createElement(Link, {
-          to: "/my-items?action=add",
+          to: "/profile?action=add",
           onClick: () => setNoItemsError(false),
           className: `block mt-2 text-sm font-semibold ${theme.textColor} ${theme.hoverTextColor} underline`
         }, "Añadir un artículo ahora →")
@@ -193,6 +230,24 @@ const ItemDetailPage = () => {
         React.createElement("h1", { className: "text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4" }, item.title),
         React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-6 flex-grow" }, item.description),
         
+        isOwnItem && !isSwapped && (
+          React.createElement("div", { className: "mb-6 flex gap-4" },
+            React.createElement(Button, { 
+              onClick: () => setIsEditModalOpen(true),
+              variant: "secondary",
+              className: "w-full",
+              children: "Editar"
+            }),
+            React.createElement(Button, {
+              onClick: handleDeleteItem,
+              variant: "danger",
+              className: "w-full",
+              isLoading: isDeleting,
+              children: "Eliminar"
+            })
+          )
+        ),
+        
         React.createElement("div", { className: "border-t border-gray-200 dark:border-gray-700 pt-4" },
           React.createElement("div", { className: "text-sm text-gray-500 dark:text-gray-400" },
             React.createElement("p", null, "Propietario: ", React.createElement("strong", null, item.ownerName)),
@@ -215,6 +270,12 @@ const ItemDetailPage = () => {
           )
         )
       )
+    ),
+    notification.show && React.createElement("div", {
+        className: `fixed bottom-5 right-5 ${notification.type === 'success' ? 'bg-green-100 border-green-400 text-green-700 dark:bg-green-800 dark:border-green-600 dark:text-green-200' : 'bg-red-100 border-red-400 text-red-700 dark:bg-red-800 dark:border-red-600 dark:text-red-200'} px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50`,
+        role: "alert"
+      },
+      React.createElement("span", { className: "font-medium" }, notification.message)
     )
   );
 };

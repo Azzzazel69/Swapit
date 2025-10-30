@@ -29,8 +29,15 @@ const setupInitialData = () => {
     ];
 };
 
-// Reinicia los datos cada vez que el script se carga para asegurar un estado limpio para pruebas.
 setupInitialData();
+
+const parseJwt = (token) => {
+    try {
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        return null;
+    }
+}
 
 class ApiClient {
   token = null;
@@ -61,6 +68,35 @@ class ApiClient {
       } else {
           throw new Error('Correo o contraseña incorrectos.');
       }
+  }
+  
+  async loginWithGoogle(credential) {
+      await this.simulateDelay();
+      const googleUser = parseJwt(credential);
+      if (!googleUser || !googleUser.email) {
+          throw new Error('Credencial de Google inválida.');
+      }
+
+      let user = users.find(u => u.email === googleUser.email);
+
+      if (!user) {
+          const newUser = {
+              id: String(users.length + 1),
+              name: googleUser.name,
+              email: googleUser.email,
+              password: `google-user-${Date.now()}`,
+              preferences: [],
+              emailVerified: true,
+              phoneVerified: false,
+              location: null,
+          };
+          users.push(newUser);
+          user = newUser;
+      }
+      
+      const dummyToken = `fake-jwt-for-${user.id}`;
+      this.setToken(dummyToken);
+      return { token: dummyToken };
   }
   
   async register(name, email, password) {
@@ -138,6 +174,63 @@ class ApiClient {
       items.unshift(newItem);
       return newItem;
   }
+
+  async updateItem(itemId, itemData) {
+      await this.simulateDelay();
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+
+      const itemIndex = items.findIndex(i => i.id === itemId);
+      if (itemIndex === -1) throw new Error('Artículo no encontrado');
+
+      const item = items[itemIndex];
+      if (item.userId !== currentUser.id) throw new Error('No autorizado para editar este artículo');
+      if (item.status !== 'AVAILABLE') throw new Error('No se puede editar un artículo que ya está en un intercambio.');
+
+      const updatedItem = { ...item, ...itemData, updatedAt: new Date().toISOString() };
+      items[itemIndex] = updatedItem;
+      return updatedItem;
+  }
+
+  async deleteItem(itemId) {
+      await this.simulateDelay();
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      
+      const itemIndex = items.findIndex(i => i.id === itemId);
+      if (itemIndex === -1) throw new Error('Artículo no encontrado');
+
+      const item = items[itemIndex];
+      if (item.userId !== currentUser.id) throw new Error('No autorizado para eliminar este artículo');
+      
+      // Prevent deleting an item that's already part of a completed/accepted trade
+      if (item.status === 'EXCHANGED') {
+          throw new Error('No se puede eliminar un artículo que ya ha sido intercambiado.');
+      }
+
+      // Find pending exchanges involving this item and cancel them
+      const affectedExchanges = exchanges.filter(ex => 
+          ex.status === 'PENDING' && 
+          (ex.requestedItemId === itemId || ex.offeredItemIds.includes(itemId))
+      );
+
+      for (const exchange of affectedExchanges) {
+          exchange.status = ExchangeStatus.Rejected;
+          const chat = chats.find(c => c.id === exchange.id);
+          if (chat) {
+              chat.messages.push({
+                  id: `msg-system-${Date.now()}-${Math.random()}`,
+                  senderId: 'system',
+                  text: `El artículo "${item.title}" ya no está disponible y la negociación se ha cancelado.`,
+                  timestamp: new Date().toISOString(),
+                  type: 'SYSTEM'
+              });
+          }
+      }
+
+      items.splice(itemIndex, 1);
+      return { success: true };
+  }
   
   async getExchanges() {
       await this.simulateDelay();
@@ -146,10 +239,10 @@ class ApiClient {
           throw new Error('Autenticación requerida');
       }
       const userExchanges = exchanges.filter(ex => 
-        ex.requesterId === currentUser.id || ex.ownerId === currentUser.id
+        (ex.requesterId === currentUser.id || ex.ownerId === currentUser.id) &&
+        (!ex.deletedBy || !ex.deletedBy.includes(currentUser.id))
       );
 
-      // Populate item details
       return userExchanges.map(ex => ({
           ...ex,
           requestedItem: items.find(item => item.id === ex.requestedItemId) || { title: 'Artículo eliminado', status: 'DELETED' },
@@ -187,10 +280,9 @@ class ApiClient {
           votedByOwner: false,
           votedByRequester: false,
           createdAt: new Date().toISOString(),
+          deletedBy: [],
       };
       exchanges.unshift(newExchange);
-      
-      const offeredItemsDetails = proposal.offeredItemIds.map(id => items.find(item => item.id === id));
       
       const initialMessage = {
           id: `msg-${Date.now()}`,
@@ -201,7 +293,7 @@ class ApiClient {
       };
 
       const newChat = {
-          id: newExchange.id, // Use exchange ID as chat ID
+          id: newExchange.id,
           participantIds: [requester.id, owner.id],
           messages: [initialMessage]
       };
@@ -263,14 +355,12 @@ class ApiClient {
 
         exchange.itemStatus[itemId] = status;
 
-        // Check if all items have been decided
         const allDecided = Object.values(exchange.itemStatus).every(s => s !== 'PENDING');
 
         if (allDecided) {
             const acceptedItems = Object.keys(exchange.itemStatus).filter(id => exchange.itemStatus[id] === 'ACCEPTED');
             const acceptedByOwner = acceptedItems.filter(id => exchange.offeredItemIds.includes(id));
             
-            // For this simplified model, a deal is accepted if the owner accepts at least one item.
             if (acceptedByOwner.length > 0) {
                 exchange.status = ExchangeStatus.Accepted;
                 const finalTradeItems = [exchange.requestedItemId, ...acceptedByOwner];
@@ -279,7 +369,6 @@ class ApiClient {
                         item.status = 'EXCHANGED';
                     }
                 });
-                // Auto-reject other exchanges involving these items
                 exchanges.forEach(ex => {
                     if (ex.id !== exchangeId && ex.status === ExchangeStatus.Pending) {
                         const otherInvolvedItems = [ex.requestedItemId, ...ex.offeredItemIds];
@@ -347,12 +436,28 @@ class ApiClient {
 
     if (exchange.votedByOwner && exchange.votedByRequester) {
         exchange.status = ExchangeStatus.Completed;
-        const involvedItemIds = [exchange.requestedItemId, ...exchange.offeredItemIds].filter(id => exchange.itemStatus[id] === 'ACCEPTED');
-        // This logic is simplified; in a real app, you might not delete but archive them.
-        // items = items.filter(item => !involvedItemIds.includes(item.id));
     }
 
     return exchange;
+  }
+  
+  async deleteExchanges(exchangeIds) {
+      await this.simulateDelay();
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      
+      exchangeIds.forEach(id => {
+          const exchange = exchanges.find(ex => ex.id === id);
+          if (exchange && (exchange.ownerId === currentUser.id || exchange.requesterId === currentUser.id)) {
+              if (!exchange.deletedBy) {
+                  exchange.deletedBy = [];
+              }
+              if (!exchange.deletedBy.includes(currentUser.id)) {
+                  exchange.deletedBy.push(currentUser.id);
+              }
+          }
+      });
+      return { success: true };
   }
 
   async updateUserPreferences(preferences) {

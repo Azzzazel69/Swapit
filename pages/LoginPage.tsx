@@ -1,8 +1,4 @@
-
-
-
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { api } from '../services/api.js';
@@ -11,17 +7,94 @@ import Input from '../components/Input.js';
 import Button from '../components/Button.js';
 import { useColorTheme } from '../hooks/useColorTheme.js';
 
+// This is a placeholder Client ID. For a production application, you must create your own in the Google Cloud Console.
+const GOOGLE_CLIENT_ID = "1028313539190-e5cih2p67j6c9t2k333ife2fr5f52g4o.apps.googleusercontent.com";
+
+// FIX: Add type definitions for the Google Identity Services library to the global window object.
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (response: CredentialResponse) => void; }) => void;
+          renderButton: (parent: HTMLElement, options: object) => void;
+        };
+      };
+    };
+  }
+}
+
+// FIX: Define the type for the Google Sign-In response.
+interface CredentialResponse {
+  credential?: string;
+}
+
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { theme } = useColorTheme();
   const location = useLocation();
+  const googleButtonRef = useRef(null);
 
   const from = location.state?.from?.pathname || "/";
+
+  const handleGoogleSignIn = useCallback(async (response: CredentialResponse) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (!response.credential) {
+          throw new Error("Google Sign-In failed: No credential received.");
+      }
+      const { token } = await api.loginWithGoogle(response.credential);
+      await login(token);
+      
+      const user = await api.getCurrentUser();
+      const isFullyOnboarded = user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0;
+
+      if (isFullyOnboarded) {
+          navigate(from, { replace: true });
+      } else {
+          navigate('/onboarding', { replace: true });
+      }
+    } catch (err) {
+      setError(err.message);
+      setIsLoading(false);
+    }
+  }, [from, login, navigate]);
+
+  useEffect(() => {
+    if (window.google?.accounts?.id) {
+        setIsGoogleScriptLoaded(true);
+        return;
+    }
+    const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (script) {
+        const handleLoad = () => setIsGoogleScriptLoaded(true);
+        script.addEventListener('load', handleLoad);
+        if (window.google?.accounts?.id) {
+            setIsGoogleScriptLoaded(true);
+        }
+        return () => script.removeEventListener('load', handleLoad);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isGoogleScriptLoaded && googleButtonRef.current && googleButtonRef.current.childElementCount === 0) {
+        window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignIn,
+        });
+        window.google.accounts.id.renderButton(
+            googleButtonRef.current,
+            { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with', shape: 'rectangular' }
+        );
+    }
+  }, [isGoogleScriptLoaded, handleGoogleSignIn]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +104,8 @@ const LoginPage = () => {
       const { token } = await api.login(email, password);
       await login(token);
       navigate(from, { replace: true });
-    } catch (err) {
+    } catch (err)
+      {
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -59,8 +133,9 @@ const LoginPage = () => {
           "Inicia sesión en tu cuenta"
         )
       ),
-      React.createElement("form", { className: "mt-8 space-y-6", onSubmit: handleSubmit },
-        error && React.createElement("p", { className: "text-red-500 text-sm text-center" }, error),
+      error && React.createElement("p", { className: "text-red-500 text-sm text-center" }, error),
+      
+      React.createElement("form", { className: "space-y-6", onSubmit: handleSubmit },
         React.createElement("div", { className: "rounded-md shadow-sm -space-y-px flex flex-col gap-y-4" },
           React.createElement(Input, {
             id: "email-address",
@@ -93,15 +168,25 @@ const LoginPage = () => {
           )
         ),
         React.createElement("div", null,
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
           React.createElement(Button, { type: "submit", isLoading: isLoading, className: "w-full", children: "Iniciar Sesión" })
         )
       ),
+
+      React.createElement("div", { className: "relative" },
+        React.createElement("div", { className: "absolute inset-0 flex items-center" },
+          React.createElement("div", { className: "w-full border-t border-gray-300 dark:border-gray-600" })
+        ),
+        React.createElement("div", { className: "relative flex justify-center text-sm" },
+          React.createElement("span", { className: "px-2 bg-white dark:bg-gray-800 text-gray-500" }, "O inicia sesión con")
+        )
+      ),
+      React.createElement("div", { className: "flex justify-center pt-4", ref: googleButtonRef }),
+
       React.createElement("p", { className: "mt-2 text-center text-sm text-gray-600 dark:text-gray-400" },
-        "O",
+        "¿No tienes una cuenta?",
         ' ',
         React.createElement(Link, { to: "/register", className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
-          "crea una nueva cuenta"
+          "Crea una aquí"
         )
       ),
       React.createElement("div", {className: "mt-6 border-t pt-4 space-y-2"},

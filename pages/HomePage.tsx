@@ -1,12 +1,12 @@
-
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { api } from '../services/api.js';
 import ItemCard from '../components/ItemCard.js';
 import Spinner from '../components/Spinner.js';
-// FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.js';
+import { Link } from 'react-router-dom';
+import { ICONS } from '../constants.js';
+import { ExchangeStatus } from '../types.js';
 
 const HomePage = () => {
   const [items, setItems] = useState([]);
@@ -14,9 +14,35 @@ const HomePage = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme } = useColorTheme();
+  const [hasNotifications, setHasNotifications] = useState(false);
 
+  useEffect(() => {
+    const checkNotifications = async () => {
+      if (!user) {
+        setHasNotifications(false);
+        return;
+      }
+      try {
+        const exchanges = await api.getExchanges();
+        const pendingIncoming = exchanges.some(
+          ex => ex.ownerId === user.id && ex.status === ExchangeStatus.Pending
+        );
+        setHasNotifications(pendingIncoming);
+      } catch (error) {
+        console.error("Failed to check for notifications:", error);
+        setHasNotifications(false);
+      }
+    };
+
+    if (user) {
+        checkNotifications();
+        const intervalId = setInterval(checkNotifications, 30000); // Check every 30 seconds
+        return () => clearInterval(intervalId);
+    }
+  }, [user]);
+  
   useEffect(() => {
     const fetchItems = async () => {
       try {
@@ -82,7 +108,33 @@ const HomePage = () => {
   };
 
   return React.createElement("div", null,
-    React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-6" }, "Artículos Disponibles para Intercambiar"),
+    React.createElement("div", { className: "mb-6 flex justify-between items-center gap-4" },
+        React.createElement(Link, {
+            to: "/profile?action=add",
+            className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
+        }, "Sube tu artículo +"),
+        React.createElement("div", { className: "flex items-center gap-4" },
+            React.createElement(Link, { 
+                to: "/exchanges", 
+                title: "Buzón",
+                className: "p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
+              },
+                React.createElement("div", { className: "relative" },
+                  ICONS.envelope,
+                  hasNotifications && (
+                    React.createElement("span", { className: "absolute top-0 right-0 block h-2.5 w-2.5 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" })
+                  )
+                )
+              ),
+            React.createElement("button", { 
+              onClick: logout, 
+              title: "Cerrar Sesión",
+              className: "p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-500 dark:hover:text-red-400 transition-colors" 
+            },
+              ICONS.logout
+            )
+        )
+    ),
     
     React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between items-center" },
       React.createElement("div", { className: "relative w-full md:w-1/2 lg:w-1/3" },
