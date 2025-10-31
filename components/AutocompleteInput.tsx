@@ -2,8 +2,10 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
 const AutocompleteInput = ({ label, id, value, onChange, suggestions, maxSuggestions = 10, ...props }) => {
   const { theme } = useColorTheme();

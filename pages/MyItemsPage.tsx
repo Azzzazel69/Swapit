@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { api } from '../services/api.js';
-import ItemCard from '../components/ItemCard.js';
-import Spinner from '../components/Spinner.js';
-import Button from '../components/Button.js';
-import Input from '../components/Input.js';
-import { ICONS, CATEGORIES } from '../constants.js';
+import { api } from '../services/api.ts';
+import ItemCard from '../components/ItemCard.tsx';
+import Spinner from '../components/Spinner.tsx';
+import Button from '../components/Button.tsx';
+import Input from '../components/Input.tsx';
+import { ICONS, CATEGORIES } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
 const MyItemsPage = () => {
   const [items, setItems] = useState([]);
@@ -66,7 +66,9 @@ const MyItemsPage = () => {
   useEffect(() => {
     if (location.state?.message) {
         showNotification(location.state.message);
-        window.history.replaceState({}, document.title);
+        if (typeof window !== 'undefined' && window.history) {
+            window.history.replaceState({}, document.title);
+        }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
@@ -135,7 +137,7 @@ const MyItemsPage = () => {
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+    if (typeof window !== 'undefined' && window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
         try {
             await api.deleteItem(itemId);
             showNotification('Artículo eliminado con éxito.');

@@ -1,12 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { api } from '../services/api.js';
-import ItemCard from '../components/ItemCard.js';
-import Spinner from '../components/Spinner.js';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { api } from '../services/api.ts';
+import ItemCard from '../components/ItemCard.tsx';
+import Spinner from '../components/Spinner.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { Link } from 'react-router-dom';
-import { ICONS } from '../constants.js';
-import { ExchangeStatus } from '../types.js';
 
 const HomePage = () => {
   const [items, setItems] = useState([]);
@@ -14,58 +12,18 @@ const HomePage = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const { user, logout } = useAuth();
+  const [searchType, setSearchType] = useState('articles'); // 'articles' or 'location'
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const searchDropdownRef = useRef(null);
+  const { user } = useAuth();
   const { theme } = useColorTheme();
-  const [hasNotifications, setHasNotifications] = useState(false);
-
-  useEffect(() => {
-    const checkNotifications = async () => {
-      if (!user) {
-        setHasNotifications(false);
-        return;
-      }
-      try {
-        const exchanges = await api.getExchanges();
-        
-        // We use two separate lists to track what the user has seen
-        const seenProposals = JSON.parse(localStorage.getItem('seen_proposals') || '[]');
-        const seenAcceptedDeals = JSON.parse(localStorage.getItem('seen_accepted_deals') || '[]');
-        
-        const hasUnreadNotification = exchanges.some(ex => {
-            // Condition 1: A new proposal has arrived for the user
-            const isNewProposal = ex.ownerId === user.id && 
-                                  ex.status === ExchangeStatus.Pending && 
-                                  !seenProposals.includes(ex.id);
-
-            // Condition 2: A proposal sent by the user has been accepted
-            const isDealAccepted = ex.requesterId === user.id && 
-                                   ex.status === ExchangeStatus.Accepted && 
-                                   !seenAcceptedDeals.includes(ex.id);
-            
-            return isNewProposal || isDealAccepted;
-        });
-        
-        setHasNotifications(hasUnreadNotification);
-
-      } catch (error) {
-        console.error("Failed to check for notifications:", error);
-        setHasNotifications(false);
-      }
-    };
-
-    if (user) {
-        checkNotifications();
-        const intervalId = setInterval(checkNotifications, 15000); // Check every 15 seconds
-        return () => clearInterval(intervalId);
-    }
-  }, [user]);
   
   useEffect(() => {
     const fetchItems = async () => {
       try {
         setLoading(true);
         const allItems = await api.getAllItems();
-        const otherUsersItems = allItems.filter(item => item.userId !== user?.id);
+        const otherUsersItems = allItems.filter(item => item.userId !== user?.id && item.status !== 'EXCHANGED');
         setItems(otherUsersItems);
         setError(null);
       } catch (err) {
@@ -81,6 +39,28 @@ const HomePage = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target)) {
+            setSearchDropdownOpen(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleToggleFavorite = async (itemId) => {
+    try {
+        const updatedItem = await api.toggleFavorite(itemId);
+        setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item));
+    } catch (error) {
+        console.error("Error toggling favorite", error);
+        setError("No se pudo actualizar el estado de favorito.");
+    }
+  };
+
   const filteredItems = useMemo(() => {
     let tempItems = items;
     
@@ -90,14 +70,23 @@ const HomePage = () => {
 
     if (searchQuery.trim()) {
       const lowercasedQuery = searchQuery.toLowerCase();
-      tempItems = tempItems.filter(item => 
-        item.title.toLowerCase().includes(lowercasedQuery) || 
-        item.description.toLowerCase().includes(lowercasedQuery)
-      );
+      if (searchType === 'articles') {
+        tempItems = tempItems.filter(item => 
+          item.title.toLowerCase().includes(lowercasedQuery) || 
+          item.description.toLowerCase().includes(lowercasedQuery)
+        );
+      } else { // searchType === 'location'
+        tempItems = tempItems.filter(item => 
+          item.ownerLocation && (
+            item.ownerLocation.city.toLowerCase().includes(lowercasedQuery) ||
+            item.ownerLocation.postalCode.toLowerCase().includes(lowercasedQuery)
+          )
+        );
+      }
     }
     
     return tempItems;
-  }, [items, filter, user, searchQuery]);
+  }, [items, filter, user, searchQuery, searchType]);
 
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
@@ -116,7 +105,7 @@ const HomePage = () => {
 
   const getEmptyMessage = () => {
     if (searchQuery.trim()) {
-      return `No se encontraron artículos que coincidan con "${searchQuery}".`;
+      return `No se encontraron resultados para "${searchQuery}".`;
     }
     if (filter === 'recommended') {
       return "No hay artículos que coincidan con tus preferencias. ¡Intenta ajustar tus intereses en tu perfil!";
@@ -129,43 +118,53 @@ const HomePage = () => {
         React.createElement(Link, {
             to: "/profile?action=add",
             className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
-        }, "Sube tu artículo +"),
-        React.createElement("div", { className: "flex items-center gap-4" },
-            React.createElement(Link, { 
-                to: "/exchanges", 
-                title: "Buzón",
-                className: "p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
-              },
-                React.createElement("div", { className: "relative" },
-                  ICONS.envelope,
-                  hasNotifications && (
-                    React.createElement("span", { className: "absolute top-0 right-0 block h-2.5 w-2.5 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" })
-                  )
-                )
-              ),
-            React.createElement("button", { 
-              onClick: logout, 
-              title: "Cerrar Sesión",
-              className: "p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-500 dark:hover:text-red-400 transition-colors" 
-            },
-              ICONS.logout
-            )
-        )
+        }, "Sube tu artículo +")
     ),
     
     React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between items-center" },
-      React.createElement("div", { className: "relative w-full md:w-1/2 lg:w-1/3" },
-         React.createElement("span", { className: "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" },
-           React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" }))),
-         React.createElement("input", {
-           type: "text",
-           placeholder: "Buscar por título o descripción...",
-           value: searchQuery,
-           onChange: (e) => setSearchQuery(e.target.value),
-           className: `w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 ${theme.focus} bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`,
-           "aria-label": "Buscar artículos"
-         })
-      ),
+        React.createElement("div", { className: "w-full md:w-1/2 lg:w-1/3" },
+            React.createElement("form", { className: "flex items-center" },
+                React.createElement("div", { className: "relative", ref: searchDropdownRef },
+                    React.createElement("button", { 
+                        type: "button",
+                        onClick: () => setSearchDropdownOpen(prev => !prev),
+                        className: "flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center text-gray-900 bg-gray-100 border border-gray-300 rounded-l-lg hover:bg-gray-200 focus:ring-2 focus:outline-none focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-500 dark:text-white dark:border-gray-600"
+                    },
+                        searchType === 'articles' ? 'Artículos' : 'Ubicación',
+                        React.createElement("svg", { className: "w-2.5 h-2.5 ml-2.5", "aria-hidden": "true", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 10 6" },
+                            React.createElement("path", { stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "m1 1 4 4 4-4" })
+                        )
+                    ),
+                    searchDropdownOpen && React.createElement("div", { className: "absolute top-full mt-1 z-20 bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700" },
+                        React.createElement("ul", { className: "py-2 text-sm text-gray-700 dark:text-gray-200" },
+                            React.createElement("li", null, 
+                                React.createElement("button", { 
+                                    type: "button", 
+                                    className: "inline-flex w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white",
+                                    onClick: () => { setSearchType('articles'); setSearchDropdownOpen(false); }
+                                }, "Artículos")
+                            ),
+                            React.createElement("li", null, 
+                                React.createElement("button", { 
+                                    type: "button", 
+                                    className: "inline-flex w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white",
+                                    onClick: () => { setSearchType('location'); setSearchDropdownOpen(false); }
+                                }, "Ubicación")
+                            )
+                        )
+                    )
+                ),
+                React.createElement("div", { className: "relative w-full" },
+                    React.createElement("input", {
+                        type: "search",
+                        className: `block p-2.5 w-full z-10 text-sm text-gray-900 bg-gray-50 rounded-r-lg border border-l-0 border-gray-300 focus:ring-2 ${theme.focus} ${theme.border} dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white`,
+                        placeholder: searchType === 'articles' ? "Buscar por título o descripción..." : "Buscar por ciudad o código postal...",
+                        value: searchQuery,
+                        onChange: (e) => setSearchQuery(e.target.value)
+                    })
+                )
+            )
+        ),
       React.createElement("div", { className: "flex items-center gap-2" },
         React.createElement(FilterButton, { type: "all", label: "Todos los Artículos" }),
         React.createElement(FilterButton, { type: "recommended", label: "Recomendado para Ti" })
@@ -178,7 +177,7 @@ const HomePage = () => {
       )
     ) : (
       React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-        filteredItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item }))
+        filteredItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: handleToggleFavorite }))
       )
     )
   );

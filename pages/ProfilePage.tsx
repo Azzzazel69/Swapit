@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
-import Button from '../components/Button.js';
-import Input from '../components/Input.js';
-import { ICONS, CATEGORIES } from '../constants.js';
-import { api } from '../services/api.js';
-import { useColorTheme } from '../hooks/useColorTheme.js';
-import ItemCard from '../components/ItemCard.js';
-import Spinner from '../components/Spinner.js';
+import Button from '../components/Button.tsx';
+import Input from '../components/Input.tsx';
+import { ICONS, CATEGORIES } from '../constants.tsx';
+import { api } from '../services/api.ts';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import ItemCard from '../components/ItemCard.tsx';
+import Spinner from '../components/Spinner.tsx';
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -33,6 +33,10 @@ const ProfilePage = () => {
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   const [deletingItemId, setDeletingItemId] = useState(null);
   
+  // My Favorites state
+  const [favoriteItems, setFavoriteItems] = useState([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
+
   const fetchUserItems = async () => {
     try {
       setLoadingItems(true);
@@ -49,8 +53,23 @@ const ProfilePage = () => {
     }
   };
 
+  const fetchFavoriteItems = async () => {
+    try {
+      setLoadingFavorites(true);
+      if (user) {
+        const favs = await api.getFavoriteItems();
+        setFavoriteItems(favs);
+      }
+    } catch (err) {
+      console.error("Error fetching favorites", err);
+    } finally {
+      setLoadingFavorites(false);
+    }
+  };
+
   useEffect(() => {
     fetchUserItems();
+    fetchFavoriteItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -69,7 +88,9 @@ const ProfilePage = () => {
   useEffect(() => {
     if (location.state?.message) {
         showNotification(location.state.message);
-        window.history.replaceState({}, document.title);
+        if (typeof window !== 'undefined' && window.history) {
+          window.history.replaceState({}, document.title);
+        }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
@@ -98,36 +119,46 @@ const ProfilePage = () => {
     }
   };
   
+  const handleToggleFavorite = async (itemId) => {
+    try {
+      await api.toggleFavorite(itemId);
+      // Remove from local state immediately for better UX
+      setFavoriteItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    } catch (error) {
+        console.error("Error toggling favorite", error);
+    }
+  };
+
   const MAX_IMAGES = 5;
 
-  // FIX: Add type for event parameter to allow type inference for file objects.
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files) {
-          setItemsError(null);
-          const filesArray = Array.from(e.target.files);
-          
-          if (images.length + filesArray.length > MAX_IMAGES) {
-              setItemsError(`No puedes subir más de ${MAX_IMAGES} imágenes.`);
-              return;
-          }
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+        setItemsError(null);
+        const filesArray = Array.from(e.target.files);
+        
+        if (images.length + filesArray.length > MAX_IMAGES) {
+            setItemsError(`No puedes subir más de ${MAX_IMAGES} imágenes.`);
+            return;
+        }
 
-          // FIX: Add explicit type for 'file' to resolve type inference issue.
-          filesArray.forEach((file: File) => {
-              if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                  setItemsError(`La imagen ${file.name} es demasiado grande (máx 10MB).`);
-                  return;
-              }
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                  if (typeof reader.result === 'string') {
-                    setImages(prevImages => [...prevImages, reader.result]);
-                  }
-              };
-              reader.readAsDataURL(file);
-          });
-          e.target.value = null;
-      }
+        const resizingPromises = filesArray.map(async (file: File) => {
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                throw new Error(`La imagen ${file.name} es demasiado grande (máx 10MB).`);
+            }
+            return await api.resizeImageBeforeUpload(file);
+        });
+
+        try {
+            const resizedImages = await Promise.all(resizingPromises);
+            setImages(prevImages => [...prevImages, ...resizedImages]);
+        } catch(err) {
+            setItemsError(err.message);
+        }
+
+        e.target.value = null;
+    }
   };
+
 
   const handleRemoveImage = (index) => {
       setImages(images.filter((_, i) => i !== index));
@@ -162,7 +193,7 @@ const ProfilePage = () => {
   };
 
   const handleDeleteItem = async (itemId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+    if (typeof window !== 'undefined' && window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
         setDeletingItemId(itemId);
         try {
             await api.deleteItem(itemId);
@@ -216,6 +247,19 @@ const ProfilePage = () => {
            React.createElement(Button, { onClick: handleSavePreferences, isLoading: isSavingPrefs, children: "Guardar Preferencias" }),
            prefsSaved && React.createElement("span", { className: "text-green-600 text-sm" }, "¡Preferencias guardadas!")
         )
+    ),
+
+    // My Favorites Section
+    React.createElement("div", { className: "mt-8" },
+      React.createElement("h2", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-6" }, "Mis Favoritos"),
+      loadingFavorites ? React.createElement(Spinner, null) :
+      favoriteItems.length === 0 ? (
+        React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo a favoritos.")
+      ) : (
+        React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+          favoriteItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: handleToggleFavorite }))
+        )
+      )
     ),
 
     // My Items Section

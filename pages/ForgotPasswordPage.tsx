@@ -1,11 +1,12 @@
 
 
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import Input from '../components/Input.js';
-import Button from '../components/Button.js';
-import { api } from '../services/api.js';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import Input from '../components/Input.tsx';
+import Button from '../components/Button.tsx';
+import { api } from '../services/api.ts';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
 const ForgotPasswordPage = () => {
     const { theme } = useColorTheme();

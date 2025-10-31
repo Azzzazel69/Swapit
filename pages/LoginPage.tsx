@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
-import { api } from '../services/api.js';
+import { api } from '../services/api.ts';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import Input from '../components/Input.js';
-import Button from '../components/Button.js';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import Input from '../components/Input.tsx';
+import Button from '../components/Button.tsx';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
+// FIX: Import Spinner component
+import Spinner from '../components/Spinner.tsx';
 
 // This is a placeholder Client ID. For a production application, you must create your own in the Google Cloud Console.
 const GOOGLE_CLIENT_ID = "1028313539190-e5cih2p67j6c9t2k333ife2fr5f52g4o.apps.googleusercontent.com";
@@ -35,13 +37,15 @@ const LoginPage = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
+  const [googleTimedOut, setGoogleTimedOut] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { theme } = useColorTheme();
-  const location = useLocation();
   const googleButtonRef = useRef(null);
 
-  const from = location.state?.from?.pathname || "/";
+  const navigateAfterLogin = useCallback(async () => {
+      navigate('/', { replace: true });
+  }, [navigate]);
 
   const handleGoogleSignIn = useCallback(async (response: CredentialResponse) => {
     setIsLoading(true);
@@ -52,34 +56,57 @@ const LoginPage = () => {
       }
       const { token } = await api.loginWithGoogle(response.credential);
       await login(token);
-      
-      const user = await api.getCurrentUser();
-      const isFullyOnboarded = user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0;
+      await navigateAfterLogin();
 
-      if (isFullyOnboarded) {
-          navigate(from, { replace: true });
-      } else {
-          navigate('/onboarding', { replace: true });
-      }
     } catch (err) {
       setError(err.message);
       setIsLoading(false);
     }
-  }, [from, login, navigate]);
+  }, [login, navigateAfterLogin]);
+
+  const handleGoogleMockLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+        const { token } = await (api as any).loginWithGoogleMock();
+        await login(token);
+        await navigateAfterLogin();
+    } catch (err) {
+        setError("Error en el inicio de sesión simulado.");
+    } finally {
+        setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
+    let timeoutId: any;
+
     if (window.google?.accounts?.id) {
         setIsGoogleScriptLoaded(true);
         return;
     }
     const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
     if (script) {
-        const handleLoad = () => setIsGoogleScriptLoaded(true);
+        const handleLoad = () => {
+            clearTimeout(timeoutId);
+            setIsGoogleScriptLoaded(true);
+        };
         script.addEventListener('load', handleLoad);
         if (window.google?.accounts?.id) {
-            setIsGoogleScriptLoaded(true);
+            handleLoad();
+        } else {
+            timeoutId = setTimeout(() => {
+                if (!window.google?.accounts?.id) {
+                    setGoogleTimedOut(true);
+                }
+            }, 3000);
         }
-        return () => script.removeEventListener('load', handleLoad);
+        return () => {
+            script.removeEventListener('load', handleLoad);
+            clearTimeout(timeoutId);
+        }
+    } else {
+        setGoogleTimedOut(true);
     }
   }, []);
 
@@ -103,7 +130,7 @@ const LoginPage = () => {
     try {
       const { token } = await api.login(email, password);
       await login(token);
-      navigate(from, { replace: true });
+      await navigateAfterLogin();
     } catch (err)
       {
       setError(err.message);
@@ -118,7 +145,7 @@ const LoginPage = () => {
     try {
       const { token } = await api.login(userEmail, userPass);
       await login(token);
-      navigate('/');
+      await navigateAfterLogin();
     } catch (err) {
       setError("Error en el inicio de sesión de desarrollo.");
     } finally {
@@ -180,7 +207,16 @@ const LoginPage = () => {
           React.createElement("span", { className: "px-2 bg-white dark:bg-gray-800 text-gray-500" }, "O inicia sesión con")
         )
       ),
-      React.createElement("div", { className: "flex justify-center pt-4", ref: googleButtonRef }),
+      isGoogleScriptLoaded ? (
+        React.createElement("div", { className: "flex justify-center pt-4", ref: googleButtonRef })
+      ) : googleTimedOut ? (
+        React.createElement("div", { className: "flex justify-center pt-4" },
+            React.createElement(Button, { onClick: handleGoogleMockLogin, isLoading: isLoading, variant: "secondary", children: "Login con Google (Mock)" })
+        )
+      ) : (
+        React.createElement("div", { className: "flex justify-center pt-4 h-[40px]" }, React.createElement(Spinner, null) )
+      ),
+
 
       React.createElement("p", { className: "mt-2 text-center text-sm text-gray-600 dark:text-gray-400" },
         "¿No tienes una cuenta?",

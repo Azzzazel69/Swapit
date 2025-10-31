@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import Confetti from '../components/Confetti.js';
+import Confetti from '../components/Confetti.tsx';
 
 const ConfettiContext = createContext({
     showConfetti: () => {},

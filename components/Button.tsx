@@ -1,5 +1,5 @@
 import React from 'react';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
 const Button = ({
   children,

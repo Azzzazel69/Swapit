@@ -1,9 +1,5 @@
-
-
-
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { api } from '../services/api.js';
+import { api } from '../services/api.ts';
 
 const AuthContext = createContext(undefined);
 
@@ -15,12 +11,16 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('jwt_token');
+    if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('jwt_token');
+    }
     api.setToken(null);
   }, []);
 
   const login = useCallback(async (newToken) => {
-    localStorage.setItem('jwt_token', newToken);
+    if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('jwt_token', newToken);
+    }
     setToken(newToken);
     api.setToken(newToken);
     try {
@@ -49,7 +49,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
-      const storedToken = localStorage.getItem('jwt_token');
+      let storedToken = null;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        storedToken = window.localStorage.getItem('jwt_token');
+      }
+
       if (storedToken) {
         try {
           setToken(storedToken);

@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { api } from '../services/api.js';
+import { api } from '../services/api.ts';
 import { Link, useNavigate } from 'react-router-dom';
-import Input from '../components/Input.js';
-import Button from '../components/Button.js';
+import Input from '../components/Input.tsx';
+import Button from '../components/Button.tsx';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
-import { useColorTheme } from '../hooks/useColorTheme.js';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
 const PasswordStrengthIndicator = ({ password }) => {
     const checks = useMemo(() => {
@@ -71,7 +71,9 @@ const RegisterPage = () => {
     setError(null);
     try {
       await api.register(name, email, password);
-      localStorage.setItem('cookie_consent', 'accepted');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('cookie_consent', 'accepted');
+      }
       const { token } = await api.login(email, password);
       await login(token);
       navigate('/onboarding');

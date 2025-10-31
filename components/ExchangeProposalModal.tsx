@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Button from './Button.js';
-import { ICONS } from '../constants.js';
+import Button from './Button.tsx';
+import { ICONS } from '../constants.tsx';
 
 const SelectableItemCard = ({ item, isSelected, onSelect }) => {
     return React.createElement("div", {

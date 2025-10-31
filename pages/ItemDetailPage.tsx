@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { api } from '../services/api.js';
-import Spinner from '../components/Spinner.js';
-import Button from '../components/Button.js';
-import { ICONS } from '../constants.js';
+import { api } from '../services/api.ts';
+import Spinner from '../components/Spinner.tsx';
+import Button from '../components/Button.tsx';
+import { ICONS } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { useColorTheme } from '../hooks/useColorTheme.js';
-import ExchangeProposalModal from '../components/ExchangeProposalModal.js';
-import EditItemModal from '../components/EditItemModal.js';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
+import EditItemModal from '../components/EditItemModal.tsx';
 
 const ImageLightbox = (props) => {
   return React.createElement("div", 
@@ -94,7 +94,7 @@ const ItemDetailPage = () => {
   
   const handleDeleteItem = async () => {
     if (!item) return;
-    if (window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+    if (typeof window !== 'undefined' && window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
         setIsDeleting(true);
         try {
             await api.deleteItem(item.id);
@@ -137,6 +137,16 @@ const ItemDetailPage = () => {
       }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!item) return;
+    try {
+        const updatedItem = await api.toggleFavorite(item.id);
+        setItem(prevItem => ({ ...prevItem, ...updatedItem }));
+    } catch (err) {
+        setError(err.message || "No se pudo actualizar el estado de favorito.");
+    }
+  };
+
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
   }
@@ -151,6 +161,7 @@ const ItemDetailPage = () => {
   
   const isOwnItem = user?.id === item.userId;
   const isSwapped = item.status === 'EXCHANGED';
+  const isReserved = item.status === 'RESERVED';
 
   return React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl mx-auto p-4 sm:p-6 lg:p-8" },
     lightboxOpen && selectedImage && React.createElement(ImageLightbox, { imageUrl: selectedImage, onClose: () => setLightboxOpen(false) }),
@@ -227,10 +238,24 @@ const ItemDetailPage = () => {
         React.createElement("span", { className: `${theme.lightBg} ${theme.darkText} text-sm font-medium mb-2 px-2.5 py-0.5 rounded-full self-start` },
           item.category
         ),
-        React.createElement("h1", { className: "text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4" }, item.title),
+        React.createElement("div", { className: "flex justify-between items-start gap-4 mb-4" },
+            React.createElement("h1", { className: "text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white flex-grow" }, item.title),
+            !isOwnItem && !isSwapped && !isReserved && (
+                React.createElement("button", {
+                    onClick: handleToggleFavorite,
+                    className: "flex-shrink-0 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 p-3 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors",
+                    title: "Añadir a favoritos"
+                },
+                    item.isFavorited 
+                        ? React.createElement("span", { className: "text-red-500" }, React.cloneElement(ICONS.heartSolid, { className: "h-6 w-6" }))
+                        : React.cloneElement(ICONS.heart, { className: "h-6 w-6" }),
+                    React.createElement("span", { className: "font-bold text-sm" }, item.likes || 0)
+                )
+            )
+        ),
         React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-6 flex-grow" }, item.description),
         
-        isOwnItem && !isSwapped && (
+        isOwnItem && !isSwapped && !isReserved && (
           React.createElement("div", { className: "mb-6 flex gap-4" },
             React.createElement(Button, { 
               onClick: () => setIsEditModalOpen(true),
@@ -258,6 +283,10 @@ const ItemDetailPage = () => {
           isSwapped ? (
             React.createElement("div", { className: "mt-6 text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg" },
               React.createElement("p", { className: "font-semibold text-gray-700 dark:text-gray-200" }, "Este artículo ya ha sido intercambiado.")
+            )
+          ) : isReserved ? (
+             React.createElement("div", { className: "mt-6 text-center p-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg" },
+              React.createElement("p", { className: "font-semibold text-yellow-800 dark:text-yellow-200" }, "Este artículo está reservado en un intercambio.")
             )
           ) : (
             React.createElement("div", { className: "mt-6" },

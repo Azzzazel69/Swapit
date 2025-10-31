@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { api } from '../services/api.js';
-import ItemCard from '../components/ItemCard.js';
-import Spinner from '../components/Spinner.js';
-import Button from '../components/Button.js';
+import { api } from '../services/api.ts';
+import ItemCard from '../components/ItemCard.tsx';
+import Spinner from '../components/Spinner.tsx';
+import Button from '../components/Button.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 
 const UserProfilePage = () => {
@@ -13,6 +13,7 @@ const UserProfilePage = () => {
     const location = useLocation();
     
     const [profile, setProfile] = useState(null);
+    const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,6 +28,7 @@ const UserProfilePage = () => {
                 setLoading(true);
                 const userProfile = await api.getUserProfile(userId);
                 setProfile(userProfile);
+                setItems(userProfile.items || []);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -46,6 +48,16 @@ const UserProfilePage = () => {
             setError(err.message);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+    
+    const handleToggleFavorite = async (itemId) => {
+        try {
+            const updatedItem = await api.toggleFavorite(itemId);
+            setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item));
+        } catch (error) {
+            console.error("Error toggling favorite", error);
+            setError("No se pudo actualizar el estado de favorito.");
         }
     };
     
@@ -69,15 +81,15 @@ const UserProfilePage = () => {
         
         React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-white mb-4" }, "Artículos disponibles de ", profile.name),
 
-        profile.items.length === 0 ? (
+        items.length === 0 ? (
           React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400 mt-10" },
             `${profile.name} no tiene artículos disponibles en este momento.`
           )
         ) : (
           React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-            profile.items.map((item) => (
+            items.map((item) => (
                 React.createElement("div", { key: item.id, className: "relative" },
-                    React.createElement(ItemCard, { item: item }),
+                    React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite }),
                     fromExchangeId && item.userId !== currentUser.id && (
                         React.createElement(Button, {
                             onClick: () => handleCounterOffer(item.id),

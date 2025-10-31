@@ -1,36 +1,36 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
-import { ColorThemeProvider } from './hooks/useColorTheme.js';
-import Header from './components/Header.js';
-import HomePage from './pages/HomePage.js';
-import LoginPage from './pages/LoginPage.js';
-import RegisterPage from './pages/RegisterPage.js';
-import ExchangesPage from './pages/ExchangesPage.js';
-import ProfilePage from './pages/ProfilePage.js';
-import Spinner from './components/Spinner.js';
-import ItemDetailPage from './pages/ItemDetailPage.js';
-import OnboardingPage from './pages/OnboardingPage.js';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.js';
-import TermsOfServicePage from './pages/TermsOfServicePage.js';
-import CookiePolicyPage from './pages/CookiePolicyPage.js';
-import { useColorTheme } from './hooks/useColorTheme.js';
-import ChatDetailPage from './pages/ChatDetailPage.js';
-import UserProfilePage from './pages/UserProfilePage.js';
-import { ConfettiProvider } from './hooks/useConfetti.tsx';
+import { ColorThemeProvider } from './hooks/useColorTheme.tsx';
+import Header from './components/Header.tsx';
+import HomePage from './pages/HomePage.tsx';
+import LoginPage from './pages/LoginPage.tsx';
+import RegisterPage from './pages/RegisterPage.tsx';
+import ExchangesPage from './pages/ExchangesPage.tsx';
+import ProfilePage from './pages/ProfilePage.tsx';
+import Spinner from './components/Spinner.tsx';
+import ItemDetailPage from './pages/ItemDetailPage.tsx';
+import OnboardingPage from './pages/OnboardingPage.tsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
+import TermsOfServicePage from './pages/TermsOfServicePage.tsx';
+import CookiePolicyPage from './pages/CookiePolicyPage.tsx';
+import { useColorTheme } from './hooks/useColorTheme.tsx';
+import ChatDetailPage from './pages/ChatDetailPage.tsx';
+import UserProfilePage from './pages/UserProfilePage.tsx';
+import OfflineBanner from './components/OfflineBanner.tsx';
+import { initializePushNotifications } from './services/pushNotifications.ts';
 
 const App = () => {
   return React.createElement(AuthProvider, null,
     React.createElement(ColorThemeProvider, null,
-      React.createElement(ConfettiProvider, null,
-        React.createElement(HashRouter, null,
-          React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
-            React.createElement(Header, null),
-            React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6 flex flex-col" },
-              React.createElement(AppRoutes, null)
-            ),
-            React.createElement(AppFooter, null)
-          )
+      React.createElement(HashRouter, null,
+        React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
+          React.createElement(OfflineBanner, null),
+          React.createElement(Header, null),
+          React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]" },
+            React.createElement(AppRoutes, null)
+          ),
+          React.createElement(AppFooter, null)
         )
       )
     )
@@ -54,6 +54,13 @@ const AppFooter = () => {
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      // Initialize push notifications once the user is logged in
+      initializePushNotifications();
+    }
+  }, [user]);
 
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" },

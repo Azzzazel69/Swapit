@@ -1,18 +1,21 @@
 
 
 
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../services/api.js';
-import Button from '../components/Button.js';
-import Input from '../components/Input.js';
-import Spinner from '../components/Spinner.js';
-import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.js';
-import { useColorTheme } from '../hooks/useColorTheme.js';
-import AutocompleteInput from '../components/AutocompleteInput.js';
-import { locations } from '../data/locations.js';
+import { api } from '../services/api.ts';
+import Button from '../components/Button.tsx';
+import Input from '../components/Input.tsx';
+import Spinner from '../components/Spinner.tsx';
+import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import AutocompleteInput from '../components/AutocompleteInput.tsx';
+import { locations } from '../data/locations.ts';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
