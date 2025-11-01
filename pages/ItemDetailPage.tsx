@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api.ts';
-import Spinner from '../components/Spinner.tsx';
 import Button from '../components/Button.tsx';
 import { ICONS } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
 import EditItemModal from '../components/EditItemModal.tsx';
+import ItemDetailSkeleton from '../components/ItemDetailSkeleton.tsx';
 
 const ImageLightbox = (props) => {
   return React.createElement("div", 
@@ -148,7 +148,7 @@ const ItemDetailPage = () => {
   };
 
   if (loading) {
-    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
+    return React.createElement(ItemDetailSkeleton, null);
   }
 
   if (error) {
