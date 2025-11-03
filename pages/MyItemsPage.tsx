@@ -1,11 +1,13 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import ItemCard from '../components/ItemCard.tsx';
-import Spinner from '../components/Spinner.tsx';
+import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
-import { ICONS, CATEGORIES } from '../constants.tsx';
+// FIX: Changed import from 'CATEGORIES' to 'CATEGORIES_WITH_SUBCATEGORIES' as 'CATEGORIES' is not exported from constants.tsx.
+import { ICONS, CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
@@ -149,7 +151,7 @@ const MyItemsPage = () => {
   };
 
   if (loading) {
-    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
+    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(SwapSpinner, null));
   }
 
   return React.createElement("div", null,
@@ -174,9 +176,18 @@ const MyItemsPage = () => {
         ),
         React.createElement("div", null,
           React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
+          // FIX: Updated category dropdown to use CATEGORIES_WITH_SUBCATEGORIES with optgroups.
           React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
             React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
-            ...CATEGORIES.map(cat => React.createElement("option", { key: cat, value: cat }, cat))
+            CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
+                                cat.sub.length > 0 ? (
+                                    React.createElement("optgroup", { key: cat.name, label: cat.name },
+                                        cat.sub.map(subCat => React.createElement("option", { key: subCat, value: subCat }, subCat))
+                                    )
+                                ) : (
+                                    React.createElement("option", { key: cat.name, value: cat.name }, cat.name)
+                                )
+                            )
           )
         ),
         React.createElement("div", null,

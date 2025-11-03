@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import { ExchangeStatus } from '../types.ts';
-import Spinner from '../components/Spinner.tsx';
+import SwapSpinner from '../components/SwapSpinner.tsx';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import Button from '../components/Button.tsx';
@@ -132,7 +133,7 @@ const ExchangesPage = () => {
   };
 
   if (loading) {
-    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
+    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(SwapSpinner, null));
   }
   
   if (error) {

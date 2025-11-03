@@ -1,4 +1,9 @@
 
+
+
+
+
+
 export const locations = {
   'Afganistán': ['Kabul', 'Herat', 'Mazar-i-Sharif', 'Kandahar'],
   'Albania': ['Tirana', 'Durrës', 'Vlorë', 'Shkodër', 'Elbasan'],

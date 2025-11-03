@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { api } from '../services/api.ts';
+import { api, viewHistoryService } from '../services/api.ts';
 import Button from '../components/Button.tsx';
 import { ICONS } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -63,6 +64,7 @@ const ItemDetailPage = () => {
         if (fetchedItem) {
           setItem(fetchedItem);
           setSelectedImage(fetchedItem.imageUrls[0]);
+          viewHistoryService.addItem(fetchedItem);
         } else {
           setError("Artículo no encontrado.");
         }
@@ -119,13 +121,14 @@ const ItemDetailPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmitProposal = async ({ offeredItemIds, message }) => {
+  const handleSubmitProposal = async ({ offeredItemIds, otherItems, message }) => {
       if (!itemId) return;
       setIsSubmitting(true);
       try {
           const newExchange = await api.createExchangeProposal({
               requestedItemId: itemId,
               offeredItemIds,
+              otherItems,
               message,
           });
           setIsModalOpen(false);
@@ -255,6 +258,16 @@ const ItemDetailPage = () => {
         ),
         React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-6 flex-grow" }, item.description),
         
+        React.createElement("div", { className: "mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-l-4 border-orange-400" },
+            React.createElement("h4", { className: "text-md font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2" }, 
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor"}, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13 10V3L4 14h7v7l9-11h-7z" })),
+                "Lo cambiaría por..."
+            ),
+            React.createElement("p", { className: "text-gray-800 dark:text-gray-100 mt-2 text-lg italic" },
+                item.wishedItem || 'Abierto a escuchar propuestas'
+            )
+        ),
+        
         isOwnItem && !isSwapped && !isReserved && (
           React.createElement("div", { className: "mb-6 flex gap-4" },
             React.createElement(Button, { 
@@ -275,7 +288,7 @@ const ItemDetailPage = () => {
         
         React.createElement("div", { className: "border-t border-gray-200 dark:border-gray-700 pt-4" },
           React.createElement("div", { className: "text-sm text-gray-500 dark:text-gray-400" },
-            React.createElement("p", null, "Propietario: ", React.createElement("strong", null, item.ownerName)),
+            React.createElement("p", null, "Propietario: ", React.createElement(Link, { to: `/user/${item.userId}`, className: `font-bold ${theme.textColor} hover:underline` }, item.ownerName)),
             React.createElement("p", null, "Publicado: ", new Date(item.createdAt).toLocaleDateString())
           )
         ),

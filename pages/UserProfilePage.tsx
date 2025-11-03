@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import ItemCard from '../components/ItemCard.tsx';
-import Spinner from '../components/Spinner.tsx';
+import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 
@@ -62,7 +62,7 @@ const UserProfilePage = () => {
     };
     
     if (loading) {
-        return React.createElement(Spinner, null);
+        return React.createElement(SwapSpinner, null);
     }
 
     if (error) {

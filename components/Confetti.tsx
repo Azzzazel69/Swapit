@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 
 function createConfettiElements(count = 60) {

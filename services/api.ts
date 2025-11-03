@@ -1,3 +1,4 @@
+
 import { ExchangeStatus } from '../types.ts';
 import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 
@@ -81,19 +82,37 @@ const setupInitialData = () => {
     chats = [];
 
     const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
-    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Vehículos'] };
+    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'] };
     const admin = { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
 
     users.push(alice, bob, admin);
 
     items = [
-        { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Una bicicleta de carretera clásica de 10 velocidades de los años 80. Bien cuidada y recién revisada.', imageUrls: ['https://images.unsplash.com/photo-1559348349-36de83b9e11e?w=500', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500'], category: 'Vehículos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), likes: 0, favoritedBy: [] },
-        { id: '102', userId: '1', ownerName: 'Ana', title: 'Guitarra Acústica', description: 'Guitarra acústica Yamaha, ideal para principiantes. Incluye funda y afinador.', imageUrls: ['https://images.unsplash.com/photo-1510915361894-db8b60106945?w=500', 'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=500'], category: 'Música', status: 'AVAILABLE', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), likes: 0, favoritedBy: [] },
-        { id: '103', userId: '2', ownerName: 'Benito', title: 'Colección de Libros Antiguos', description: 'Lote de 20 novelas clásicas de la literatura. Incluye obras de Tolstoy, Dickens y Austen.', imageUrls: ['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500', 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500'], category: 'Libros', status: 'AVAILABLE', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), likes: 0, favoritedBy: [] },
-        { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Nintendo Switch con poco uso, incluye dos juegos: Zelda y Mario Kart 8.', imageUrls: ['https://images.unsplash.com/photo-1612036782180-6f0b6cd84627?w=500', 'https://images.unsplash.com/photo-1589254065909-b7086229d08c?w=500'], category: 'Electrónica', status: 'EXCHANGED', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(), likes: 0, favoritedBy: [] },
-        { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Dron compacto y potente, perfecto para principiantes. Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: ['https://images.unsplash.com/photo-1607621247161-1e24a5b9b8b0?w=500', 'https://images.unsplash.com/photo-1507563589139-d3c2e7d7a2e8?w=500'], category: 'Electrónica', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 0, favoritedBy: [] },
-        { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada, en excelentes condiciones. Estilo atemporal.', imageUrls: ['https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?w=500', 'https://images.unsplash.com/photo-1611312449412-6cefac5dc2d0?w=500'], category: 'Ropa', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 0, favoritedBy: [] },
-        { id: '107', userId: '3', ownerName: 'Admin', title: 'Clases de guitarra online', description: 'Ofrezco una hora de clase de guitarra para principiantes a través de videollamada. Todos los niveles son bienvenidos.', imageUrls: ['https://images.unsplash.com/photo-1550291652-6ea9114a47b1?w=500'], category: 'Servicios', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 0, favoritedBy: [] },
+        // Ana's Items (User 1)
+        { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Bicicleta de carretera de 10 velocidades de los 80. Bien cuidada.', imageUrls: ['https://images.unsplash.com/photo-1559348349-36de8b9e11e?w=500', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500'], category: 'Vehículos', wishedItem: 'Monitor Ultrawide', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 2, favoritedBy: ['2'] },
+        { id: '102', userId: '1', ownerName: 'Ana', title: 'Guitarra Acústica Yamaha', description: 'Ideal para principiantes. Incluye funda y afinador.', imageUrls: ['https://images.unsplash.com/photo-1510915361894-db8b60106945?w=500', 'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=500'], category: 'Música', wishedItem: 'Colección de Libros Antiguos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 5, favoritedBy: ['2', '3'] },
+        { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: ['https://images.unsplash.com/photo-1607621247161-1e24a5b9b8b0?w=500', 'https://images.unsplash.com/photo-1507563589139-d3c2e7d7a2e8?w=500'], category: 'Electrónica', wishedItem: 'Casco de Moto', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 10, favoritedBy: ['2'] },
+        { id: '108', userId: '1', ownerName: 'Ana', title: 'Juego de Tazas de Cerámica', description: 'Hechas a mano. Cuatro tazas con un diseño único y rústico.', imageUrls: ['https://images.unsplash.com/photo-1594312693441-32c029a24786?w=500'], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 4).toISOString(), likes: 1, favoritedBy: [] },
+        { id: '109', userId: '1', ownerName: 'Ana', title: 'Patinete Eléctrico', description: 'Patinete eléctrico con autonomía de 20km, ideal para la ciudad.', imageUrls: ['https://images.unsplash.com/photo-1593922709633-855f71e54c86?w=500'], category: 'Vehículos', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 6).toISOString(), likes: 0, favoritedBy: [] },
+        { id: '110', userId: '1', ownerName: 'Ana', title: 'Saga "Dune" Completa', description: 'Los 6 libros de la saga original de Frank Herbert en tapa blanda.', imageUrls: ['https://images.unsplash.com/photo-1633423539542-f83c3b31d167?w=500'], category: 'Libros', wishedItem: 'Videojuego Nintendo Switch', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 8).toISOString(), likes: 3, favoritedBy: [] },
+        { id: '111', userId: '1', ownerName: 'Ana', title: 'Teclado Mecánico Keychron', description: 'Teclado 65% con switches brown, retroiluminación RGB.', imageUrls: ['https://images.unsplash.com/photo-1618384887924-2c8ab66a8a0b?w=500'], category: 'Electrónica', wishedItem: 'Tocadiscos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 8, favoritedBy: ['2'] },
+        { id: '112', userId: '1', ownerName: 'Ana', title: 'Cámara Analógica Canon AE-1', description: 'Cámara réflex de 35mm clásica. Funciona perfectamente.', imageUrls: ['https://images.unsplash.com/photo-1519638831568-d9897f54ed69?w=500'], category: 'Electrónica', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 12).toISOString(), likes: 4, favoritedBy: [] },
+        
+        // Benito's Items (User 2)
+        { id: '103', userId: '2', ownerName: 'Benito', title: 'Colección de Libros Antiguos', description: 'Lote de 20 novelas clásicas. Incluye Tolstoy, Dickens y Austen.', imageUrls: ['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500', 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500'], category: 'Libros', wishedItem: 'Guitarra Acústica', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 8, favoritedBy: ['1'] },
+        { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Con poco uso, incluye Zelda y Mario Kart 8.', imageUrls: ['https://images.unsplash.com/photo-1612036782180-6f0b6cd84627?w=500', 'https://images.unsplash.com/photo-1589254065909-b7086229d08c?w=500'], category: 'Videojuegos', wishedItem: '', status: 'EXCHANGED', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 15, favoritedBy: [] },
+        { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada.', imageUrls: ['https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?w=500', 'https://images.unsplash.com/photo-1611312449412-6cefac5dc2d0?w=500'], category: 'Ropa', wishedItem: 'Patinete', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 2, favoritedBy: [] },
+        { id: '113', userId: '2', ownerName: 'Benito', title: 'Tocadiscos Audio-Technica', description: 'Modelo AT-LP60X. Automático, con preamplificador. Casi nuevo.', imageUrls: ['https://images.unsplash.com/photo-1591321920387-014ea413a968?w=500'], category: 'Música', wishedItem: 'Teclado Mecánico', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 9, favoritedBy: ['1'] },
+        { id: '114', userId: '2', ownerName: 'Benito', title: 'Cafetera Italiana Bialetti', description: 'Cafetera moka para 6 tazas. Un clásico del diseño.', imageUrls: ['https://images.unsplash.com/photo-1620524222472-a7d65b72183e?w=500'], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 7).toISOString(), likes: 0, favoritedBy: [] },
+        { id: '115', userId: '2', ownerName: 'Benito', title: 'Casco de Moto Modular', description: 'Talla L, con visor solar integrado. Marca LS2.', imageUrls: ['https://images.unsplash.com/photo-1599119747993-9c5954620068?w=500'], category: 'Vehículos', wishedItem: 'Dron', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 9).toISOString(), likes: 1, favoritedBy: [] },
+        { id: '116', userId: '2', ownerName: 'Benito', title: 'Monitor Ultrawide LG', description: 'Monitor de 29 pulgadas, resolución 2560x1080, ideal para productividad.', imageUrls: ['https://images.unsplash.com/photo-1627843445396-5ab93a18b6a3?w=500'], category: 'Electrónica', wishedItem: 'Bicicleta Clásica', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 6, favoritedBy: ['1'] },
+        { id: '117', userId: '2', ownerName: 'Benito', title: 'Mochila de Montaña 50L', description: 'Mochila de trekking con múltiples compartimentos. Marca Osprey.', imageUrls: ['https://images.unsplash.com/photo-1580610423292-8d2659e974f4?w=500'], category: 'Otros', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 15).toISOString(), likes: 3, favoritedBy: [] },
+
+        // Admin's Items (User 3)
+        { id: '107', userId: '3', ownerName: 'Admin', title: 'Clases de guitarra online', description: 'Ofrezco una hora de clase de guitarra para principiantes por videollamada.', imageUrls: ['https://images.unsplash.com/photo-1550291652-6ea9114a47b1?w=500'], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 4, favoritedBy: [] },
+        { id: '118', userId: '3', ownerName: 'Admin', title: 'Set de Herramientas Bosch', description: 'Maletín con 108 piezas, incluye taladro percutor y puntas.', imageUrls: ['https://images.unsplash.com/photo-1556911985-652a60824b33?w=500'], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 2, favoritedBy: [] },
+        { id: '119', userId: '3', ownerName: 'Admin', title: 'Lámpara de Escritorio Vintage', description: 'Lámpara de metal de los años 60, estilo industrial.', imageUrls: ['https://images.unsplash.com/photo-1507494954209-4723e7f3b521?w=500'], category: 'Muebles', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 1, favoritedBy: [] },
+        { id: '120', userId: '3', ownerName: 'Admin', title: 'Masaje Relajante a Domicilio', description: 'Sesión de 1 hora de masaje descontracturante. Solo en Valencia.', imageUrls: ['https://images.unsplash.com/photo-1598421830154-02a4b8849033?w=500'], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 7, favoritedBy: ['1', '2'] },
     ];
     persistData();
 };
@@ -135,13 +154,31 @@ class ApiClient {
     return users.find(u => u.id === userId);
   }
 
-  _enrichItem(item, currentUser) {
+  _enrichItem(item, currentUser, currentUserItemsCache) {
       if (!item) return null;
-      const isFavorited = currentUser ? (item.favoritedBy || []).includes(currentUser.id) : false;
       const owner = users.find(u => u.id === item.userId);
+      if (!currentUser) {
+           return { 
+              ...item,
+              isFavorited: false,
+              isMatch: false,
+              ownerLocation: owner ? owner.location : null
+          };
+      }
+      
+      const isFavorited = (item.favoritedBy || []).includes(currentUser.id);
+
+      const currentUserItems = currentUserItemsCache || items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE');
+      
+      const isMatch = currentUserItems.some(userItem =>
+        (userItem.wishedItem && item.title.toLowerCase().includes(userItem.wishedItem.toLowerCase())) &&
+        (item.wishedItem && userItem.title.toLowerCase().includes(item.wishedItem.toLowerCase()))
+      );
+
       return { 
           ...item, 
           isFavorited,
+          isMatch,
           ownerLocation: owner ? owner.location : null
       };
   }
@@ -185,6 +222,7 @@ class ApiClient {
               emailVerified: true,
               phoneVerified: false,
               location: null,
+              fcmToken: null,
           };
           users.push(newUser);
           user = newUser;
@@ -209,6 +247,7 @@ class ApiClient {
           preferences: [],
           emailVerified: false,
           phoneVerified: false,
+          fcmToken: null,
       };
       users.push(newUser);
       persistData();
@@ -233,21 +272,27 @@ class ApiClient {
   async getAllItems() {
       await this.simulateDelay();
       const currentUser = this._getCurrentUserFromToken();
-      return items.map(item => this._enrichItem(item, currentUser));
+      const currentUserItems = currentUser ? items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE') : [];
+      return items.map(item => this._enrichItem(item, currentUser, currentUserItems));
   }
   
   async getItemById(itemId) {
       await this.simulateDelay(300);
       const currentUser = this._getCurrentUserFromToken();
+      const currentUserItems = currentUser ? items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE') : [];
       const item = items.find(item => item.id === itemId);
-      return this._enrichItem(item, currentUser);
+      return this._enrichItem(item, currentUser, currentUserItems);
   }
   
   async getUserItems(userId) {
       await this.simulateDelay();
       const currentUser = this._getCurrentUserFromToken();
       const userItems = items.filter(item => item.userId === userId);
-      return userItems.map(item => this._enrichItem(item, currentUser));
+      // For enriching our own items, we don't need to check for matches against ourselves.
+      const enrichmentItems = (currentUser && currentUser.id !== userId) 
+        ? items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE') 
+        : [];
+      return userItems.map(item => this._enrichItem(item, currentUser, enrichmentItems));
   }
 
   async getUserProfile(userId) {
@@ -256,9 +301,11 @@ class ApiClient {
       const user = users.find(u => u.id === userId);
       if (!user) throw new Error("Usuario no encontrado.");
       
+      const currentUserItems = currentUser ? items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE') : [];
+      
       const userItems = items
           .filter(item => item.userId === userId && item.status === 'AVAILABLE')
-          .map(item => this._enrichItem(item, currentUser));
+          .map(item => this._enrichItem(item, currentUser, currentUserItems));
 
       const { password, email, ...publicProfile } = user;
       return { ...publicProfile, items: userItems };
@@ -375,8 +422,9 @@ class ApiClient {
       
       addNotificationDev(owner.id, { title: 'Nueva propuesta de intercambio', body: `${requester.name} quiere tu ${requestedItem.title}` });
 
-      const allItemIdsInvolved = [proposal.requestedItemId, ...proposal.offeredItemIds];
-      const itemStatus = allItemIdsInvolved.reduce((acc, id) => {
+      const offeredOtherItems = proposal.otherItems || [];
+      const allOfferedIds = [...proposal.offeredItemIds, ...offeredOtherItems.map(item => item.id)];
+      const itemStatus = allOfferedIds.reduce((acc, id) => {
         acc[id] = 'PENDING';
         return acc;
       }, {});
@@ -389,6 +437,7 @@ class ApiClient {
           ownerName: owner.name,
           requestedItemId: proposal.requestedItemId,
           offeredItemIds: proposal.offeredItemIds,
+          offeredOtherItems: offeredOtherItems,
           acceptedOfferedItemIds: [],
           itemStatus: itemStatus,
           status: ExchangeStatus.Pending,
@@ -437,8 +486,16 @@ class ApiClient {
     const { password: __, ...requesterPublic } = requester;
     
     const allItemIds = [...new Set([exchange.requestedItemId, ...exchange.offeredItemIds])];
-    const allItems = allItemIds.map(id => items.find(item => item.id === id)).filter(Boolean);
+    const regularItems = allItemIds.map(id => items.find(item => item.id === id)).filter(Boolean);
+    const otherItems = (exchange.offeredOtherItems || []).map(item => ({
+        ...item,
+        title: 'Otro artículo',
+        description: item.description,
+        isOther: true
+    }));
 
+    const allItems = [...regularItems, ...otherItems];
+    
     const detailedExchange = { ...exchange, allItems, owner: ownerPublic, requester: requesterPublic };
     
     return { chat, exchange: detailedExchange };
@@ -467,83 +524,154 @@ class ApiClient {
       return newMessage;
   }
 
-    async updateItemInExchange(exchangeId, itemId, status) {
+    async respondToExchange(exchangeId, action) { // action is 'ACCEPT' or 'REJECT'
         await this.simulateDelay();
         const currentUser = this._getCurrentUserFromToken();
         const exchange = exchanges.find(ex => ex.id === exchangeId);
+        const chat = chats.find(c => c.id === exchangeId);
 
         if (!exchange) throw new Error('Intercambio no encontrado');
-        if (currentUser.id !== exchange.ownerId) throw new Error('No autorizado para modificar este intercambio');
-        if (!exchange.itemStatus[itemId]) throw new Error('Artículo no encontrado en este intercambio');
+        if (currentUser.id !== exchange.ownerId) throw new Error('No autorizado para responder a esta oferta');
+        if (exchange.status !== ExchangeStatus.Pending) throw new Error('Esta oferta ya ha sido respondida.');
+        
+        const owner = users.find(u => u.id === exchange.ownerId);
+        const requester = users.find(u => u.id === exchange.requesterId);
 
-        exchange.itemStatus[itemId] = status;
-
-        const allDecided = Object.values(exchange.itemStatus).every(s => s !== 'PENDING');
-
-        if (allDecided) {
-            const acceptedItemsIds = Object.keys(exchange.itemStatus).filter(id => exchange.itemStatus[id] === 'ACCEPTED');
-            const acceptedByOwner = acceptedItemsIds.filter(id => exchange.offeredItemIds.includes(id));
+        if (action === 'ACCEPT') {
+            exchange.status = ExchangeStatus.Accepted;
+            exchange.acceptedOfferedItemIds = [...exchange.offeredItemIds, ...(exchange.offeredOtherItems || []).map(i => i.id)];
             
-            if (acceptedByOwner.length > 0) {
-                exchange.status = ExchangeStatus.Accepted;
-                exchange.acceptedOfferedItemIds = acceptedByOwner;
+            const finalTradeItems = [exchange.requestedItemId, ...exchange.acceptedOfferedItemIds];
+            items.forEach(item => {
+                if (finalTradeItems.includes(item.id)) {
+                    item.status = 'RESERVED';
+                }
+            });
+            
+            addNotificationDev(requester.id, { 
+                title: '¡Tu propuesta ha sido aceptada!', 
+                body: `${owner.name} ha aceptado. Por favor, confirma el intercambio para finalizar.` 
+            });
+            addNotificationDev(owner.id, { 
+                title: 'Has aceptado un intercambio', 
+                body: `Esperando tu confirmación final para el intercambio con ${requester.name}.` 
+            });
 
-                const finalTradeItems = [exchange.requestedItemId, ...acceptedByOwner];
-                items.forEach(item => {
-                    if (finalTradeItems.includes(item.id)) {
-                        item.status = 'RESERVED'; // New status: RESERVED
-                    }
-                });
-                
-                const owner = users.find(u => u.id === exchange.ownerId);
-                const requester = users.find(u => u.id === exchange.requesterId);
-                
-                addNotificationDev(requester.id, { 
-                    title: '¡Tu propuesta ha sido aceptada!', 
-                    body: `${owner.name} ha aceptado. Por favor, confirma el intercambio para finalizar.` 
-                });
-                
-                addNotificationDev(owner.id, { 
-                    title: 'Has aceptado un intercambio', 
-                    body: `Esperando tu confirmación final para el intercambio con ${requester.name}.` 
-                });
-
-                const systemMessageText = `${owner.name} ha aceptado la propuesta. Ambos usuarios deben confirmar el intercambio en este chat para finalizarlo.`;
-                chats.find(c => c.id === exchangeId).messages.push({
+            const systemMessageText = `${owner.name} ha aceptado la propuesta. Ambos usuarios deben confirmar el intercambio en este chat para finalizarlo.`;
+            if (chat) {
+                chat.messages.push({
                     id: `msg-system-${Date.now()}`, senderId: 'system', text: systemMessageText, timestamp: new Date().toISOString(), type: 'SYSTEM'
                 });
-
-            } else {
-                exchange.status = ExchangeStatus.Rejected;
-                chats.find(c => c.id === exchangeId).messages.push({
-                    id: `msg-system-${Date.now()}`, senderId: 'system', text: 'El trato ha sido rechazado ya que no se aceptó ningún artículo.', timestamp: new Date().toISOString(), type: 'SYSTEM'
+            }
+        } else { // REJECT
+            exchange.status = ExchangeStatus.Rejected;
+            const systemMessageText = `${owner.name} ha rechazado la propuesta de intercambio.`;
+            if (chat) {
+                chat.messages.push({
+                    id: `msg-system-${Date.now()}`, senderId: 'system', text: systemMessageText, timestamp: new Date().toISOString(), type: 'SYSTEM'
                 });
             }
         }
+        
         persistData();
         return exchange;
     }
 
-    async addCounterOffer(exchangeId, itemIds) {
+    async modifyExchangeProposal(exchangeId, { offeredItemIds, otherItems, message }) {
         await this.simulateDelay();
+        const currentUser = this._getCurrentUserFromToken();
         const exchange = exchanges.find(ex => ex.id === exchangeId);
-        if (!exchange) throw new Error("Intercambio no encontrado");
+        const chat = chats.find(c => c.id === exchangeId);
+        
+        if (!exchange) throw new Error('Intercambio no encontrado');
+        if (currentUser.id !== exchange.requesterId) throw new Error('No autorizado para modificar esta oferta');
+        if (exchange.status !== ExchangeStatus.Pending) throw new Error('No se puede modificar una oferta que ya ha sido respondida.');
 
-        itemIds.forEach(itemId => {
-            if (!exchange.offeredItemIds.includes(itemId)) {
-                exchange.offeredItemIds.push(itemId);
-                exchange.itemStatus[itemId] = 'PENDING';
+        exchange.offeredItemIds = offeredItemIds;
+        exchange.offeredOtherItems = otherItems || [];
+        
+        exchange.itemStatus = [...offeredItemIds, ...(otherItems || []).map(i => i.id)].reduce((acc, id) => {
+            acc[id] = 'PENDING';
+            return acc;
+        }, {});
+
+        const systemMessageText = `${currentUser.name} ha modificado la oferta.`;
+        if (chat) {
+            chat.messages.push({
+                id: `msg-system-mod-${Date.now()}`, senderId: 'system', text: systemMessageText, timestamp: new Date().toISOString(), type: 'SYSTEM'
+            });
+
+            if (message && message.trim()) {
+                 chat.messages.push({
+                    id: `msg-${Date.now()}`,
+                    senderId: currentUser.id,
+                    text: message,
+                    timestamp: new Date().toISOString(),
+                    type: 'TEXT',
+                });
+            }
+        }
+
+        persistData();
+        return exchange;
+    }
+
+// FIX: Add missing 'addCounterOffer' method to handle counter-proposals from the item owner.
+    /**
+     * Permite al propietario de un artículo hacer una contraoferta
+     * pidiendo artículos adicionales del solicitante.
+     */
+    async addCounterOffer(exchangeId, newItemIds) {
+        await this.simulateDelay();
+        const currentUser = this._getCurrentUserFromToken();
+        if (!currentUser) throw new Error('Autenticación requerida');
+
+        const exchange = exchanges.find(ex => ex.id === exchangeId);
+        if (!exchange) throw new Error('Intercambio no encontrado');
+        if (currentUser.id !== exchange.ownerId) throw new Error('No autorizado para hacer una contraoferta');
+        if (exchange.status !== ExchangeStatus.Pending) throw new Error('Solo se puede hacer una contraoferta en un intercambio pendiente.');
+
+        // Add new items to the offered items list.
+        const existingOffered = new Set(exchange.offeredItemIds);
+        newItemIds.forEach(id => {
+            const item = items.find(i => i.id === id);
+            // Ensure the added item belongs to the requester and is available
+            if (item && item.userId === exchange.requesterId && item.status === 'AVAILABLE') {
+                existingOffered.add(id);
             }
         });
-        
-        const counterOfferItems = itemIds.map(id => items.find(i => i.id === id));
-        chats.find(c => c.id === exchangeId).messages.push({
-            id: `msg-system-${Date.now()}`, senderId: 'system', 
-            text: `${exchange.ownerName} ha añadido ${counterOfferItems.map(i => i.title).join(', ')} a la negociación.`, 
-            timestamp: new Date().toISOString(), type: 'SYSTEM'
-        });
-        persistData();
+        exchange.offeredItemIds = Array.from(existingOffered);
 
+        // Update item status for all offered items
+        exchange.itemStatus = exchange.offeredItemIds.reduce((acc, id) => {
+            acc[id] = 'PENDING';
+            return acc;
+        }, {});
+
+        // Add system message to chat
+        const chat = chats.find(c => c.id === exchangeId);
+        if (chat) {
+            const newItems = newItemIds.map(id => items.find(i => i.id === id)?.title).filter(Boolean);
+            const messageText = `${currentUser.name} ha hecho una contraoferta, pidiendo también: ${newItems.join(', ')}.`;
+            chat.messages.push({
+                id: `msg-system-counter-${Date.now()}`,
+                senderId: 'system',
+                text: messageText,
+                timestamp: new Date().toISOString(),
+                type: 'SYSTEM'
+            });
+        }
+        
+        // Notify the requester
+        const requester = users.find(u => u.id === exchange.requesterId);
+        if(requester) {
+            addNotificationDev(requester.id, {
+                title: 'Has recibido una contraoferta',
+                body: `${currentUser.name} ha modificado la oferta de intercambio.`
+            });
+        }
+
+        persistData();
         return exchange;
     }
 
@@ -688,6 +816,20 @@ class ApiClient {
       }
   }
 
+  async saveFcmToken(token: string) {
+      await this.simulateDelay(200);
+      const currentUser = this._getCurrentUserFromToken();
+      if (currentUser) {
+          console.log(`Saving FCM token for user ${currentUser.id}: ${token}`);
+          // @ts-ignore
+          currentUser.fcmToken = token;
+          persistData();
+          return { success: true };
+      }
+      console.warn('Could not save FCM token, no user logged in.');
+      return { success: false };
+  }
+
   async toggleFavorite(itemId) {
     await this.simulateDelay(200);
     const currentUser = this._getCurrentUserFromToken();
@@ -737,7 +879,8 @@ class ApiClient {
     }
     
     persistData();
-    return this._enrichItem(item, currentUser);
+    const currentUserItems = items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE');
+    return this._enrichItem(item, currentUser, currentUserItems);
   }
 
   async getFavoriteItems() {
@@ -795,6 +938,40 @@ class ApiClient {
     });
   }
 }
+
+// --- Client-side View History Service ---
+const VIEW_HISTORY_KEY = 'swapit_view_history';
+const MAX_HISTORY_SIZE = 25;
+
+export const viewHistoryService = {
+  getHistory: () => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const historyJson = window.localStorage.getItem(VIEW_HISTORY_KEY);
+      return historyJson ? JSON.parse(historyJson) : [];
+    } catch (e) {
+      console.error("Error reading view history", e);
+      return [];
+    }
+  },
+  addItem: (item) => {
+    if (typeof window === 'undefined' || !item || !item.id || !item.category) return;
+    try {
+      let history = viewHistoryService.getHistory();
+      // Remove existing to move it to the front
+      history = history.filter(h => h.id !== item.id);
+      // Add to the front
+      history.unshift({ id: item.id, category: item.category });
+      // Trim to max size
+      if (history.length > MAX_HISTORY_SIZE) {
+        history = history.slice(0, MAX_HISTORY_SIZE);
+      }
+      window.localStorage.setItem(VIEW_HISTORY_KEY, JSON.stringify(history));
+    } catch (e) {
+      console.error("Error saving view history", e);
+    }
+  }
+};
 
 export const api = new ApiClient();
 

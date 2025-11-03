@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from './Button.tsx';
 import Input from './Input.tsx';
-import { ICONS, CATEGORIES } from '../constants.tsx';
+import { ICONS, CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { api } from '../services/api.ts';
 
@@ -9,6 +9,7 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
+    const [wishedItem, setWishedItem] = useState('');
     const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -21,6 +22,7 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
             setDescription(item.description);
             setCategory(item.category);
             setImages(item.imageUrls);
+            setWishedItem(item.wishedItem || '');
             setError(''); // Reset error when item changes
         }
     }, [item]);
@@ -70,7 +72,7 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
         setError('');
         setIsSubmitting(true);
         try {
-            await onSave({ title, description, category, imageUrls: images });
+            await onSave({ title, description, category, imageUrls: images, wishedItem });
             onClose();
         } catch (err) {
             setError(err.message || 'Error al guardar los cambios.');
@@ -96,12 +98,46 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
                     React.createElement("label", { htmlFor: "edit-category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
                     React.createElement("select", { id: "edit-category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
                         React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
-                        ...CATEGORIES.map(cat => React.createElement("option", { key: cat, value: cat }, cat))
+                        CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
+                            cat.sub.length > 0 ? (
+                                React.createElement("optgroup", { key: cat.name, label: cat.name },
+                                    cat.sub.map(subCat => React.createElement("option", { key: subCat, value: subCat }, subCat))
+                                )
+                            ) : (
+                                React.createElement("option", { key: cat.name, value: cat.name }, cat.name)
+                            )
+                        )
                     )
                 ),
                 React.createElement("div", null,
+                    React.createElement(Input, { 
+                        id: "edit-wishedItem", 
+                        label: "Artículo deseado a cambio (opcional)", 
+                        type: "text", 
+                        value: wishedItem, 
+                        onChange: e => setWishedItem(e.target.value), 
+                        placeholder: "Ej: Guitarra acústica, PS5, etc." 
+                    }),
+                    React.createElement("p", { className: "mt-1 text-xs text-gray-500 dark:text-gray-400" }, "Sé específico para encontrar un 'match' directo. Ej: \"Playstation 5\", \"Libro Dune tapa dura\".")
+                ),
+                React.createElement("div", null,
                     React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Imágenes (mín. 1, máx. 5)"),
-                    images.length > 0 && React.createElement("div", { className: "mt-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4" },
+                    React.createElement("div", { className: "mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md" },
+                        React.createElement("div", { className: "space-y-1 text-center" },
+                            React.createElement("svg", { className: "mx-auto h-12 w-12 text-gray-400", stroke: "currentColor", fill: "none", viewBox: "0 0 48 48", "aria-hidden": "true" },
+                                React.createElement("path", { d: "M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" })
+                            ),
+                            React.createElement("div", { className: "flex text-sm text-gray-600 dark:text-gray-400" },
+                                React.createElement("label", { htmlFor: "file-upload-edit", className: `relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium ${theme.textColor} ${theme.hoverTextColor} focus-within:outline-none` },
+                                    React.createElement("span", null, "Sube tus archivos"),
+                                    React.createElement("input", { id: "file-upload-edit", name: "file-upload-edit", type: "file", className: "sr-only", multiple: true, accept: "image/*", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
+                                ),
+                                React.createElement("p", { className: "pl-1" }, "o arrástralos aquí")
+                            ),
+                            React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-500" }, "PNG, JPG, GIF hasta 10MB")
+                        )
+                    ),
+                    images.length > 0 && React.createElement("div", { className: "mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4" },
                         images.map((image, index) => React.createElement("div", { key: index, className: "relative group" },
                             React.createElement("img", { src: image, alt: `Preview ${index}`, className: "h-24 w-24 object-cover rounded-md" }),
                             React.createElement("button", { type: "button", onClick: () => handleRemoveImage(index), className: "absolute -top-1 -right-1 p-1 bg-red-600 text-white rounded-full opacity-75 group-hover:opacity-100 transition-opacity", "aria-label": "Eliminar imagen" },
@@ -110,12 +146,6 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
                                 )
                             )
                         ))
-                    ),
-                    React.createElement("div", { className: "mt-2" },
-                        React.createElement("label", { htmlFor: "file-upload-edit", className: `relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium ${theme.textColor} ${theme.hoverTextColor} focus-within:outline-none p-2 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center` },
-                            React.createElement("span", null, "Añadir más fotos..."),
-                            React.createElement("input", { id: "file-upload-edit", name: "file-upload-edit", type: "file", className: "sr-only", multiple: true, accept: "image/*", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
-                        )
                     )
                 )
             ),

@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -11,11 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
-import Spinner from '../components/Spinner.tsx';
+import SwapSpinner from '../components/SwapSpinner.tsx';
 import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import AutocompleteInput from '../components/AutocompleteInput.tsx';
 import { locations } from '../data/locations.ts';
+import { requestNotificationPermission } from '../services/pushNotifications.ts';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
@@ -156,6 +152,7 @@ const OnboardingPage = () => {
         try {
             await api.updateUserPreferences(preferences);
             await refreshUser();
+            await requestNotificationPermission(); // Request permission after onboarding is complete
         } catch (err) { setError(err.message); }
         finally { setIsLoading(false); }
     };
@@ -232,7 +229,7 @@ const OnboardingPage = () => {
                     ),
                     React.createElement("h3", { className: "text-xl font-semibold" }, "¡Configuración Completa!"),
                     React.createElement("p", { className: "text-gray-600 dark:text-gray-400" }, "Redirigiendo a la página principal..."),
-                    React.createElement(Spinner, null)
+                    React.createElement(SwapSpinner, null)
                 );
         }
     }

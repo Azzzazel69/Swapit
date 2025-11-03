@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -6,8 +7,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Input from '../components/Input.tsx';
 import Button from '../components/Button.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
-// FIX: Import Spinner component
-import Spinner from '../components/Spinner.tsx';
+import SwapSpinner from '../components/SwapSpinner.tsx';
 
 // This is a placeholder Client ID. For a production application, you must create your own in the Google Cloud Console.
 const GOOGLE_CLIENT_ID = "1028313539190-e5cih2p67j6c9t2k333ife2fr5f52g4o.apps.googleusercontent.com";
@@ -214,7 +214,7 @@ const LoginPage = () => {
             React.createElement(Button, { onClick: handleGoogleMockLogin, isLoading: isLoading, variant: "secondary", children: "Login con Google (Mock)" })
         )
       ) : (
-        React.createElement("div", { className: "flex justify-center pt-4 h-[40px]" }, React.createElement(Spinner, null) )
+        React.createElement("div", { className: "flex justify-center pt-4 h-[40px]" }, React.createElement(SwapSpinner, { size: 'md-small' }) )
       ),
 
 

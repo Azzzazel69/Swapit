@@ -1,16 +1,39 @@
+
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { api } from '../services/api.ts';
+import { api, viewHistoryService } from '../services/api.ts';
 import ItemCard from '../components/ItemCard.tsx';
-import Spinner from '../components/Spinner.tsx';
+import SwapSpinner from '../components/SwapSpinner.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { Link } from 'react-router-dom';
+
+const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage }) => {
+    if (!items || items.length === 0) {
+        return (
+            React.createElement("div", { className: "mb-12" },
+                React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
+                React.createElement("div", { className: "text-center py-8 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg" },
+                    React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, emptyMessage)
+                )
+            )
+        );
+    }
+
+    return (
+        React.createElement("div", { className: "mb-12" },
+            React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
+            React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite }))
+            )
+        )
+    );
+};
+
 
 const HomePage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('articles'); // 'articles' or 'location'
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
@@ -61,125 +84,174 @@ const HomePage = () => {
     }
   };
 
-  const filteredItems = useMemo(() => {
-    let tempItems = items;
-    
-    if (filter === 'recommended' && user?.preferences?.length) {
-      tempItems = tempItems.filter(item => user.preferences.includes(item.category));
+  const groupedItems = useMemo(() => {
+    let searchedItems = items;
+    if (searchQuery.trim()) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        if (searchType === 'articles') {
+            searchedItems = items.filter(item =>
+                item.title.toLowerCase().includes(lowercasedQuery) ||
+                item.description.toLowerCase().includes(lowercasedQuery)
+            );
+        } else { // searchType === 'location'
+            searchedItems = items.filter(item =>
+                item.ownerLocation && (
+                    item.ownerLocation.city.toLowerCase().includes(lowercasedQuery) ||
+                    item.ownerLocation.postalCode.toLowerCase().includes(lowercasedQuery)
+                )
+            );
+        }
     }
 
-    if (searchQuery.trim()) {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      if (searchType === 'articles') {
-        tempItems = tempItems.filter(item => 
-          item.title.toLowerCase().includes(lowercasedQuery) || 
-          item.description.toLowerCase().includes(lowercasedQuery)
-        );
-      } else { // searchType === 'location'
-        tempItems = tempItems.filter(item => 
-          item.ownerLocation && (
-            item.ownerLocation.city.toLowerCase().includes(lowercasedQuery) ||
-            item.ownerLocation.postalCode.toLowerCase().includes(lowercasedQuery)
-          )
-        );
-      }
-    }
+    const viewHistory = viewHistoryService.getHistory();
+    const categoryFrequencies = viewHistory.reduce((acc, item) => {
+        acc[item.category] = (acc[item.category] || 0) + 1;
+        return acc;
+    }, {});
+
+    const itemsWithScores = searchedItems.map(item => {
+        const historyScore = categoryFrequencies[item.category] || 0;
+        const preferenceScore = user?.preferences?.includes(item.category) ? 1 : 0;
+        const score = (historyScore * 3) + preferenceScore;
+        return { ...item, recommendationScore: score };
+    });
+
+    const directMatches = [];
+    const recommended = [];
+    const newArrivals = [];
+    const nearbyItems = [];
+    const displayedIds = new Set();
     
-    return tempItems;
-  }, [items, filter, user, searchQuery, searchType]);
+    // 1. Direct Matches
+    itemsWithScores.forEach(item => {
+        if (item.isMatch) {
+            directMatches.push(item);
+            displayedIds.add(item.id);
+        }
+    });
+
+    // 2. Recommended by user history and preferences
+    const potentialRecommendations = itemsWithScores
+        .filter(item => !displayedIds.has(item.id) && item.recommendationScore > 0)
+        .sort((a, b) => b.recommendationScore - a.recommendationScore);
+    
+    potentialRecommendations.forEach(item => {
+        recommended.push(item);
+        displayedIds.add(item.id);
+    });
+    
+    const remaining = itemsWithScores.filter(item => !displayedIds.has(item.id));
+    
+    // 3. New Arrivals (sort remaining by date)
+    const sortedByDate = [...remaining].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const NEW_ARRIVALS_COUNT = 8;
+    newArrivals.push(...sortedByDate.slice(0, NEW_ARRIVALS_COUNT));
+    newArrivals.forEach(item => displayedIds.add(item.id));
+    
+    // 4. Nearby (the rest of the items, sorted by location)
+    const lastRemaining = sortedByDate.slice(NEW_ARRIVALS_COUNT);
+    if (user?.location) {
+        lastRemaining.sort((a, b) => {
+            const aScore = a.ownerLocation?.postalCode === user.location.postalCode ? 2 : a.ownerLocation?.city === user.location.city ? 1 : 0;
+            const bScore = b.ownerLocation?.postalCode === user.location.postalCode ? 2 : b.ownerLocation?.city === user.location.city ? 1 : 0;
+            if (aScore !== bScore) return bScore - aScore;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // secondary sort by newest
+        });
+    }
+    nearbyItems.push(...lastRemaining);
+
+    return { directMatches, recommended, newArrivals, nearbyItems };
+  }, [items, user, searchQuery, searchType]);
+
 
   if (loading) {
-    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(Spinner, null));
+    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(SwapSpinner, null));
   }
 
   if (error) {
     return React.createElement("div", { className: "text-center text-red-500" }, error);
   }
-  
-  const FilterButton = ({ type, label }) => (
-    React.createElement("button", { 
-      onClick: () => setFilter(type),
-      className: `px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filter === type ? `bg-gradient-to-r ${theme.bg} text-white` : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}`
-    }, label)
-  );
-
-  const getEmptyMessage = () => {
-    if (searchQuery.trim()) {
-      return `No se encontraron resultados para "${searchQuery}".`;
-    }
-    if (filter === 'recommended') {
-      return "No hay artículos que coincidan con tus preferencias. ¡Intenta ajustar tus intereses en tu perfil!";
-    }
-    return "No hay artículos disponibles de otros usuarios en este momento.";
-  };
 
   return React.createElement("div", null,
-    React.createElement("div", { className: "mb-6 flex justify-between items-center gap-4" },
-        React.createElement(Link, {
-            to: "/profile?action=add",
-            className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
-        }, "Sube tu artículo +")
-    ),
-    
     React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between items-center" },
-        React.createElement("div", { className: "w-full md:w-1/2 lg:w-1/3" },
-            React.createElement("form", { className: "flex items-center" },
-                React.createElement("div", { className: "relative", ref: searchDropdownRef },
-                    React.createElement("button", { 
-                        type: "button",
-                        onClick: () => setSearchDropdownOpen(prev => !prev),
-                        className: "flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center text-gray-900 bg-gray-100 border border-gray-300 rounded-l-lg hover:bg-gray-200 focus:ring-2 focus:outline-none focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-500 dark:text-white dark:border-gray-600"
-                    },
-                        searchType === 'articles' ? 'Artículos' : 'Ubicación',
-                        React.createElement("svg", { className: "w-2.5 h-2.5 ml-2.5", "aria-hidden": "true", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 10 6" },
-                            React.createElement("path", { stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "m1 1 4 4 4-4" })
-                        )
-                    ),
-                    searchDropdownOpen && React.createElement("div", { className: "absolute top-full mt-1 z-20 bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700" },
-                        React.createElement("ul", { className: "py-2 text-sm text-gray-700 dark:text-gray-200" },
-                            React.createElement("li", null, 
-                                React.createElement("button", { 
-                                    type: "button", 
-                                    className: "inline-flex w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white",
-                                    onClick: () => { setSearchType('articles'); setSearchDropdownOpen(false); }
-                                }, "Artículos")
-                            ),
-                            React.createElement("li", null, 
-                                React.createElement("button", { 
-                                    type: "button", 
-                                    className: "inline-flex w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white",
-                                    onClick: () => { setSearchType('location'); setSearchDropdownOpen(false); }
-                                }, "Ubicación")
-                            )
-                        )
-                    )
-                ),
-                React.createElement("div", { className: "relative w-full" },
-                    React.createElement("input", {
-                        type: "search",
-                        className: `block p-2.5 w-full z-10 text-sm text-gray-900 bg-gray-50 rounded-r-lg border border-l-0 border-gray-300 focus:ring-2 ${theme.focus} ${theme.border} dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white`,
-                        placeholder: searchType === 'articles' ? "Buscar por título o descripción..." : "Buscar por ciudad o código postal...",
-                        value: searchQuery,
-                        onChange: (e) => setSearchQuery(e.target.value)
-                    })
-                )
-            )
-        ),
-      React.createElement("div", { className: "flex items-center gap-2" },
-        React.createElement(FilterButton, { type: "all", label: "Todos los Artículos" }),
-        React.createElement(FilterButton, { type: "recommended", label: "Recomendado para Ti" })
-      )
+      React.createElement("div", { className: "w-full md:w-1/2 lg:w-1/3" },
+          React.createElement("form", { className: "flex items-center" },
+              React.createElement("div", { className: "relative", ref: searchDropdownRef },
+                  React.createElement("button", { 
+                      type: "button",
+                      onClick: () => setSearchDropdownOpen(prev => !prev),
+                      className: "flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center text-gray-900 bg-gray-100 border border-gray-300 rounded-l-lg hover:bg-gray-200 focus:ring-2 focus:outline-none focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-500 dark:text-white dark:border-gray-600"
+                  },
+                      searchType === 'articles' ? 'Artículos' : 'Ubicación',
+                      React.createElement("svg", { className: "w-2.5 h-2.5 ml-2.5", "aria-hidden": "true", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 10 6" },
+                          React.createElement("path", { stroke: "currentColor", strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "m1 1 4 4 4-4" })
+                      )
+                  ),
+                  searchDropdownOpen && React.createElement("div", { className: "absolute top-full mt-1 z-20 bg-white divide-y divide-gray-100 rounded-lg shadow w-44 dark:bg-gray-700" },
+                      React.createElement("ul", { className: "py-2 text-sm text-gray-700 dark:text-gray-200" },
+                          React.createElement("li", null, 
+                              React.createElement("button", { 
+                                  type: "button", 
+                                  className: "inline-flex w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white",
+                                  onClick: () => { setSearchType('articles'); setSearchDropdownOpen(false); }
+                              }, "Artículos")
+                          ),
+                          React.createElement("li", null, 
+                              React.createElement("button", { 
+                                  type: "button", 
+                                  className: "inline-flex w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white",
+                                  onClick: () => { setSearchType('location'); setSearchDropdownOpen(false); }
+                              }, "Ubicación")
+                          )
+                      )
+                  )
+              ),
+              React.createElement("div", { className: "relative w-full" },
+                  React.createElement("input", {
+                      type: "search",
+                      className: `block p-2.5 w-full z-10 text-sm text-gray-900 bg-gray-50 rounded-r-lg border border-l-0 border-gray-300 focus:ring-2 ${theme.focus} ${theme.border} dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white`,
+                      placeholder: searchType === 'articles' ? "Buscar por título o descripción..." : "Buscar por ciudad o código postal...",
+                      value: searchQuery,
+                      onChange: (e) => setSearchQuery(e.target.value)
+                  })
+              )
+          )
+      ),
+      React.createElement(Link, {
+          to: "/add-item",
+          className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
+      }, "Sube tu artículo +")
     ),
 
-    filteredItems.length === 0 ? (
-      React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400 mt-10" },
-        getEmptyMessage()
-      )
-    ) : (
-      React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-        filteredItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: handleToggleFavorite }))
-      )
-    )
+    React.createElement(ItemGroup, {
+        title: "¡Matches Directos!",
+        icon: "⚡️",
+        items: groupedItems.directMatches,
+        onToggleFavorite: handleToggleFavorite,
+        emptyMessage: "No hemos encontrado ningún match directo. ¡Prueba a añadir qué buscas en tus artículos!"
+    }),
+    React.createElement(ItemGroup, {
+        title: "Recomendado para Ti",
+        icon: "❤️",
+        items: groupedItems.recommended,
+        onToggleFavorite: handleToggleFavorite,
+        emptyMessage: "No hay recomendaciones por ahora. ¡Empieza a explorar artículos para que aprendamos qué te gusta!"
+    }),
+    React.createElement(ItemGroup, {
+        title: "Novedades",
+        icon: "✨",
+        items: groupedItems.newArrivals,
+        onToggleFavorite: handleToggleFavorite,
+        emptyMessage: "No hay artículos nuevos en este momento."
+    }),
+    React.createElement(ItemGroup, {
+        title: "Cerca de Ti",
+        icon: "📍",
+        items: groupedItems.nearbyItems,
+        onToggleFavorite: handleToggleFavorite,
+        emptyMessage: "No hay más artículos disponibles en tu zona."
+    }),
+
   );
 };
 

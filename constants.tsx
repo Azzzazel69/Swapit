@@ -12,40 +12,38 @@ export const ICONS = {
   envelope: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" })),
   heart: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" })),
   heartSolid: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { fillRule: "evenodd", d: "M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z", clipRule: "evenodd" })),
+  eye: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }), React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" })),
+  eyeOff: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-gray-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 .847 0 1.673.124 2.468.352M15 12a3 3 0 11-6 0 3 3 0 016 0z" }), React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M2 2l20 20" }))
 };
 
 export const CATEGORIES_WITH_SUBCATEGORIES = [
   {
     name: 'Electrónica',
-    sub: ['Móviles', 'Ordenadores', 'Videojuegos', 'Cámaras', 'Audio'],
+    sub: ['Móviles y Accesorios', 'Ordenadores y Portátiles', 'Consolas y Videojuegos', 'Cámaras y Fotografía', 'Audio y Sonido', 'Componentes y Periféricos'],
   },
   {
-    name: 'Libros',
-    sub: ['Ficción', 'No Ficción', 'Ciencia Ficción', 'Cómics', 'Libros de texto'],
+    name: 'Ropa y Accesorios',
+    sub: ['Ropa de Mujer', 'Ropa de Hombre', 'Ropa Infantil', 'Calzado', 'Bolsos y Carteras', 'Joyas y Relojes', 'Otros Accesorios'],
+  },
+  {
+    name: 'Hogar y Muebles',
+    sub: ['Muebles', 'Decoración', 'Electrodomésticos', 'Cocina y Menaje', 'Jardín y Terraza', 'Herramientas', 'Iluminación'],
+  },
+  {
+    name: 'Libros, Películas y Música',
+    sub: ['Libros', 'Cómics y Manga', 'Películas y Series', 'Música (CDs, Vinilos)', 'Instrumentos Musicales'],
+  },
+  {
+    name: 'Coleccionismo',
+    sub: ['Juegos de Mesa y Rol', 'Figuras de Acción', 'Antigüedades', 'Cromos y Sellos', 'Artículos Retro/Vintage', 'Monedas y Billetes'],
   },
   {
     name: 'Vehículos',
-    sub: ['Coches', 'Motos', 'Bicicletas', 'Patinetes'],
-  },
-  {
-    name: 'Música',
-    sub: ['Instrumentos', 'Vinilos', 'Equipamiento', 'Coleccionables'],
-  },
-  {
-    name: 'Muebles',
-    sub: ['Sillas', 'Mesas', 'Almacenamiento', 'Camas', 'Decoración'],
-  },
-  {
-    name: 'Ropa',
-    sub: ['Hombre', 'Mujer', 'Niños', 'Accesorios', 'Zapatos'],
-  },
-  {
-    name: 'Hogar',
-    sub: ['Cocina', 'Jardín', 'Herramientas', 'Electrodomésticos'],
+    sub: ['Coches', 'Motos', 'Bicicletas', 'Patinetes y Eléctricos', 'Accesorios y Piezas'],
   },
   {
     name: 'Servicios',
-    sub: ['Manitas', 'Masajes', 'Tratamientos estéticos', 'Clases particulares', 'Cuidado de mascotas'],
+    sub: ['Clases Particulares', 'Cuidado de Mascotas', 'Manitas y Reparaciones', 'Tratamientos Estéticos', 'Masajes y Bienestar'],
   },
   {
     name: 'Otros',
@@ -53,4 +51,4 @@ export const CATEGORIES_WITH_SUBCATEGORIES = [
   },
 ];
 
-export const CATEGORIES = CATEGORIES_WITH_SUBCATEGORIES.map(c => c.name);
+export const ALL_SUBCATEGORIES = CATEGORIES_WITH_SUBCATEGORIES.flatMap(c => c.sub.length > 0 ? c.sub : [c.name]);

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { api } from '../services/api.ts';
 import { Link, useNavigate } from 'react-router-dom';
@@ -6,6 +7,7 @@ import Button from '../components/Button.tsx';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { ICONS } from '../constants.tsx';
 
 const PasswordStrengthIndicator = ({ password }) => {
     const checks = useMemo(() => {
@@ -48,6 +50,8 @@ const RegisterPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { theme } = useColorTheme();
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
   const isPasswordValid = useMemo(() => {
     return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password);
@@ -128,10 +132,34 @@ const RegisterPage = () => {
           React.createElement(Input, { id: "name", label: "Nombre Completo", name: "name", type: "text", autoComplete: "name", required: true, value: name, onChange: (e) => setName(e.target.value), placeholder: "Tu Nombre" }),
           React.createElement(Input, { id: "email-address", label: "Correo electrónico", name: "email", type: "email", autoComplete: "email", required: true, value: email, onChange: (e) => setEmail(e.target.value), placeholder: "Correo electrónico" }),
           React.createElement("div", null,
-              React.createElement(Input, { id: "password", label: "Contraseña", name: "password", type: "password", autoComplete: "new-password", required: true, value: password, onChange: (e) => setPassword(e.target.value), placeholder: "Contraseña" }),
+              React.createElement(Input, { 
+                  id: "password", 
+                  label: "Contraseña", 
+                  name: "password", 
+                  type: passwordVisible ? 'text' : 'password', 
+                  autoComplete: "new-password", 
+                  required: true, 
+                  value: password, 
+                  onChange: (e) => setPassword(e.target.value), 
+                  placeholder: "Contraseña",
+                  icon: passwordVisible ? ICONS.eyeOff : ICONS.eye,
+                  onIconClick: () => setPasswordVisible(!passwordVisible)
+              }),
               React.createElement(PasswordStrengthIndicator, { password: password })
           ),
-          React.createElement(Input, { id: "confirm-password", label: "Confirmar Contraseña", name: "confirm-password", type: "password", autoComplete: "new-password", required: true, value: confirmPassword, onChange: (e) => setConfirmPassword(e.target.value), placeholder: "Confirmar Contraseña" })
+          React.createElement(Input, { 
+              id: "confirm-password", 
+              label: "Confirmar Contraseña", 
+              name: "confirm-password", 
+              type: confirmPasswordVisible ? 'text' : 'password', 
+              autoComplete: "new-password", 
+              required: true, 
+              value: confirmPassword, 
+              onChange: (e) => setConfirmPassword(e.target.value), 
+              placeholder: "Confirmar Contraseña",
+              icon: confirmPasswordVisible ? ICONS.eyeOff : ICONS.eye,
+              onIconClick: () => setConfirmPasswordVisible(!confirmPasswordVisible)
+          })
         ),
         React.createElement("div", { className: "flex items-start" },
             React.createElement("div", { className: "flex items-center h-5" },
