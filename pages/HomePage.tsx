@@ -20,12 +20,13 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
             )
         );
     }
-
+    
     const gridLayoutClasses = {
         2: 'grid-cols-2',
         3: 'grid-cols-2 md:grid-cols-3',
         4: 'grid-cols-2 md:grid-cols-4'
     };
+
 
     return (
         React.createElement("div", { className: "mb-12" },
@@ -33,6 +34,46 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
             React.createElement("div", { className: `grid ${gridLayoutClasses[columns]} gap-4` },
                 items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite }))
             )
+        )
+    );
+};
+
+const LayoutSelector = ({ layout, setLayout }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const options = [2, 3, 4];
+    const icons = {
+        2: React.createElement("div", { className: "flex gap-1", title:"2 columnas" }, React.createElement("div", { className: "w-4 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-4 h-5 bg-gray-500 rounded-sm" })),
+        3: React.createElement("div", { className: "flex gap-1", title:"3 columnas" }, React.createElement("div", { className: "w-2.5 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2.5 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2.5 h-5 bg-gray-500 rounded-sm" })),
+        4: React.createElement("div", { className: "flex gap-1", title:"4 columnas" }, React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" })),
+    };
+
+    return (
+        React.createElement("div", { className: "relative", ref: wrapperRef },
+            React.createElement("button", {
+                onClick: () => setIsOpen(prev => !prev),
+                className: "p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }, icons[layout]),
+            isOpen && React.createElement("div", {
+                className: "absolute top-full right-0 mt-2 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 flex flex-col gap-1"
+            }, options.map(opt => (
+                React.createElement("button", {
+                    key: opt,
+                    onClick: () => { setLayout(opt); setIsOpen(false); },
+                    className: `p-2 rounded-md transition-colors ${layout === opt ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`
+                }, icons[opt])
+            )))
         )
     );
 };
@@ -51,9 +92,14 @@ const HomePage = () => {
   
   const [columnLayout, setColumnLayout] = useState(() => {
     if (typeof window !== 'undefined') {
-        return Number(window.localStorage.getItem('item_layout_columns')) || 2;
+        const savedLayout = window.localStorage.getItem('item_layout_columns');
+        if (savedLayout) {
+            return Number(savedLayout);
+        }
+        // Set default based on screen size if nothing is saved
+        return window.innerWidth < 768 ? 2 : 4;
     }
-    return 2;
+    return 2; // Fallback for SSR/build time
   });
 
   useEffect(() => {
@@ -239,15 +285,7 @@ const HomePage = () => {
           )
       ),
       React.createElement("div", { className: "flex items-center gap-4" },
-        React.createElement("div", { className: "flex items-center gap-1 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg" },
-            [2, 3, 4].map(num => (
-                React.createElement("button", {
-                    key: num,
-                    onClick: () => setColumnLayout(num),
-                    className: `px-3 py-1 text-sm font-semibold rounded-md transition-colors ${columnLayout === num ? `bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400` : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300/50 dark:hover:bg-gray-600/50'}`
-                }, num)
-            ))
-        ),
+        React.createElement(LayoutSelector, { layout: columnLayout, setLayout: setColumnLayout }),
         React.createElement(Link, {
             to: "/add-item",
             className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`

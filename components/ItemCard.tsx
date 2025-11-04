@@ -36,7 +36,7 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
             "⚡️ ¡MATCH!"
           )
         ),
-        React.createElement("img", { className: "w-full h-48 object-cover object-center", src: item.imageUrls[0], alt: item.title }),
+        React.createElement("img", { className: "w-full aspect-square object-cover object-center", src: item.imageUrls[0], alt: item.title }),
         isSwapped && (
           React.createElement("div", { className: "absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center" },
               React.createElement("span", { className: "text-white text-2xl font-bold border-4 border-white px-4 py-2 rounded-lg transform -rotate-12" }, "SWAPPED!")

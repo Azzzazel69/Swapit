@@ -1,3 +1,4 @@
+
 // services/pushNotifications.ts
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/messaging';
@@ -9,32 +10,37 @@ let serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
 let initializationPromise: Promise<void> | null = null;
 
 /**
+ * A promise that resolves only when the window's 'load' event has fired.
+ * This is crucial for safely registering a service worker.
+ */
+const windowLoaded = new Promise(resolve => {
+    if (document.readyState === 'complete') {
+        resolve(true);
+    } else {
+        window.addEventListener('load', () => resolve(true), { once: true });
+    }
+});
+
+
+/**
  * Helper function to safely register the service worker only after the page has fully loaded.
  * This prevents the "document is in an invalid state" error.
  */
-const registerServiceWorker = (): Promise<ServiceWorkerRegistration> => {
-    return new Promise((resolve, reject) => {
-        const register = async () => {
-            if (!('serviceWorker' in navigator)) {
-                return reject(new Error("Service workers are not supported in this browser."));
-            }
-            try {
-                const swUrl = `${location.origin}/firebase-messaging-sw.js`;
-                const registration = await navigator.serviceWorker.register(swUrl);
-                console.log('Firebase Service Worker registered successfully with scope:', registration.scope);
-                resolve(registration);
-            } catch (error) {
-                console.error('Service Worker registration failed:', error);
-                reject(error);
-            }
-        };
-
-        if (document.readyState === 'complete') {
-            register();
-        } else {
-            window.addEventListener('load', register, { once: true });
-        }
-    });
+const registerServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
+    await windowLoaded; // Guarantees the window is fully loaded.
+    
+    if (!('serviceWorker' in navigator)) {
+        throw new Error("Service workers are not supported in this browser.");
+    }
+    try {
+        const swUrl = `${location.origin}/firebase-messaging-sw.js`;
+        const registration = await navigator.serviceWorker.register(swUrl);
+        console.log('Firebase Service Worker registered successfully with scope:', registration.scope);
+        return registration;
+    } catch (error) {
+        console.error('Service Worker registration failed:', error);
+        throw error;
+    }
 };
 
 /**
@@ -72,6 +78,7 @@ export const initializePushNotifications = () => {
             console.error("Error initializing Firebase for Push Notifications:", error);
             // Reset promise on failure to allow retries.
             initializationPromise = null; 
+            throw error; // Re-throw to propagate the error
         }
     })();
 
