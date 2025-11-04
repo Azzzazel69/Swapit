@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -10,6 +11,7 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
+  const APP_VERSION = "0.3";
 
   const activeLinkClass = `bg-gray-200 dark:bg-gray-700`;
   const inactiveLinkClass = 'hover:bg-gray-200 dark:hover:bg-gray-700';
@@ -39,7 +41,10 @@ const Header = () => {
               React.createElement("span", { className: "transform rotate-12" }, ICONS.swap),
               "Swapit"
             ),
-            React.createElement("span", { className: "text-sm italic text-gray-400 self-end mb-1" }, "(beta)")
+            React.createElement("div", { className: "flex flex-col items-start -ml-1 self-end mb-1" },
+              React.createElement("span", { className: "text-xs italic text-gray-400 leading-none" }, "(beta)"),
+              React.createElement("span", { className: "text-xs font-semibold text-gray-500 dark:text-gray-400 leading-none" }, `Versión ${APP_VERSION}`)
+            )
           ),
 
           // Right side: Icons or Auth buttons

@@ -23,6 +23,7 @@ import UserProfilePage from './pages/UserProfilePage.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
 import CookieBanner from './components/CookieBanner.tsx';
 import AddItemPage from './pages/AddItemPage.tsx';
+import { initializePushNotifications, requestNotificationPermission } from './services/pushNotifications.ts';
 
 const App = () => {
   return React.createElement(AuthProvider, null,
@@ -49,7 +50,7 @@ const AppFooter = () => {
 
   return (
     React.createElement("footer", { className: "text-center p-4 text-gray-500 text-sm border-t border-gray-200 dark:border-gray-700" },
-      "© 2025 Swapit. Todos los derechos reservados.",
+      `© 2025 Swapit. Todos los derechos reservados.`,
       React.createElement("div", { className: "mt-2" },
         React.createElement(Link, { to: "/terms-of-service", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Términos de Servicio"),
         "|",
@@ -61,6 +62,14 @@ const AppFooter = () => {
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
+
+  React.useEffect(() => {
+    if (user) {
+        // Initialize notifications once the user is logged in.
+        initializePushNotifications();
+    }
+  }, [user]);
+
 
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" },
