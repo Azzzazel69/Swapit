@@ -21,17 +21,18 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
         );
     }
     
+    // This new logic respects the user's choice on mobile while ensuring a good layout.
     const gridLayoutClasses = {
         2: 'grid-cols-2',
-        3: 'grid-cols-2 md:grid-cols-3',
-        4: 'grid-cols-2 md:grid-cols-4'
+        3: 'grid-cols-3',
+        4: 'grid-cols-3 md:grid-cols-4' // On the smallest screens, limit 4 columns to 3 to prevent overflow.
     };
 
 
     return (
         React.createElement("div", { className: "mb-12" },
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
-            React.createElement("div", { className: `grid ${gridLayoutClasses[columns]} gap-4` },
+            React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4` },
                 items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite }))
             )
         )
@@ -54,19 +55,19 @@ const LayoutSelector = ({ layout, setLayout }) => {
 
     const options = [2, 3, 4];
     const icons = {
-        2: React.createElement("div", { className: "flex gap-1", title:"2 columnas" }, React.createElement("div", { className: "w-4 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-4 h-5 bg-gray-500 rounded-sm" })),
-        3: React.createElement("div", { className: "flex gap-1", title:"3 columnas" }, React.createElement("div", { className: "w-2.5 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2.5 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2.5 h-5 bg-gray-500 rounded-sm" })),
-        4: React.createElement("div", { className: "flex gap-1", title:"4 columnas" }, React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-5 bg-gray-500 rounded-sm" })),
+        2: React.createElement("div", { className: "flex gap-0.5", title:"2 columnas" }, React.createElement("div", { className: "w-3 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-3 h-4 bg-gray-500 rounded-sm" })),
+        3: React.createElement("div", { className: "flex gap-0.5", title:"3 columnas" }, React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" })),
+        4: React.createElement("div", { className: "flex gap-0.5", title:"4 columnas" }, React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" })),
     };
 
     return (
         React.createElement("div", { className: "relative", ref: wrapperRef },
             React.createElement("button", {
                 onClick: () => setIsOpen(prev => !prev),
-                className: "p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                className: "p-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
             }, icons[layout]),
             isOpen && React.createElement("div", {
-                className: "absolute top-full right-0 mt-2 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 flex flex-col gap-1"
+                className: "absolute bottom-full right-0 mb-2 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 flex flex-row gap-1"
             }, options.map(opt => (
                 React.createElement("button", {
                     key: opt,
