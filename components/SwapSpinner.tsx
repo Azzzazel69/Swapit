@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
@@ -13,11 +14,20 @@ const SwapSpinner = ({ size = 'md' }) => {
 
   return (
     React.createElement("div", { className: `relative ${sizeClasses[size]} flex items-center justify-center` },
-      React.createElement("svg", { className: `absolute animate-spin-slower ${sizeClasses[size]} text-gray-300 dark:text-gray-600`, xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" },
-        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M8 7h12m0 0l-4-4m4 4l-4 4" })
-      ),
-      React.createElement("svg", { className: `absolute animate-spin-slow ${sizeClasses[size]} ${theme.textColor}`, xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" },
-        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M16 17H4m0 0l4 4m-4-4l4-4" })
+      React.createElement("svg", { 
+        className: `animate-spin ${sizeClasses[size]} ${theme.textColor}`, 
+        xmlns: "http://www.w3.org/2000/svg", 
+        viewBox: "0 0 24 24", 
+        fill: "none", 
+        stroke: "currentColor", 
+        strokeWidth: "2.5", 
+        strokeLinecap: "round", 
+        strokeLinejoin: "round"
+      },
+        React.createElement("polyline", { points: "23 4 23 10 17 10" }),
+        React.createElement("polyline", { points: "1 20 1 14 7 14" }),
+        React.createElement("path", { d: "M20.49 9A9 9 0 0 0 5.64 5.64" }),
+        React.createElement("path", { d: "M3.51 15A9 9 0 0 0 18.36 18.36" })
       )
     )
   );

@@ -32,13 +32,20 @@ const Button = ({
       ...props
     },
     isLoading && React.createElement("span", { className: "absolute inset-0 flex items-center justify-center" },
-      React.createElement("div", { className: "relative h-5 w-5" },
-        React.createElement("svg", { className: "absolute animate-spin-slow h-5 w-5 text-white opacity-50", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3" },
-          React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M8 7h12m0 0l-4-4m4 4l-4 4" })
-        ),
-        React.createElement("svg", { className: "absolute animate-spin-slow-reverse h-5 w-5 text-white", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "3" },
-          React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M16 17H4m0 0l4 4m-4-4l4-4" })
-        )
+      React.createElement("svg", { 
+        className: "animate-spin h-5 w-5 text-white", 
+        xmlns: "http://www.w3.org/2000/svg", 
+        viewBox: "0 0 24 24", 
+        fill: "none", 
+        stroke: "currentColor", 
+        strokeWidth: "2.5", 
+        strokeLinecap: "round", 
+        strokeLinejoin: "round" 
+      },
+        React.createElement("polyline", { points: "23 4 23 10 17 10" }),
+        React.createElement("polyline", { points: "1 20 1 14 7 14" }),
+        React.createElement("path", { d: "M20.49 9A9 9 0 0 0 5.64 5.64" }),
+        React.createElement("path", { d: "M3.51 15A9 9 0 0 0 18.36 18.36" })
       )
     ),
     React.createElement("span", { className: isLoading ? 'opacity-0' : 'opacity-100' },

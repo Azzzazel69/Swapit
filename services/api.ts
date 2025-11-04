@@ -60,6 +60,35 @@ async function loginWithGoogleMock() {
 // --- FIN PATCH ---
 
 
+// --- START MOCK HASHING (FOR DEMO PURPOSES ONLY) ---
+// WARNING: This is a simplified simulation of password hashing for demonstration.
+// DO NOT use this implementation in a production environment.
+// A real backend should use a strong, slow hashing algorithm like Argon2 or bcrypt.
+
+const generateSalt = (length = 16) => {
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+};
+
+const hashPassword = (password, salt) => {
+    // Simple combination and encoding to simulate a hash.
+    // In a real app, this would be a one-way cryptographic hash function.
+    try {
+        // btoa is a simple way to simulate a one-way-like transformation in this mock env.
+        return btoa(password + salt);
+    } catch (e) {
+        // Fallback for environments where btoa might not be available
+        return password + salt;
+    }
+};
+
+// --- END MOCK HASHING ---
+
+
 let users = [];
 let items = [];
 let exchanges = [];
@@ -81,9 +110,14 @@ const setupInitialData = () => {
     exchanges = [];
     chats = [];
 
-    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', password: 'Password123', emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
-    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', password: 'Password456', emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'] };
-    const admin = { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', password: 'AdminPassword123', emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
+    // Hashing passwords for initial users
+    const aliceSalt = generateSalt();
+    const bobSalt = generateSalt();
+    const adminSalt = generateSalt();
+
+    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', salt: aliceSalt, hashedPassword: hashPassword('Password123', aliceSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
+    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', salt: bobSalt, hashedPassword: hashPassword('Password456', bobSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'] };
+    const admin = { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
 
     users.push(alice, bob, admin);
 
@@ -194,7 +228,7 @@ class ApiClient {
   async login(email, password) {
       await this.simulateDelay();
       const user = users.find(u => u.email === email);
-      if (user && user.password === password) {
+      if (user && user.hashedPassword === hashPassword(password, user.salt)) {
           const dummyToken = `fake-jwt-for-${user.id}`;
           this.setToken(dummyToken);
           return { token: dummyToken };
@@ -213,11 +247,14 @@ class ApiClient {
       let user = users.find(u => u.email === googleUser.email);
 
       if (!user) {
+          const salt = generateSalt();
+          const hashedPassword = hashPassword(`google-user-${Date.now()}`, salt);
           const newUser = {
               id: String(users.length + 1),
               name: googleUser.name,
               email: googleUser.email,
-              password: `google-user-${Date.now()}`,
+              salt,
+              hashedPassword,
               preferences: [],
               emailVerified: true,
               phoneVerified: false,
@@ -239,11 +276,14 @@ class ApiClient {
       if (users.some(u => u.email === email)) {
           throw new Error('Ya existe un usuario con este correo.');
       }
+      const salt = generateSalt();
+      const hashedPassword = hashPassword(password, salt);
       const newUser = {
           id: String(users.length + 1),
           name,
           email,
-          password,
+          salt,
+          hashedPassword,
           preferences: [],
           emailVerified: false,
           phoneVerified: false,
@@ -252,7 +292,7 @@ class ApiClient {
       users.push(newUser);
       persistData();
       
-      const { password: _, ...userToReturn } = newUser;
+      const { hashedPassword: _, salt: __, ...userToReturn } = newUser;
       return userToReturn;
   }
 
@@ -263,7 +303,7 @@ class ApiClient {
       }
       const user = this._getCurrentUserFromToken();
       if (user) {
-          const { password: _, ...userToReturn } = user;
+          const { hashedPassword: _, salt: __, ...userToReturn } = user;
           return userToReturn;
       }
       throw new Error('Usuario no encontrado');
@@ -307,7 +347,7 @@ class ApiClient {
           .filter(item => item.userId === userId && item.status === 'AVAILABLE')
           .map(item => this._enrichItem(item, currentUser, currentUserItems));
 
-      const { password, email, ...publicProfile } = user;
+      const { hashedPassword, salt, email, ...publicProfile } = user;
       return { ...publicProfile, items: userItems };
   }
   
@@ -482,8 +522,8 @@ class ApiClient {
     const owner = users.find(u => u.id === exchange.ownerId);
     const requester = users.find(u => u.id === exchange.requesterId);
     if (!owner || !requester) throw new Error('Participante no encontrado.');
-    const { password: _, ...ownerPublic } = owner;
-    const { password: __, ...requesterPublic } = requester;
+    const { hashedPassword: _, salt: __, ...ownerPublic } = owner;
+    const { hashedPassword: ___, salt: ____, ...requesterPublic } = requester;
     
     const allItemIds = [...new Set([exchange.requestedItemId, ...exchange.offeredItemIds])];
     const regularItems = allItemIds.map(id => items.find(item => item.id === id)).filter(Boolean);
@@ -760,7 +800,7 @@ class ApiClient {
       if (!currentUser) throw new Error('Autenticación requerida');
       currentUser.preferences = preferences;
       persistData();
-      const { password: _, ...userToReturn } = currentUser;
+      const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
       return userToReturn;
   }
 
@@ -801,7 +841,7 @@ class ApiClient {
       if (!currentUser) throw new Error('Autenticación requerida');
       currentUser.location = location;
       persistData();
-      const { password: _, ...userToReturn } = currentUser;
+      const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
       return userToReturn;
   }
 
