@@ -7,8 +7,10 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { Link } from 'react-router-dom';
 
-const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage }) => {
+const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns = 2 }) => {
     if (!items || items.length === 0) {
+        if (title === "¡Matches Directos!") return null; // Ocultar si no hay matches
+        
         return (
             React.createElement("div", { className: "mb-12" },
                 React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
@@ -19,10 +21,16 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage }) => {
         );
     }
 
+    const gridLayoutClasses = {
+        2: 'grid-cols-2',
+        3: 'grid-cols-2 md:grid-cols-3',
+        4: 'grid-cols-2 md:grid-cols-4'
+    };
+
     return (
         React.createElement("div", { className: "mb-12" },
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
-            React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+            React.createElement("div", { className: `grid ${gridLayoutClasses[columns]} gap-4` },
                 items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite }))
             )
         )
@@ -40,6 +48,19 @@ const HomePage = () => {
   const searchDropdownRef = useRef(null);
   const { user } = useAuth();
   const { theme } = useColorTheme();
+  
+  const [columnLayout, setColumnLayout] = useState(() => {
+    if (typeof window !== 'undefined') {
+        return Number(window.localStorage.getItem('item_layout_columns')) || 2;
+    }
+    return 2;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        window.localStorage.setItem('item_layout_columns', columnLayout.toString());
+    }
+  }, [columnLayout]);
   
   useEffect(() => {
     const fetchItems = async () => {
@@ -217,10 +238,21 @@ const HomePage = () => {
               )
           )
       ),
-      React.createElement(Link, {
-          to: "/add-item",
-          className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
-      }, "Sube tu artículo +")
+      React.createElement("div", { className: "flex items-center gap-4" },
+        React.createElement("div", { className: "flex items-center gap-1 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg" },
+            [2, 3, 4].map(num => (
+                React.createElement("button", {
+                    key: num,
+                    onClick: () => setColumnLayout(num),
+                    className: `px-3 py-1 text-sm font-semibold rounded-md transition-colors ${columnLayout === num ? `bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400` : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300/50 dark:hover:bg-gray-600/50'}`
+                }, num)
+            ))
+        ),
+        React.createElement(Link, {
+            to: "/add-item",
+            className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
+        }, "Sube tu artículo +")
+      )
     ),
 
     React.createElement(ItemGroup, {
@@ -228,28 +260,32 @@ const HomePage = () => {
         icon: "⚡️",
         items: groupedItems.directMatches,
         onToggleFavorite: handleToggleFavorite,
-        emptyMessage: "No hemos encontrado ningún match directo. ¡Prueba a añadir qué buscas en tus artículos!"
+        emptyMessage: "No hemos encontrado ningún match directo. ¡Prueba a añadir qué buscas en tus artículos!",
+        columns: columnLayout
     }),
     React.createElement(ItemGroup, {
         title: "Recomendado para Ti",
         icon: "❤️",
         items: groupedItems.recommended,
         onToggleFavorite: handleToggleFavorite,
-        emptyMessage: "No hay recomendaciones por ahora. ¡Empieza a explorar artículos para que aprendamos qué te gusta!"
+        emptyMessage: "No hay recomendaciones por ahora. ¡Empieza a explorar artículos para que aprendamos qué te gusta!",
+        columns: columnLayout
     }),
     React.createElement(ItemGroup, {
         title: "Novedades",
         icon: "✨",
         items: groupedItems.newArrivals,
         onToggleFavorite: handleToggleFavorite,
-        emptyMessage: "No hay artículos nuevos en este momento."
+        emptyMessage: "No hay artículos nuevos en este momento.",
+        columns: columnLayout
     }),
     React.createElement(ItemGroup, {
         title: "Cerca de Ti",
         icon: "📍",
         items: groupedItems.nearbyItems,
         onToggleFavorite: handleToggleFavorite,
-        emptyMessage: "No hay más artículos disponibles en tu zona."
+        emptyMessage: "No hay más artículos disponibles en tu zona.",
+        columns: columnLayout
     }),
 
   );

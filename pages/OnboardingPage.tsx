@@ -12,6 +12,7 @@ import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import AutocompleteInput from '../components/AutocompleteInput.tsx';
 import { locations } from '../data/locations.ts';
+import { requestNotificationPermission } from '../services/pushNotifications.ts';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
@@ -151,6 +152,7 @@ const OnboardingPage = () => {
         setIsLoading(true); setError('');
         try {
             await api.updateUserPreferences(preferences);
+            await requestNotificationPermission();
             await refreshUser();
         } catch (err) { setError(err.message); }
         finally { setIsLoading(false); }

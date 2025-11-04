@@ -159,15 +159,23 @@ const setupInitialData = () => {
     chats = [];
 
     // Hashing passwords for initial users
-    const aliceSalt = generateSalt();
-    const bobSalt = generateSalt();
+    const anaSalt = generateSalt();
+    const benitoSalt = generateSalt();
     const adminSalt = generateSalt();
+    const carlosSalt = generateSalt();
+    const danielaSalt = generateSalt();
+    const elenaSalt = generateSalt();
+    const fernandoSalt = generateSalt();
 
-    const alice = { id: '1', name: 'Ana', email: 'ana@example.com', salt: aliceSalt, hashedPassword: hashPassword('Password123', aliceSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
-    const bob = { id: '2', name: 'Benito', email: 'benito@example.com', salt: bobSalt, hashedPassword: hashPassword('Password456', bobSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'] };
-    const admin = { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] };
-
-    users.push(alice, bob, admin);
+    users = [
+        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] },
+        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'] },
+        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] },
+        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'] },
+        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'] },
+        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'] },
+        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'] },
+    ];
 
     items = [
         // Ana's Items (User 1)
@@ -195,6 +203,22 @@ const setupInitialData = () => {
         { id: '118', userId: '3', ownerName: 'Admin', title: 'Set de Herramientas Bosch', description: 'Maletín con 108 piezas, incluye taladro percutor y puntas.', imageUrls: [generatePlaceholderImage('Set de Herramientas Bosch')], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 2, favoritedBy: [] },
         { id: '119', userId: '3', ownerName: 'Admin', title: 'Lámpara de Escritorio Vintage', description: 'Lámpara de metal de los años 60, estilo industrial.', imageUrls: [generatePlaceholderImage('Lámpara de Escritorio Vintage')], category: 'Muebles', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 1, favoritedBy: [] },
         { id: '120', userId: '3', ownerName: 'Admin', title: 'Masaje Relajante a Domicilio', description: 'Sesión de 1 hora de masaje descontracturante. Solo en Valencia.', imageUrls: [generatePlaceholderImage('Masaje Relajante a Domicilio')], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 7, favoritedBy: ['1', '2'] },
+
+        // Carlos's Items (User 4)
+        { id: '401', userId: '4', ownerName: 'Carlos', title: 'Vinilo de Queen', description: 'Edición original de "A Night at the Opera".', imageUrls: [generatePlaceholderImage('Vinilo de Queen')], category: 'Música', wishedItem: 'Cómics antiguos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 4).toISOString(), likes: 12, favoritedBy: [] },
+        { id: '402', userId: '4', ownerName: 'Carlos', title: 'Zapatillas Nike Air Max', description: 'Talla 43. Color blanco. Usadas pero en buen estado.', imageUrls: [generatePlaceholderImage('Zapatillas Nike Air Max')], category: 'Ropa', wishedItem: 'Juego de mesa', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 5, favoritedBy: [] },
+        
+        // Daniela's Items (User 5)
+        { id: '501', userId: '5', ownerName: 'Daniela', title: 'Robot de Cocina', description: 'Robot de cocina multifunción. Amasa, pica, cuece al vapor.', imageUrls: [generatePlaceholderImage('Robot de Cocina')], category: 'Hogar', wishedItem: 'Máquina de coser', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 6).toISOString(), likes: 8, favoritedBy: [] },
+        { id: '502', userId: '5', ownerName: 'Daniela', title: 'Estantería de Madera', description: 'Estantería de 5 baldas, estilo nórdico. 180x80cm.', imageUrls: [generatePlaceholderImage('Estantería de Madera')], category: 'Muebles', wishedItem: '', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 3, favoritedBy: [] },
+
+        // Elena's Items (User 6)
+        { id: '601', userId: '6', ownerName: 'Elena', title: 'Cuidado de Gatos', description: 'Cuido de tu gato en mi domicilio durante tus vacaciones.', imageUrls: [generatePlaceholderImage('Cuidado de Gatos')], category: 'Servicios', wishedItem: 'Planta de interior grande', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 15, favoritedBy: [] },
+        { id: '602', userId: '6', ownerName: 'Elena', title: 'Plancha de Pelo GHD', description: 'Plancha profesional, se calienta en 30 segundos.', imageUrls: [generatePlaceholderImage('Plancha de Pelo GHD')], category: 'Otros', wishedItem: 'Libros de arte', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 7, favoritedBy: [] },
+        
+        // Fernando's Items (User 7)
+        { id: '701', userId: '7', ownerName: 'Fernando', title: 'Bicicleta de Montaña', description: 'Cuadro de aluminio, 21 velocidades, frenos de disco.', imageUrls: [generatePlaceholderImage('Bicicleta de Montaña')], category: 'Vehículos', wishedItem: 'Apple Watch', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 9, favoritedBy: [] },
+        { id: '702', userId: '7', ownerName: 'Fernando', title: 'Piezas de Coche Clásico', description: 'Volante y faros para Seat 600. Originales.', imageUrls: [generatePlaceholderImage('Piezas de Coche Clásico')], category: 'Vehículos', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 2, favoritedBy: [] },
     ];
     persistData();
 };

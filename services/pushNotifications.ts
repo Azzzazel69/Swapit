@@ -6,49 +6,76 @@ import { api } from './api.ts';
 
 let messaging: firebase.messaging.Messaging | null = null;
 let serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
+let initializationPromise: Promise<void> | null = null;
+
+/**
+ * Helper function to safely register the service worker only after the page has fully loaded.
+ * This prevents the "document is in an invalid state" error.
+ */
+const registerServiceWorker = (): Promise<ServiceWorkerRegistration> => {
+    return new Promise((resolve, reject) => {
+        const register = async () => {
+            if (!('serviceWorker' in navigator)) {
+                return reject(new Error("Service workers are not supported in this browser."));
+            }
+            try {
+                const swUrl = `${location.origin}/firebase-messaging-sw.js`;
+                const registration = await navigator.serviceWorker.register(swUrl);
+                console.log('Firebase Service Worker registered successfully with scope:', registration.scope);
+                resolve(registration);
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+                reject(error);
+            }
+        };
+
+        if (document.readyState === 'complete') {
+            register();
+        } else {
+            window.addEventListener('load', register, { once: true });
+        }
+    });
+};
 
 /**
  * Initializes the push notification service using Firebase.
- * This should be called once when the application loads for a logged-in user.
+ * This function can be called multiple times, but will only run the initialization once.
  */
-export const initializePushNotifications = async () => {
-    console.log("Push Notification Service: Initializing with Firebase (Compat Mode)");
-    try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+export const initializePushNotifications = () => {
+    if (initializationPromise) {
+        return initializationPromise;
+    }
 
-        if (firebase.messaging.isSupported()) {
-            // Step 1: Register the service worker FIRST.
-            // This is crucial. The service worker must be registered before we can get a token.
-            if ('serviceWorker' in navigator) {
-                try {
-                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                    console.log('Firebase Service Worker registered successfully with scope:', registration.scope);
-                    serviceWorkerRegistration = registration;
-                } catch (error) {
-                    console.error('Service Worker registration failed:', error);
-                    return; // Stop initialization if SW registration fails
-                }
-            } else {
-                 console.log("Service workers are not supported in this browser.");
-                 return;
+    initializationPromise = (async () => {
+        console.log("Push Notification Service: Initializing with Firebase (Compat Mode)");
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
             }
 
-            // Step 2: Get the messaging instance.
-            messaging = firebase.messaging();
+            if (firebase.messaging.isSupported()) {
+                // Safely register the service worker and wait for it to be ready.
+                serviceWorkerRegistration = await registerServiceWorker();
 
-            // Step 3: Set up a handler for foreground messages.
-            messaging.onMessage((payload) => {
-                console.log('Foreground message received.', payload);
-                // In a real app, you would show a toast notification here.
-            });
-        } else {
-            console.log("Push Notification Service: Firebase Messaging is not supported in this browser.");
+                // Get the messaging instance.
+                messaging = firebase.messaging();
+
+                // Set up a handler for foreground messages.
+                messaging.onMessage((payload) => {
+                    console.log('Foreground message received.', payload);
+                    // In a real app, you would show a toast notification here.
+                });
+            } else {
+                console.log("Push Notification Service: Firebase Messaging is not supported in this browser.");
+            }
+        } catch (error) {
+            console.error("Error initializing Firebase for Push Notifications:", error);
+            // Reset promise on failure to allow retries.
+            initializationPromise = null; 
         }
-    } catch (error) {
-        console.error("Error initializing Firebase for Push Notifications:", error);
-    }
+    })();
+
+    return initializationPromise;
 };
 
 /**
@@ -62,6 +89,9 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
         console.log("Push Notification Service: This browser does not support desktop notifications.");
         return false;
     }
+    
+    // Ensure initialization is complete before requesting permission
+    await initializePushNotifications();
 
     try {
         const currentPermission = Notification.permission;
