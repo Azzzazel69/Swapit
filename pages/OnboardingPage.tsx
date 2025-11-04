@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 // FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -11,7 +12,6 @@ import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import AutocompleteInput from '../components/AutocompleteInput.tsx';
 import { locations } from '../data/locations.ts';
-import { requestNotificationPermission } from '../services/pushNotifications.ts';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
@@ -152,7 +152,6 @@ const OnboardingPage = () => {
         try {
             await api.updateUserPreferences(preferences);
             await refreshUser();
-            await requestNotificationPermission(); // Request permission after onboarding is complete
         } catch (err) { setError(err.message); }
         finally { setIsLoading(false); }
     };

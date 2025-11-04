@@ -1,17 +1,14 @@
-
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import Button from './Button.tsx';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 const CookieBanner = () => {
     const [isVisible, setIsVisible] = useState(false);
     const { theme } = useColorTheme();
+    const location = useLocation();
+    const { user } = useAuth(); // Importar el estado de autenticación
 
     useEffect(() => {
         // Check localStorage after a short delay to ensure client-side execution
@@ -22,7 +19,7 @@ const CookieBanner = () => {
                     setIsVisible(true);
                 }
             }
-        }, 1000);
+        }, 500);
         return () => clearTimeout(timer);
     }, []);
 
@@ -33,7 +30,11 @@ const CookieBanner = () => {
         setIsVisible(false);
     };
 
-    if (!isVisible) {
+    const authPaths = ['/login', '/register', '/forgot-password', '/onboarding'];
+    const shouldHideOnAuthPage = authPaths.includes(location.pathname);
+
+    // Si el usuario ha iniciado sesión, NUNCA mostrar el banner
+    if (!isVisible || shouldHideOnAuthPage || user) {
         return null;
     }
 

@@ -2,6 +2,54 @@
 import { ExchangeStatus } from '../types.ts';
 import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 
+// --- Helper function to generate placeholder images ---
+const generatePlaceholderImage = (text: string): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 500;
+    canvas.height = 500;
+
+    // Generate a random background color
+    const bgColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 85%)`;
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Style and add the text
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 30px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Simple word wrapping
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+    const maxWidth = 450;
+    
+    for(let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+            lines.push(line);
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line);
+
+    const lineHeight = 35;
+    const startY = (canvas.height - (lines.length - 1) * lineHeight) / 2;
+
+    for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i].trim(), canvas.width / 2, startY + i * lineHeight);
+    }
+    
+    return canvas.toDataURL('image/png');
+};
+
+
 // --- DEV PATCH: polyfills y notifications (dev-only) ---
 
 // Polyfill seguro para atob en entornos node/controlados
@@ -123,30 +171,30 @@ const setupInitialData = () => {
 
     items = [
         // Ana's Items (User 1)
-        { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Bicicleta de carretera de 10 velocidades de los 80. Bien cuidada.', imageUrls: ['https://images.unsplash.com/photo-1559348349-36de8b9e11e?w=500', 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500'], category: 'Vehículos', wishedItem: 'Monitor Ultrawide', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 2, favoritedBy: ['2'] },
-        { id: '102', userId: '1', ownerName: 'Ana', title: 'Guitarra Acústica Yamaha', description: 'Ideal para principiantes. Incluye funda y afinador.', imageUrls: ['https://images.unsplash.com/photo-1510915361894-db8b60106945?w=500', 'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=500'], category: 'Música', wishedItem: 'Colección de Libros Antiguos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 5, favoritedBy: ['2', '3'] },
-        { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: ['https://images.unsplash.com/photo-1607621247161-1e24a5b9b8b0?w=500', 'https://images.unsplash.com/photo-1507563589139-d3c2e7d7a2e8?w=500'], category: 'Electrónica', wishedItem: 'Casco de Moto', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 10, favoritedBy: ['2'] },
-        { id: '108', userId: '1', ownerName: 'Ana', title: 'Juego de Tazas de Cerámica', description: 'Hechas a mano. Cuatro tazas con un diseño único y rústico.', imageUrls: ['https://images.unsplash.com/photo-1594312693441-32c029a24786?w=500'], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 4).toISOString(), likes: 1, favoritedBy: [] },
-        { id: '109', userId: '1', ownerName: 'Ana', title: 'Patinete Eléctrico', description: 'Patinete eléctrico con autonomía de 20km, ideal para la ciudad.', imageUrls: ['https://images.unsplash.com/photo-1593922709633-855f71e54c86?w=500'], category: 'Vehículos', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 6).toISOString(), likes: 0, favoritedBy: [] },
-        { id: '110', userId: '1', ownerName: 'Ana', title: 'Saga "Dune" Completa', description: 'Los 6 libros de la saga original de Frank Herbert en tapa blanda.', imageUrls: ['https://images.unsplash.com/photo-1633423539542-f83c3b31d167?w=500'], category: 'Libros', wishedItem: 'Videojuego Nintendo Switch', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 8).toISOString(), likes: 3, favoritedBy: [] },
-        { id: '111', userId: '1', ownerName: 'Ana', title: 'Teclado Mecánico Keychron', description: 'Teclado 65% con switches brown, retroiluminación RGB.', imageUrls: ['https://images.unsplash.com/photo-1618384887924-2c8ab66a8a0b?w=500'], category: 'Electrónica', wishedItem: 'Tocadiscos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 8, favoritedBy: ['2'] },
-        { id: '112', userId: '1', ownerName: 'Ana', title: 'Cámara Analógica Canon AE-1', description: 'Cámara réflex de 35mm clásica. Funciona perfectamente.', imageUrls: ['https://images.unsplash.com/photo-1519638831568-d9897f54ed69?w=500'], category: 'Electrónica', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 12).toISOString(), likes: 4, favoritedBy: [] },
+        { id: '101', userId: '1', ownerName: 'Ana', title: 'Bicicleta Clásica', description: 'Bicicleta de carretera de 10 velocidades de los 80. Bien cuidada.', imageUrls: [generatePlaceholderImage('Bicicleta Clásica')], category: 'Vehículos', wishedItem: 'Monitor Ultrawide', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 2, favoritedBy: ['2'] },
+        { id: '102', userId: '1', ownerName: 'Ana', title: 'Guitarra Acústica Yamaha', description: 'Ideal para principiantes. Incluye funda y afinador.', imageUrls: [generatePlaceholderImage('Guitarra Acústica Yamaha')], category: 'Música', wishedItem: 'Colección de Libros Antiguos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 5, favoritedBy: ['2', '3'] },
+        { id: '105', userId: '1', ownerName: 'Ana', title: 'Dron DJI Mini 2', description: 'Graba vídeo en 4K. Incluye mando y batería extra.', imageUrls: [generatePlaceholderImage('Dron DJI Mini 2')], category: 'Electrónica', wishedItem: 'Casco de Moto', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 10, favoritedBy: ['2'] },
+        { id: '108', userId: '1', ownerName: 'Ana', title: 'Juego de Tazas de Cerámica', description: 'Hechas a mano. Cuatro tazas con un diseño único y rústico.', imageUrls: [generatePlaceholderImage('Juego de Tazas de Cerámica')], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 4).toISOString(), likes: 1, favoritedBy: [] },
+        { id: '109', userId: '1', ownerName: 'Ana', title: 'Patinete Eléctrico', description: 'Patinete eléctrico con autonomía de 20km, ideal para la ciudad.', imageUrls: [generatePlaceholderImage('Patinete Eléctrico')], category: 'Vehículos', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 6).toISOString(), likes: 0, favoritedBy: [] },
+        { id: '110', userId: '1', ownerName: 'Ana', title: 'Saga "Dune" Completa', description: 'Los 6 libros de la saga original de Frank Herbert en tapa blanda.', imageUrls: [generatePlaceholderImage('Saga "Dune" Completa')], category: 'Libros', wishedItem: 'Videojuego Nintendo Switch', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 8).toISOString(), likes: 3, favoritedBy: [] },
+        { id: '111', userId: '1', ownerName: 'Ana', title: 'Teclado Mecánico Keychron', description: 'Teclado 65% con switches brown, retroiluminación RGB.', imageUrls: [generatePlaceholderImage('Teclado Mecánico Keychron')], category: 'Electrónica', wishedItem: 'Tocadiscos', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 8, favoritedBy: ['2'] },
+        { id: '112', userId: '1', ownerName: 'Ana', title: 'Cámara Analógica Canon AE-1', description: 'Cámara réflex de 35mm clásica. Funciona perfectamente.', imageUrls: [generatePlaceholderImage('Cámara Analógica Canon AE-1')], category: 'Electrónica', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 12).toISOString(), likes: 4, favoritedBy: [] },
         
         // Benito's Items (User 2)
-        { id: '103', userId: '2', ownerName: 'Benito', title: 'Colección de Libros Antiguos', description: 'Lote de 20 novelas clásicas. Incluye Tolstoy, Dickens y Austen.', imageUrls: ['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500', 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500'], category: 'Libros', wishedItem: 'Guitarra Acústica', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 8, favoritedBy: ['1'] },
-        { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Con poco uso, incluye Zelda y Mario Kart 8.', imageUrls: ['https://images.unsplash.com/photo-1612036782180-6f0b6cd84627?w=500', 'https://images.unsplash.com/photo-1589254065909-b7086229d08c?w=500'], category: 'Videojuegos', wishedItem: '', status: 'EXCHANGED', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 15, favoritedBy: [] },
-        { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada.', imageUrls: ['https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?w=500', 'https://images.unsplash.com/photo-1611312449412-6cefac5dc2d0?w=500'], category: 'Ropa', wishedItem: 'Patinete', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 2, favoritedBy: [] },
-        { id: '113', userId: '2', ownerName: 'Benito', title: 'Tocadiscos Audio-Technica', description: 'Modelo AT-LP60X. Automático, con preamplificador. Casi nuevo.', imageUrls: ['https://images.unsplash.com/photo-1591321920387-014ea413a968?w=500'], category: 'Música', wishedItem: 'Teclado Mecánico', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 9, favoritedBy: ['1'] },
-        { id: '114', userId: '2', ownerName: 'Benito', title: 'Cafetera Italiana Bialetti', description: 'Cafetera moka para 6 tazas. Un clásico del diseño.', imageUrls: ['https://images.unsplash.com/photo-1620524222472-a7d65b72183e?w=500'], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 7).toISOString(), likes: 0, favoritedBy: [] },
-        { id: '115', userId: '2', ownerName: 'Benito', title: 'Casco de Moto Modular', description: 'Talla L, con visor solar integrado. Marca LS2.', imageUrls: ['https://images.unsplash.com/photo-1599119747993-9c5954620068?w=500'], category: 'Vehículos', wishedItem: 'Dron', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 9).toISOString(), likes: 1, favoritedBy: [] },
-        { id: '116', userId: '2', ownerName: 'Benito', title: 'Monitor Ultrawide LG', description: 'Monitor de 29 pulgadas, resolución 2560x1080, ideal para productividad.', imageUrls: ['https://images.unsplash.com/photo-1627843445396-5ab93a18b6a3?w=500'], category: 'Electrónica', wishedItem: 'Bicicleta Clásica', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 6, favoritedBy: ['1'] },
-        { id: '117', userId: '2', ownerName: 'Benito', title: 'Mochila de Montaña 50L', description: 'Mochila de trekking con múltiples compartimentos. Marca Osprey.', imageUrls: ['https://images.unsplash.com/photo-1580610423292-8d2659e974f4?w=500'], category: 'Otros', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 15).toISOString(), likes: 3, favoritedBy: [] },
+        { id: '103', userId: '2', ownerName: 'Benito', title: 'Colección de Libros Antiguos', description: 'Lote de 20 novelas clásicas. Incluye Tolstoy, Dickens y Austen.', imageUrls: [generatePlaceholderImage('Colección de Libros Antiguos')], category: 'Libros', wishedItem: 'Guitarra Acústica', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 8, favoritedBy: ['1'] },
+        { id: '104', userId: '2', ownerName: 'Benito', title: 'Nintendo Switch', description: 'Con poco uso, incluye Zelda y Mario Kart 8.', imageUrls: [generatePlaceholderImage('Nintendo Switch')], category: 'Videojuegos', wishedItem: '', status: 'EXCHANGED', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 15, favoritedBy: [] },
+        { id: '106', userId: '2', ownerName: 'Benito', title: 'Chaqueta de Cuero', description: 'Chaqueta de cuero negro clásica, talla M. Apenas usada.', imageUrls: [generatePlaceholderImage('Chaqueta de Cuero')], category: 'Ropa', wishedItem: 'Patinete', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 2, favoritedBy: [] },
+        { id: '113', userId: '2', ownerName: 'Benito', title: 'Tocadiscos Audio-Technica', description: 'Modelo AT-LP60X. Automático, con preamplificador. Casi nuevo.', imageUrls: [generatePlaceholderImage('Tocadiscos Audio-Technica')], category: 'Música', wishedItem: 'Teclado Mecánico', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), likes: 9, favoritedBy: ['1'] },
+        { id: '114', userId: '2', ownerName: 'Benito', title: 'Cafetera Italiana Bialetti', description: 'Cafetera moka para 6 tazas. Un clásico del diseño.', imageUrls: [generatePlaceholderImage('Cafetera Italiana Bialetti')], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 7).toISOString(), likes: 0, favoritedBy: [] },
+        { id: '115', userId: '2', ownerName: 'Benito', title: 'Casco de Moto Modular', description: 'Talla L, con visor solar integrado. Marca LS2.', imageUrls: [generatePlaceholderImage('Casco de Moto Modular')], category: 'Vehículos', wishedItem: 'Dron', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 9).toISOString(), likes: 1, favoritedBy: [] },
+        { id: '116', userId: '2', ownerName: 'Benito', title: 'Monitor Ultrawide LG', description: 'Monitor de 29 pulgadas, resolución 2560x1080, ideal para productividad.', imageUrls: [generatePlaceholderImage('Monitor Ultrawide LG')], category: 'Electrónica', wishedItem: 'Bicicleta Clásica', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), likes: 6, favoritedBy: ['1'] },
+        { id: '117', userId: '2', ownerName: 'Benito', title: 'Mochila de Montaña 50L', description: 'Mochila de trekking con múltiples compartimentos. Marca Osprey.', imageUrls: [generatePlaceholderImage('Mochila de Montaña 50L')], category: 'Otros', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 15).toISOString(), likes: 3, favoritedBy: [] },
 
         // Admin's Items (User 3)
-        { id: '107', userId: '3', ownerName: 'Admin', title: 'Clases de guitarra online', description: 'Ofrezco una hora de clase de guitarra para principiantes por videollamada.', imageUrls: ['https://images.unsplash.com/photo-1550291652-6ea9114a47b1?w=500'], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 4, favoritedBy: [] },
-        { id: '118', userId: '3', ownerName: 'Admin', title: 'Set de Herramientas Bosch', description: 'Maletín con 108 piezas, incluye taladro percutor y puntas.', imageUrls: ['https://images.unsplash.com/photo-1556911985-652a60824b33?w=500'], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 2, favoritedBy: [] },
-        { id: '119', userId: '3', ownerName: 'Admin', title: 'Lámpara de Escritorio Vintage', description: 'Lámpara de metal de los años 60, estilo industrial.', imageUrls: ['https://images.unsplash.com/photo-1507494954209-4723e7f3b521?w=500'], category: 'Muebles', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 1, favoritedBy: [] },
-        { id: '120', userId: '3', ownerName: 'Admin', title: 'Masaje Relajante a Domicilio', description: 'Sesión de 1 hora de masaje descontracturante. Solo en Valencia.', imageUrls: ['https://images.unsplash.com/photo-1598421830154-02a4b8849033?w=500'], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 7, favoritedBy: ['1', '2'] },
+        { id: '107', userId: '3', ownerName: 'Admin', title: 'Clases de guitarra online', description: 'Ofrezco una hora de clase de guitarra para principiantes por videollamada.', imageUrls: [generatePlaceholderImage('Clases de guitarra online')], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 4, favoritedBy: [] },
+        { id: '118', userId: '3', ownerName: 'Admin', title: 'Set de Herramientas Bosch', description: 'Maletín con 108 piezas, incluye taladro percutor y puntas.', imageUrls: [generatePlaceholderImage('Set de Herramientas Bosch')], category: 'Hogar', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), likes: 2, favoritedBy: [] },
+        { id: '119', userId: '3', ownerName: 'Admin', title: 'Lámpara de Escritorio Vintage', description: 'Lámpara de metal de los años 60, estilo industrial.', imageUrls: [generatePlaceholderImage('Lámpara de Escritorio Vintage')], category: 'Muebles', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), likes: 1, favoritedBy: [] },
+        { id: '120', userId: '3', ownerName: 'Admin', title: 'Masaje Relajante a Domicilio', description: 'Sesión de 1 hora de masaje descontracturante. Solo en Valencia.', imageUrls: [generatePlaceholderImage('Masaje Relajante a Domicilio')], category: 'Servicios', wishedItem: '', status: 'AVAILABLE', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), likes: 7, favoritedBy: ['1', '2'] },
     ];
     persistData();
 };
@@ -259,7 +307,6 @@ class ApiClient {
               emailVerified: true,
               phoneVerified: false,
               location: null,
-              fcmToken: null,
           };
           users.push(newUser);
           user = newUser;
@@ -287,7 +334,6 @@ class ApiClient {
           preferences: [],
           emailVerified: false,
           phoneVerified: false,
-          fcmToken: null,
       };
       users.push(newUser);
       persistData();
@@ -794,6 +840,33 @@ class ApiClient {
       return { success: true };
   }
 
+  // FIX: Add missing 'saveFcmToken' method to handle saving push notification tokens.
+  async saveFcmToken(fcmToken: string) {
+    await this.simulateDelay(100);
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) {
+        console.warn('Cannot save FCM token without a logged-in user.');
+        return { success: false, message: 'User not authenticated.' };
+    }
+    console.log(`SIMULACIÓN: Guardando token FCM para el usuario ${currentUser.id}`);
+    
+    // In a real app, this would be an API call to your backend.
+    // For this mock, we'll store it on the user object.
+    // @ts-ignore
+    if (!currentUser.fcmTokens) {
+        // @ts-ignore
+        currentUser.fcmTokens = [];
+    }
+    // @ts-ignore
+    if (!currentUser.fcmTokens.includes(fcmToken)) {
+        // @ts-ignore
+        currentUser.fcmTokens.push(fcmToken);
+        persistData();
+    }
+    
+    return { success: true };
+  }
+
   async updateUserPreferences(preferences) {
       await this.simulateDelay();
       const currentUser = this._getCurrentUserFromToken();
@@ -854,20 +927,6 @@ class ApiClient {
       } else {
           return { message: "Si existe una cuenta con este correo, se ha enviado un enlace para restablecer la contraseña." };
       }
-  }
-
-  async saveFcmToken(token: string) {
-      await this.simulateDelay(200);
-      const currentUser = this._getCurrentUserFromToken();
-      if (currentUser) {
-          console.log(`Saving FCM token for user ${currentUser.id}: ${token}`);
-          // @ts-ignore
-          currentUser.fcmToken = token;
-          persistData();
-          return { success: true };
-      }
-      console.warn('Could not save FCM token, no user logged in.');
-      return { success: false };
   }
 
   async toggleFavorite(itemId) {

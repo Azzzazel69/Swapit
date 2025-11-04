@@ -1,31 +1,47 @@
 // services/pushNotifications.ts
-
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/messaging';
 import { firebaseConfig, VAPID_KEY } from './firebaseConfig.ts';
 import { api } from './api.ts';
 
-let messaging;
+let messaging: firebase.messaging.Messaging | null = null;
+let serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
 
 /**
  * Initializes the push notification service using Firebase.
  * This should be called once when the application loads for a logged-in user.
  */
-export const initializePushNotifications = () => {
-    console.log("Push Notification Service: Initializing with Firebase");
+export const initializePushNotifications = async () => {
+    console.log("Push Notification Service: Initializing with Firebase (Compat Mode)");
     try {
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
 
         if (firebase.messaging.isSupported()) {
+            // Step 1: Register the service worker FIRST.
+            // This is crucial. The service worker must be registered before we can get a token.
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    console.log('Firebase Service Worker registered successfully with scope:', registration.scope);
+                    serviceWorkerRegistration = registration;
+                } catch (error) {
+                    console.error('Service Worker registration failed:', error);
+                    return; // Stop initialization if SW registration fails
+                }
+            } else {
+                 console.log("Service workers are not supported in this browser.");
+                 return;
+            }
+
+            // Step 2: Get the messaging instance.
             messaging = firebase.messaging();
 
-            // Handle incoming messages when the app is in the foreground.
+            // Step 3: Set up a handler for foreground messages.
             messaging.onMessage((payload) => {
                 console.log('Foreground message received.', payload);
                 // In a real app, you would show a toast notification here.
-                // Example: MyToastLib.show(payload.notification.title, payload.notification.body);
             });
         } else {
             console.log("Push Notification Service: Firebase Messaging is not supported in this browser.");
@@ -83,16 +99,18 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
  * Retrieves the FCM token from Firebase and sends it to the backend for storage.
  */
 const getAndSaveToken = async (): Promise<boolean> => {
-    if (!messaging) {
-        console.log("Messaging not initialized. Cannot get token.");
+    if (!messaging || !serviceWorkerRegistration) {
+        console.log("Messaging or Service Worker not properly initialized. Cannot get token.");
         return false;
     }
 
     try {
-        const currentToken = await messaging.getToken({ vapidKey: VAPID_KEY });
+        const currentToken = await messaging.getToken({ 
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: serviceWorkerRegistration 
+        });
         if (currentToken) {
             console.log('FCM Token retrieved:', currentToken);
-            // Send the token to your server to associate it with the current user
             await api.saveFcmToken(currentToken);
             return true;
         } else {

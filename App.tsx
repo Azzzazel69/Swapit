@@ -1,5 +1,6 @@
 
-import React, { useEffect } from 'react';
+
+import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { ColorThemeProvider } from './hooks/useColorTheme.tsx';
@@ -20,7 +21,6 @@ import { useColorTheme } from './hooks/useColorTheme.tsx';
 import ChatDetailPage from './pages/ChatDetailPage.tsx';
 import UserProfilePage from './pages/UserProfilePage.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
-import { initializePushNotifications, requestNotificationPermission } from './services/pushNotifications.ts';
 import CookieBanner from './components/CookieBanner.tsx';
 import AddItemPage from './pages/AddItemPage.tsx';
 
@@ -61,15 +61,6 @@ const AppFooter = () => {
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      // Initialize push notifications once the user is logged in
-      initializePushNotifications();
-      // After initialization, request permission
-      requestNotificationPermission();
-    }
-  }, [user]);
 
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" },

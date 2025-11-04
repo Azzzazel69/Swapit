@@ -1,10 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Button from './Button.tsx';
 import { ICONS } from '../constants.tsx';
 import OtherItemModal from './OtherItemModal.tsx';
 
-const SelectableItemCard = ({ item, isSelected, onSelect, isOther = false }) => {
+const SelectableItemCard = ({ item, isSelected, onSelect, isOther = false, isMatch = false }) => {
     const hasImage = item.imageUrls && item.imageUrls.length > 0;
 
     const ImagePlaceholder = () => (
@@ -19,6 +18,11 @@ const SelectableItemCard = ({ item, isSelected, onSelect, isOther = false }) => 
         onClick: () => onSelect(item.id),
         className: `relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 h-full flex flex-col ${isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'}`
     },
+        isMatch && !isOther && (
+            React.createElement("div", { className: "absolute top-1 left-1 z-10 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1" },
+                "⚡️ ¡MATCH!"
+            )
+        ),
         hasImage
             ? React.createElement("img", { src: item.imageUrls[0], alt: isOther ? 'Otro artículo' : item.title, className: "w-full h-24 object-cover" })
             : React.createElement(ImagePlaceholder, null),
@@ -71,6 +75,17 @@ const ExchangeProposalModal = ({
         }
     }, [isOpen, isModification, existingExchange]);
     
+    const sortedUserItems = useMemo(() => {
+        if (!userItems || !targetItem) return [];
+
+        const itemsWithMatchStatus = userItems.map(item => {
+            const isMatch = targetItem.wishedItem && item.title.toLowerCase().includes(targetItem.wishedItem.toLowerCase());
+            return { ...item, isMatch };
+        });
+
+        return itemsWithMatchStatus.sort((a, b) => (b.isMatch ? 1 : 0) - (a.isMatch ? 1 : 0));
+    }, [userItems, targetItem]);
+
     if (!isOpen) return null;
 
     const handleSelect = (itemId) => {
@@ -100,7 +115,7 @@ const ExchangeProposalModal = ({
         });
     };
     
-    const allSelectableItems = [...userItems, ...otherItems];
+    const allSelectableItems = [...sortedUserItems, ...otherItems];
 
     return (
         React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4", onClick: onClose },
@@ -128,12 +143,13 @@ const ExchangeProposalModal = ({
                             allSelectableItems.map(item => {
                                 const isOther = item.id.startsWith('other-');
                                 return (
-                                    React.createElement("div", { key: item.id, className: "relative group" },
+                                    React.createElement("div", { key: item.id, className: `relative group ${item.isMatch ? 'animate-shake' : ''}` },
                                         React.createElement(SelectableItemCard, {
                                             item: item,
                                             isSelected: selectedItemIds.includes(item.id),
                                             onSelect: handleSelect,
-                                            isOther: isOther
+                                            isOther: isOther,
+                                            isMatch: item.isMatch
                                         }),
                                         isOther && React.createElement("button", {
                                             onClick: (e) => { e.stopPropagation(); handleRemoveOtherItem(item.id); },

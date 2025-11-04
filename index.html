@@ -7,6 +7,16 @@
     <title>Swapit - Plataforma de Trueques</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+      .animate-shake {
+        animation: shake 0.8s ease-in-out;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {
@@ -22,21 +32,9 @@
   <body class="bg-gray-100 dark:bg-gray-900">
     <div id="root"></div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
+    <!-- Firebase SDKs are loaded via importmap -->
 
     <script type="module" src="/index.js?v=3.10"></script>
     
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js')
-          .then(function(registration) {
-            console.log('Firebase Service Worker registered with scope:', registration.scope);
-          }).catch(function(error) {
-            console.log('Service Worker registration failed:', error);
-          });
-      }
-    </script>
   </body>
 </html>
