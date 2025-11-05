@@ -13,12 +13,13 @@ import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import AutocompleteInput from '../components/AutocompleteInput.tsx';
 import { locations } from '../data/locations.ts';
 import { requestNotificationPermission } from '../services/pushNotifications.ts';
+import TutorialModal from '../components/TutorialModal.tsx';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
     const { theme } = useColorTheme();
     const navigate = useNavigate();
-    const [step, setStep] = useState('email');
+    const [step, setStep] = useState('initial_check');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     
@@ -37,24 +38,39 @@ const OnboardingPage = () => {
     // Preferences state
     const [preferences, setPreferences] = useState([]);
     
+    const determineOnboardingStep = () => {
+        if (!user) return;
+        if (user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0) {
+            setStep('complete');
+            setTimeout(() => navigate('/'), 2000);
+        } else if (!user.emailVerified) {
+            setStep('email');
+        } else if (!user.phoneVerified) {
+            setStep('phone');
+        } else if (!user.location) {
+            setStep('location');
+        } else {
+            setStep('preferences');
+        }
+    };
+
     useEffect(() => {
         if (user) {
-            // Check if FULLY onboarded (including location and non-empty preferences)
-            if (user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0) {
-                setStep('complete');
-                setTimeout(() => navigate('/'), 2000);
-            } else if (!user.emailVerified) {
-                setStep('email');
-            } else if (!user.phoneVerified) {
-                setStep('phone');
-            } else if (!user.location) {
-                setStep('location');
-            } else { // This covers the case where location is set but preferences are not.
-                setStep('preferences');
+            const tutorialCompleted = typeof window !== 'undefined' ? window.localStorage.getItem('tutorial_completed') === 'true' : true;
+            if (!tutorialCompleted) {
+                setStep('tutorial');
+            } else {
+                determineOnboardingStep();
             }
         }
     }, [user, navigate]);
 
+    const handleTutorialClose = () => {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem('tutorial_completed', 'true');
+        }
+        determineOnboardingStep();
+    };
 
     const handleVerifyEmail = async () => {
         setIsLoading(true); setError('');
@@ -158,13 +174,15 @@ const OnboardingPage = () => {
         finally { setIsLoading(false); }
     };
 
-    const renderStep = () => {
+    const renderStepContent = () => {
         switch(step) {
+            case 'initial_check':
+            case 'tutorial':
+                return React.createElement(SwapSpinner, null);
             case 'email':
                 return React.createElement("div", null,
                     React.createElement("h3", { className: "text-xl font-semibold mb-2" }, "Paso 1: Verifica tu Correo"),
                     React.createElement("p", { className: "mb-4 text-gray-600 dark:text-gray-400" }, "Se ha enviado un enlace de verificación a ", React.createElement("strong", null, user?.email), ". (Para esta demo, solo haz clic en el botón de abajo)."),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
                     React.createElement(Button, { onClick: handleVerifyEmail, isLoading: isLoading, children: "Confirmar Correo Electrónico" })
                 );
             case 'phone':
@@ -174,14 +192,12 @@ const OnboardingPage = () => {
                     !codeSent ? (
                         React.createElement("form", { onSubmit: handleSendCode, className: "space-y-4" },
                             React.createElement(Input, { id: "phone", label: "Número de Teléfono", type: "tel", value: phone, onChange: e => setPhone(e.target.value), required: true, placeholder: "+34 600 123 456" }),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
                             React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Enviar Código" })
                         )
                     ) : (
                         React.createElement("form", { onSubmit: handleVerifyCode, className: "space-y-4" },
                             React.createElement("p", { className: "text-sm text-green-600" }, "Se ha enviado un código a ", phone, ". (Pista: es 123456)"),
                             React.createElement(Input, { id: "code", label: "Código de Verificación", type: "text", value: code, onChange: e => setCode(e.target.value), required: true, placeholder: "código de 6 dígitos" }),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
                             React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Verificar Teléfono" })
                         )
                     )
@@ -190,7 +206,6 @@ const OnboardingPage = () => {
                 return React.createElement("div", null,
                     React.createElement("h3", { className: "text-xl font-semibold mb-2" }, "Paso 3: Configura tu Ubicación"),
                     React.createElement("p", { className: "mb-4 text-gray-600 dark:text-gray-400" }, "Esto nos ayuda a encontrar intercambios cerca de ti."),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
                     React.createElement(Button, { onClick: handleAutoDetectLocation, isLoading: isLocating, variant: "secondary", className: "mb-4 w-full", children: React.createElement("div", { className: "flex items-center gap-2" }, React.createElement("span", { className: theme.textColor }, ICONS.location), " Reintentar Autodetección")
                     }),
                     React.createElement("form", { onSubmit: handleSaveLocation, className: "space-y-4" },
@@ -198,7 +213,6 @@ const OnboardingPage = () => {
                         React.createElement(AutocompleteInput, { id: "city", label: "Ciudad", value: city, onChange: setCity, required: true, suggestions: citiesForSelectedCountry, placeholder: "Escribe tu ciudad...", disabled: !country }),
                         React.createElement(Input, { id: "address", label: "Dirección (Calle, número, piso)", type: "text", value: address, onChange: e => setAddress(e.target.value), required: true, placeholder:"Ej: Calle Principal, 123, 2B" }),
                         React.createElement(Input, { id: "postalCode", label: "Código Postal", type: "text", value: postalCode, onChange: e => setPostalCode(e.target.value), required: true }),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
                         React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Guardar Ubicación" })
                     )
                 );
@@ -220,7 +234,6 @@ const OnboardingPage = () => {
                             )
                         ))
                     ),
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
                     React.createElement(Button, { onClick: handleSavePreferences, isLoading: isLoading, className: "mt-6 w-full", children: "Completar Configuración y Entrar a Swapit" })
                 );
             case 'complete':
@@ -235,11 +248,16 @@ const OnboardingPage = () => {
         }
     }
 
-    return React.createElement("div", { className: "max-w-xl mx-auto py-12" },
-        React.createElement("div", { className: "bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg" },
-             React.createElement("h2", { className: "text-3xl font-bold text-center mb-6" }, "¡Bienvenido a Swapit!"),
-             error && React.createElement("p", { className: "text-red-500 text-sm text-center mb-4 p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
-             renderStep()
+    return (
+        React.createElement(React.Fragment, null,
+            React.createElement(TutorialModal, { isOpen: step === 'tutorial', onClose: handleTutorialClose }),
+            React.createElement("div", { className: `max-w-xl mx-auto py-12 transition-opacity duration-500 ${step === 'tutorial' ? 'opacity-0 pointer-events-none' : 'opacity-100'}` },
+                React.createElement("div", { className: "bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg" },
+                     React.createElement("h2", { className: "text-3xl font-bold text-center mb-6" }, "¡Bienvenido a Swapit!"),
+                     error && React.createElement("p", { className: "text-red-500 text-sm text-center mb-4 p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
+                     renderStepContent()
+                )
+            )
         )
     );
 };
