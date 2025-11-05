@@ -5,11 +5,12 @@ import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { ICONS } from '../constants.tsx';
 import SwapSpinner from './SwapSpinner.tsx';
 
-const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleFavorite }) => {
+const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleFavorite, columns = 2 }) => {
   const { theme } = useColorTheme();
   const isSwapped = item.status === 'EXCHANGED';
   const isReserved = item.status === 'RESERVED';
   const isBeingDeleted = deletingItemId === item.id;
+  const isSmall = columns > 2;
 
   return React.createElement("div", { 
       className: `relative bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 group ${isSwapped || isReserved ? 'opacity-60' : ''}` 
@@ -55,9 +56,9 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
           )
         )
       ),
-      React.createElement("div", { className: "p-4" },
+      React.createElement("div", { className: `p-${isSmall ? '2' : '4'}` },
         React.createElement("div", { className: "flex justify-between items-start gap-2" },
-            React.createElement("h2", { className: `text-lg font-bold mb-1 truncate flex-grow transition-colors ${item.isFavorited ? 'text-red-500 dark:text-red-400' : `text-gray-900 dark:text-white group-hover:${theme.textColor}`}` }, item.title),
+            React.createElement("h2", { className: `${isSmall ? 'text-base' : 'text-lg'} font-bold mb-1 truncate flex-grow transition-colors ${item.isFavorited ? 'text-red-500 dark:text-red-400' : `text-gray-900 dark:text-white group-hover:${theme.textColor}`}` }, item.title),
             !isOwnItem && onToggleFavorite && React.createElement("button", {
               onClick: (e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); },
               className: "flex-shrink-0 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400",
@@ -67,20 +68,20 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
               React.createElement("span", { className: "font-bold" }, item.likes || 0)
             )
         ),
-        React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-sm mb-2 line-clamp-2 h-10" }, item.description),
+        React.createElement("p", { className: `text-gray-600 dark:text-gray-400 text-sm mb-2 ${isSmall ? 'line-clamp-1 h-5' : 'line-clamp-2 h-10'}` }, item.description),
         
         item.wishedItem && (
-            React.createElement("div", { className: "mt-2 pt-2 border-t border-gray-100 dark:border-gray-700" },
+            React.createElement("div", { className: `mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 ${columns === 4 ? 'hidden' : ''}` },
               React.createElement("h4", { className: "text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1" }, 
                 React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-3 w-3", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor"}, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13 10V3L4 14h7v7l9-11h-7z" })),
                 "Desea:"
               ),
-              React.createElement("p", { className: "text-sm font-medium text-gray-800 dark:text-gray-200 truncate mt-1" }, item.wishedItem)
+              React.createElement("p", { className: `${isSmall ? 'text-xs' : 'text-sm'} font-medium text-gray-800 dark:text-gray-200 truncate mt-1` }, item.wishedItem)
             )
         ),
 
-        React.createElement("div", { className: "flex items-center justify-between mt-4" },
-          React.createElement("div", { className: "text-sm text-gray-500 dark:text-gray-400" },
+        React.createElement("div", { className: `flex items-center justify-between ${isSmall ? 'mt-2' : 'mt-4'}` },
+          React.createElement("div", { className: `${isSmall ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400` },
             React.createElement("p", null, "Propietario: ", React.createElement("strong", null, isOwnItem ? 'Tú' : item.ownerName))
           )
         )

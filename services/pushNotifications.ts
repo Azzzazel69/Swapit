@@ -27,7 +27,8 @@ const windowLoaded = new Promise(resolve => {
  * This prevents the "document is in an invalid state" error.
  */
 const registerServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
-    await windowLoaded; // Guarantees the window is fully loaded.
+    // This await is slightly redundant if the caller also awaits, but it's safe.
+    await windowLoaded; 
     
     if (!('serviceWorker' in navigator)) {
         throw new Error("Service workers are not supported in this browser.");
@@ -53,6 +54,9 @@ export const initializePushNotifications = () => {
     }
 
     initializationPromise = (async () => {
+        // Wait for the window to be fully loaded before attempting any Firebase initialization.
+        await windowLoaded;
+
         console.log("Push Notification Service: Initializing with Firebase (Compat Mode)");
         try {
             if (!firebase.apps.length) {

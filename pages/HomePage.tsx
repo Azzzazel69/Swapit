@@ -6,14 +6,19 @@ import SwapSpinner from '../components/SwapSpinner.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { Link } from 'react-router-dom';
+import ItemCardSkeleton from '../components/ItemCardSkeleton.tsx';
+
+const CACHE_KEY = 'home_page_items';
 
 const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns = 2 }) => {
+    const { theme } = useColorTheme();
+
     if (!items || items.length === 0) {
         if (title === "¡Matches Directos!") return null; // Ocultar si no hay matches
         
         return (
             React.createElement("div", { className: "mb-12" },
-                React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
+                React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
                 React.createElement("div", { className: "text-center py-8 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg" },
                     React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, emptyMessage)
                 )
@@ -21,19 +26,18 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
         );
     }
     
-    // This new logic respects the user's choice on mobile while ensuring a good layout.
     const gridLayoutClasses = {
         2: 'grid-cols-2',
-        3: 'grid-cols-3',
-        4: 'grid-cols-3 md:grid-cols-4' // On the smallest screens, limit 4 columns to 3 to prevent overflow.
+        3: 'grid-cols-2 md:grid-cols-3',
+        4: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
     };
 
 
     return (
         React.createElement("div", { className: "mb-12" },
-            React.createElement("h2", { className: "text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-3" }, icon, title),
-            React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4` },
-                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite }))
+            React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
+            React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4 md:gap-6` },
+                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns }))
             )
         )
     );
@@ -60,21 +64,30 @@ const LayoutSelector = ({ layout, setLayout }) => {
         4: React.createElement("div", { className: "flex gap-0.5", title:"4 columnas" }, React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" })),
     };
 
+    const handleSelect = (option) => {
+        setLayout(option);
+        setIsOpen(false);
+    };
+
     return (
-        React.createElement("div", { className: "relative", ref: wrapperRef },
-            React.createElement("button", {
-                onClick: () => setIsOpen(prev => !prev),
-                className: "p-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-            }, icons[layout]),
-            isOpen && React.createElement("div", {
-                className: "absolute bottom-full right-0 mb-2 p-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 flex flex-row gap-1"
-            }, options.map(opt => (
-                React.createElement("button", {
-                    key: opt,
-                    onClick: () => { setLayout(opt); setIsOpen(false); },
-                    className: `p-2 rounded-md transition-colors ${layout === opt ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`
-                }, icons[opt])
-            )))
+        React.createElement("div", { className: "flex items-center justify-end gap-2", ref: wrapperRef },
+             React.createElement("span", {
+                className: `text-sm font-medium text-gray-600 dark:text-gray-400 transition-all duration-300 ease-in-out ${isOpen ? 'max-w-xs opacity-100 mr-2' : 'max-w-0 opacity-0'} overflow-hidden whitespace-nowrap`,
+            }, "Artículos por línea"),
+            React.createElement("div", { className: `flex items-center p-1 bg-gray-200 dark:bg-gray-700 rounded-full transition-all duration-300 ease-in-out` },
+                !isOpen && React.createElement("button", {
+                    onClick: () => setIsOpen(true),
+                    className: `p-1.5 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600`
+                }, icons[layout]),
+                
+                isOpen && [...options].reverse().map(opt => (
+                    React.createElement("button", {
+                        key: opt,
+                        onClick: () => handleSelect(opt),
+                        className: `p-1.5 rounded-full transition-colors ml-1 first:ml-0 ${layout === opt ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-300 dark:hover:bg-gray-600'}`
+                    }, icons[opt])
+                ))
+            )
         )
     );
 };
@@ -112,11 +125,34 @@ const HomePage = () => {
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        setLoading(true);
+        // Caching strategy: stale-while-revalidate
+        // 1. Try to load from cache immediately
+        let hasCache = false;
+        if (typeof window !== 'undefined') {
+            const cachedItems = window.localStorage.getItem(CACHE_KEY);
+            if (cachedItems) {
+                const parsedItems = JSON.parse(cachedItems);
+                setItems(parsedItems);
+                setLoading(false); // Stop loading, show cached data
+                hasCache = true;
+            }
+        }
+        
+        if (!hasCache) {
+            setLoading(true);
+        }
+
+        // 2. Always fetch fresh data from the API
         const allItems = await api.getAllItems();
         const otherUsersItems = allItems.filter(item => item.userId !== user?.id && item.status !== 'EXCHANGED');
+        
+        // 3. Update state and cache with fresh data
         setItems(otherUsersItems);
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(CACHE_KEY, JSON.stringify(otherUsersItems));
+        }
         setError(null);
+
       } catch (err) {
         setError('Error al cargar los artículos. Por favor, inténtalo de nuevo más tarde.');
         console.error(err);
@@ -145,7 +181,13 @@ const HomePage = () => {
   const handleToggleFavorite = async (itemId) => {
     try {
         const updatedItem = await api.toggleFavorite(itemId);
-        setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item));
+        setItems(prevItems => {
+            const newItems = prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item);
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem(CACHE_KEY, JSON.stringify(newItems));
+            }
+            return newItems;
+        });
     } catch (error) {
         console.error("Error toggling favorite", error);
         setError("No se pudo actualizar el estado de favorito.");
@@ -232,11 +274,27 @@ const HomePage = () => {
   }, [items, user, searchQuery, searchType]);
 
 
-  if (loading) {
-    return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(SwapSpinner, null));
+  if (loading && items.length === 0) {
+    const skeletonCount = 8;
+    const gridLayoutClasses = {
+        2: 'grid-cols-2',
+        3: 'grid-cols-2 md:grid-cols-3',
+        4: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+    };
+    return (
+      React.createElement("div", null,
+        React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between items-center" },
+            React.createElement("div", { className: "h-11 bg-gray-200 dark:bg-gray-700 rounded-lg w-full md:w-1/2 lg:w-1/3 animate-pulse" }),
+            React.createElement("div", { className: "h-11 bg-gray-200 dark:bg-gray-700 rounded-full w-24 animate-pulse" })
+        ),
+        React.createElement("div", { className: `grid ${gridLayoutClasses[columnLayout] || 'grid-cols-2'} gap-4 md:gap-6` },
+          [...Array(skeletonCount)].map((_, i) => React.createElement(ItemCardSkeleton, { key: i }))
+        )
+      )
+    );
   }
 
-  if (error) {
+  if (error && items.length === 0) {
     return React.createElement("div", { className: "text-center text-red-500" }, error);
   }
 
@@ -285,13 +343,7 @@ const HomePage = () => {
               )
           )
       ),
-      React.createElement("div", { className: "flex items-center gap-4" },
-        React.createElement(LayoutSelector, { layout: columnLayout, setLayout: setColumnLayout }),
-        React.createElement(Link, {
-            to: "/add-item",
-            className: `flex items-center gap-2 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm`
-        }, "Sube tu artículo +")
-      )
+      React.createElement(LayoutSelector, { layout: columnLayout, setLayout: setColumnLayout })
     ),
 
     React.createElement(ItemGroup, {
@@ -326,6 +378,16 @@ const HomePage = () => {
         emptyMessage: "No hay más artículos disponibles en tu zona.",
         columns: columnLayout
     }),
+    
+    React.createElement(Link, {
+        to: "/add-item",
+        title: "Sube tu artículo",
+        className: `fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white rounded-full p-4 shadow-lg hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.focus} transition-transform duration-200 z-40`
+    },
+      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"2" },
+        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4v16m8-8H4" })
+      )
+    )
 
   );
 };

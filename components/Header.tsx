@@ -11,7 +11,7 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
-  const APP_VERSION = "0.9";
+  const APP_VERSION = "1.0";
 
   const activeLinkClass = `bg-gray-200 dark:bg-gray-700`;
   const inactiveLinkClass = 'hover:bg-gray-200 dark:hover:bg-gray-700';
