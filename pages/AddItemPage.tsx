@@ -1,11 +1,13 @@
 
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
-import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
+import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { api } from '../services/api.ts';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { ItemCondition } from '../types.ts';
 
 const AddItemPage = () => {
     const navigate = useNavigate();
@@ -14,6 +16,7 @@ const AddItemPage = () => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
+    const [condition, setCondition] = useState('');
     const [wishedItem, setWishedItem] = useState('');
     const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,10 +66,14 @@ const AddItemPage = () => {
             setError('Por favor, selecciona una categoría.');
             return;
         }
+        if (!condition) {
+            setError('Por favor, selecciona la condición del artículo.');
+            return;
+        }
         setError(null);
         setIsSubmitting(true);
         try {
-            await api.createItem({ title, description, category, imageUrls: images, wishedItem });
+            await api.createItem({ title, description, category, condition, imageUrls: images, wishedItem });
             navigate('/profile', { state: { message: '¡Artículo añadido con éxito!' } });
         } catch (err) {
             setError('Error al crear el artículo.');
@@ -86,18 +93,27 @@ const AddItemPage = () => {
                         React.createElement("label", { htmlFor: "description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
                         React.createElement("textarea", { id: "description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, placeholder: "Describe tu artículo, su estado, etc.", className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
                     ),
-                    React.createElement("div", null,
-                        React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-                        React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
-                            React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
-                            CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
-                                cat.sub.length > 0 ? (
-                                    React.createElement("optgroup", { key: cat.name, label: cat.name },
-                                        cat.sub.map(subCat => React.createElement("option", { key: subCat, value: subCat }, subCat))
+                    React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4" },
+                        React.createElement("div", null,
+                            React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
+                            React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                                React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
+                                CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
+                                    cat.sub.length > 0 ? (
+                                        React.createElement("optgroup", { key: cat.name, label: cat.name },
+                                            cat.sub.map(subCat => React.createElement("option", { key: subCat, value: subCat }, subCat))
+                                        )
+                                    ) : (
+                                        React.createElement("option", { key: cat.name, value: cat.name }, cat.name)
                                     )
-                                ) : (
-                                    React.createElement("option", { key: cat.name, value: cat.name }, cat.name)
                                 )
+                            )
+                        ),
+                        React.createElement("div", null,
+                            React.createElement("label", { htmlFor: "condition", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Condición"),
+                            React.createElement("select", { id: "condition", value: condition, onChange: (e) => setCondition(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                                React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
+                                Object.values(ItemCondition).map(cond => React.createElement("option", { key: cond, value: cond }, cond))
                             )
                         )
                     ),

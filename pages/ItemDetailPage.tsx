@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api, viewHistoryService } from '../services/api.ts';
@@ -6,6 +7,8 @@ import Button from '../components/Button.tsx';
 import { ICONS } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { useToast } from '../hooks/useToast.tsx';
+import { ItemCondition } from '../types.ts';
 import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
 import EditItemModal from '../components/EditItemModal.tsx';
 import ItemDetailSkeleton from '../components/ItemDetailSkeleton.tsx';
@@ -37,6 +40,7 @@ const ItemDetailPage = () => {
   const { itemId } = useParams();
   const { user } = useAuth();
   const { theme } = useColorTheme();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +52,6 @@ const ItemDetailPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noItemsError, setNoItemsError] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   const [isDeleting, setIsDeleting] = useState(false);
   
   useEffect(() => {
@@ -78,19 +81,14 @@ const ItemDetailPage = () => {
     fetchItem();
   }, [itemId]);
   
-  const showNotification = (message, type = 'success') => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification({ show: false, message: '', type: 'success' }), 3000);
-  };
-  
   const handleSaveItem = async (updatedData) => {
     if (!item) return;
     try {
         const updatedItem = await api.updateItem(item.id, updatedData);
         setItem(updatedItem);
-        showNotification('Artículo actualizado con éxito.');
+        showToast('Artículo actualizado con éxito.', 'success');
     } catch (err) {
-        setError(err.message || 'Error al actualizar el artículo.');
+        showToast(err.message || 'Error al actualizar el artículo.', 'error');
     }
   };
   
@@ -102,7 +100,7 @@ const ItemDetailPage = () => {
             await api.deleteItem(item.id);
             navigate('/profile', { state: { message: 'Artículo eliminado con éxito.' } });
         } catch (err) {
-            setError(err.message || 'Error al eliminar el artículo.');
+            showToast(err.message || 'Error al eliminar el artículo.', 'error');
         } finally {
             setIsDeleting(false);
         }
@@ -134,7 +132,7 @@ const ItemDetailPage = () => {
           setIsModalOpen(false);
           navigate(`/chat/${newExchange.id}`);
       } catch (err) {
-          setError(err.message || 'Error al crear la propuesta.');
+          showToast(err.message || 'Error al crear la propuesta.', 'error');
       } finally {
           setIsSubmitting(false);
       }
@@ -146,7 +144,7 @@ const ItemDetailPage = () => {
         const updatedItem = await api.toggleFavorite(item.id);
         setItem(prevItem => ({ ...prevItem, ...updatedItem }));
     } catch (err) {
-        setError(err.message || "No se pudo actualizar el estado de favorito.");
+        showToast(err.message || "No se pudo actualizar el estado de favorito.", 'error');
     }
   };
 
@@ -165,6 +163,13 @@ const ItemDetailPage = () => {
   const isOwnItem = user?.id === item.userId;
   const isSwapped = item.status === 'EXCHANGED';
   const isReserved = item.status === 'RESERVED';
+
+  const conditionClasses = {
+    [ItemCondition.New]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    [ItemCondition.LikeNew]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    [ItemCondition.Good]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    [ItemCondition.Acceptable]: 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200',
+  };
 
   return React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl mx-auto p-4 sm:p-6 lg:p-8" },
     lightboxOpen && selectedImage && React.createElement(ImageLightbox, { imageUrl: selectedImage, onClose: () => setLightboxOpen(false) }),
@@ -195,7 +200,7 @@ const ItemDetailPage = () => {
         React.createElement("p", { className: "font-bold" }, "Necesitas un artículo para intercambiar"),
         React.createElement("p", { className: "text-sm mt-1" }, "Para proponer un intercambio, primero debes añadir un artículo a tu perfil."),
         React.createElement(Link, {
-          to: "/profile?action=add",
+          to: "/add-item",
           onClick: () => setNoItemsError(false),
           className: `block mt-2 text-sm font-semibold ${theme.textColor} ${theme.hoverTextColor} underline`
         }, "Añadir un artículo ahora →")
@@ -238,8 +243,13 @@ const ItemDetailPage = () => {
         )
       ),
       React.createElement("div", { className: "flex flex-col" },
-        React.createElement("span", { className: `${theme.lightBg} ${theme.darkText} text-sm font-medium mb-2 px-2.5 py-0.5 rounded-full self-start` },
-          item.category
+        React.createElement("div", { className: "flex items-center gap-3 mb-2" },
+            React.createElement("span", { className: `${theme.lightBg} ${theme.darkText} text-sm font-medium px-2.5 py-0.5 rounded-full self-start` },
+                item.category
+            ),
+            item.condition && React.createElement("span", { className: `text-sm font-medium px-2.5 py-0.5 rounded-full self-start ${conditionClasses[item.condition]}` },
+                item.condition
+            )
         ),
         React.createElement("div", { className: "flex justify-between items-start gap-4 mb-4" },
             React.createElement("h1", { className: "text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white flex-grow" }, item.title),
@@ -312,12 +322,6 @@ const ItemDetailPage = () => {
           )
         )
       )
-    ),
-    notification.show && React.createElement("div", {
-        className: `fixed bottom-5 right-5 ${notification.type === 'success' ? 'bg-green-100 border-green-400 text-green-700 dark:bg-green-800 dark:border-green-600 dark:text-green-200' : 'bg-red-100 border-red-400 text-red-700 dark:bg-red-800 dark:border-red-600 dark:text-red-200'} px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50`,
-        role: "alert"
-      },
-      React.createElement("span", { className: "font-medium" }, notification.message)
     )
   );
 };

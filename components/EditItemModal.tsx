@@ -4,11 +4,13 @@ import Input from './Input.tsx';
 import { ICONS, CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { api } from '../services/api.ts';
+import { ItemCondition } from '../types.ts';
 
 const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
+    const [condition, setCondition] = useState('');
     const [wishedItem, setWishedItem] = useState('');
     const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,6 +23,7 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
             setTitle(item.title);
             setDescription(item.description);
             setCategory(item.category);
+            setCondition(item.condition || '');
             setImages(item.imageUrls);
             setWishedItem(item.wishedItem || '');
             setError(''); // Reset error when item changes
@@ -69,10 +72,14 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
             setError('Debes tener al menos una foto.');
             return;
         }
+        if (!condition) {
+            setError('Debes seleccionar la condición del artículo.');
+            return;
+        }
         setError('');
         setIsSubmitting(true);
         try {
-            await onSave({ title, description, category, imageUrls: images, wishedItem });
+            await onSave({ title, description, category, condition, imageUrls: images, wishedItem });
             onClose();
         } catch (err) {
             setError(err.message || 'Error al guardar los cambios.');
@@ -94,18 +101,27 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
                     React.createElement("label", { htmlFor: "edit-description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
                     React.createElement("textarea", { id: "edit-description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
                 ),
-                React.createElement("div", null,
-                    React.createElement("label", { htmlFor: "edit-category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-                    React.createElement("select", { id: "edit-category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
-                        React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
-                        CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
-                            cat.sub.length > 0 ? (
-                                React.createElement("optgroup", { key: cat.name, label: cat.name },
-                                    cat.sub.map(subCat => React.createElement("option", { key: subCat, value: subCat }, subCat))
+                React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4" },
+                    React.createElement("div", null,
+                        React.createElement("label", { htmlFor: "edit-category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
+                        React.createElement("select", { id: "edit-category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                            React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
+                            CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
+                                cat.sub.length > 0 ? (
+                                    React.createElement("optgroup", { key: cat.name, label: cat.name },
+                                        cat.sub.map(subCat => React.createElement("option", { key: subCat, value: subCat }, subCat))
+                                    )
+                                ) : (
+                                    React.createElement("option", { key: cat.name, value: cat.name }, cat.name)
                                 )
-                            ) : (
-                                React.createElement("option", { key: cat.name, value: cat.name }, cat.name)
                             )
+                        )
+                    ),
+                    React.createElement("div", null,
+                        React.createElement("label", { htmlFor: "edit-condition", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Condición"),
+                        React.createElement("select", { id: "edit-condition", value: condition, onChange: (e) => setCondition(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                            React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
+                            Object.values(ItemCondition).map(cond => React.createElement("option", { key: cond, value: cond }, cond))
                         )
                     )
                 ),

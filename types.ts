@@ -9,3 +9,10 @@ export const ExchangeStatus = {
   Rejected: 'REJECTED',
   Completed: 'COMPLETED',
 };
+
+export const ItemCondition = {
+  New: 'NUEVO',
+  LikeNew: 'COMO NUEVO',
+  Good: 'USADO - BUEN ESTADO',
+  Acceptable: 'USADO - ACEPTABLE',
+};

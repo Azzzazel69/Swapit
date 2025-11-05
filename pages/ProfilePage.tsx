@@ -9,6 +9,8 @@ import ItemCard from '../components/ItemCard.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import PreferencesModal from '../components/PreferencesModal.tsx';
 import AutocompleteInput from '../components/AutocompleteInput.tsx';
+import EmptyState from '../components/EmptyState.tsx';
+import { useToast } from '../hooks/useToast.tsx';
 import { locations } from '../data/locations.ts';
 
 const ProfileSection = ({ title, children, onEdit, isEditing, onSave, onCancel, isLoading, isEditable, disabledReason }) => {
@@ -51,6 +53,7 @@ const ProfileSection = ({ title, children, onEdit, isEditing, onSave, onCancel, 
 
 const ProfilePage = () => {
     const { user, updateUser, refreshUser } = useAuth();
+    const { showToast } = useToast();
     const navigate = useNavigate();
 
     // Editability state
@@ -78,7 +81,6 @@ const ProfilePage = () => {
     // General states
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [notification, setNotification] = useState({ show: false, message: '' });
 
     // My Items/Favorites states
     const [items, setItems] = useState([]);
@@ -129,11 +131,6 @@ const ProfilePage = () => {
         fetchUserItems();
         fetchFavoriteItems();
     }, [user]);
-    
-    const showNotification = (message) => {
-        setNotification({ show: true, message });
-        setTimeout(() => setNotification({ show: false, message: '' }), 3000);
-    };
 
     const handleSaveInfo = async () => {
         setIsLoading(true); setError('');
@@ -141,7 +138,7 @@ const ProfilePage = () => {
             const updatedUser = await api.updateUserProfileData({ name });
             updateUser(updatedUser);
             setIsEditingInfo(false);
-            showNotification('Información actualizada.');
+            showToast('Información actualizada.', 'success');
         } catch (err) { setError(err.message); } finally { setIsLoading(false); }
     };
     
@@ -157,7 +154,7 @@ const ProfilePage = () => {
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-            showNotification('Contraseña actualizada.');
+            showToast('Contraseña actualizada.', 'success');
         } catch (err) { setError(err.message); } finally { setIsLoading(false); }
     };
     
@@ -167,7 +164,7 @@ const ProfilePage = () => {
             const updatedUser = await api.updateUserProfileData({ location });
             updateUser(updatedUser);
             setIsEditingLocation(false);
-            showNotification('Ubicación actualizada.');
+            showToast('Ubicación actualizada.', 'success');
         } catch (err) { setError(err.message); } finally { setIsLoading(false); }
     };
     
@@ -189,7 +186,7 @@ const ProfilePage = () => {
                 await refreshUser();
                 setIsPhoneModalOpen(false);
                 setCodeSent(false);
-                showNotification('Teléfono verificado.');
+                showToast('Teléfono verificado.', 'success');
             } else {
                 setError('Código incorrecto.');
             }
@@ -200,9 +197,9 @@ const ProfilePage = () => {
         try {
             const updatedUser = await api.updateUserPreferences(newPreferences);
             updateUser(updatedUser);
-            showNotification('Intereses guardados.');
+            showToast('Intereses guardados.', 'success');
         } catch (error) {
-            setError('Error al guardar las preferencias.');
+            showToast('Error al guardar las preferencias.', 'error');
         }
     };
     
@@ -212,9 +209,9 @@ const ProfilePage = () => {
             try {
                 await api.deleteItem(itemId);
                 setItems(prev => prev.filter(i => i.id !== itemId));
-                showNotification('Artículo eliminado.');
+                showToast('Artículo eliminado.', 'success');
             } catch (err) {
-                setError(err.message);
+                showToast(err.message, 'error');
             } finally {
                 setDeletingItemId(null);
             }
@@ -266,7 +263,6 @@ const ProfilePage = () => {
             onSave: handleSavePreferences
         }),
         isPhoneModalOpen && React.createElement(PhoneVerificationModal, null),
-        notification.show && React.createElement("div", { className: `fixed bottom-5 right-5 bg-green-100 border-green-400 text-green-700 dark:bg-green-800 dark:border-green-600 dark:text-green-200 px-4 py-3 rounded-lg shadow-lg z-50`}, notification.message),
         React.createElement("h1", { className: "text-3xl font-bold mb-6 text-gray-900 dark:text-white" }, "Mi Perfil"),
         
         React.createElement(ProfileSection, {
@@ -362,13 +358,18 @@ const ProfilePage = () => {
               onClick: () => navigate('/add-item'),
               children: React.createElement("div", { className: "flex items-center gap-2" },
                 ICONS.plus,
-                'Añadir Nuevo Artículo'
+                'Añadir Artículo'
               )
             })
           ),
           loadingItems ? React.createElement(SwapSpinner, null) :
           items.length === 0 ? (
-            React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo.")
+            React.createElement(EmptyState, {
+                icon: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", strokeWidth: "1.5", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" })),
+                title: "Aún no tienes artículos",
+                message: "¿Por qué no subes algo que ya no uses y le das una segunda vida?",
+                actionButton: React.createElement(Button, { onClick: () => navigate('/add-item'), children: "Subir mi primer artículo" })
+            })
           ) : (
             React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
               items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem, deletingItemId: deletingItemId }))
@@ -380,7 +381,12 @@ const ProfilePage = () => {
           React.createElement("h2", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-6" }, "Mis Favoritos"),
           loadingFavorites ? React.createElement(SwapSpinner, null) :
           favoriteItems.length === 0 ? (
-            React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo a favoritos.")
+            React.createElement(EmptyState, {
+                icon: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", strokeWidth: "1.5", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" })),
+                title: "Tu lista de favoritos está vacía",
+                message: "Explora los artículos y pulsa el corazón para guardar los que más te gusten.",
+                actionButton: React.createElement(Button, { onClick: () => navigate('/'), variant:"secondary", children: "Explorar artículos" })
+            })
           ) : (
             React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
               favoriteItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: handleToggleFavorite }))

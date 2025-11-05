@@ -5,6 +5,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-ro
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { ColorThemeProvider } from './hooks/useColorTheme.tsx';
 import { ConfettiProvider } from './hooks/useConfetti.tsx';
+import { ToastProvider } from './hooks/useToast.tsx';
 import Header from './components/Header.tsx';
 import HomePage from './pages/HomePage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
@@ -29,15 +30,17 @@ const App = () => {
   return React.createElement(AuthProvider, null,
     React.createElement(ColorThemeProvider, null,
       React.createElement(ConfettiProvider, null,
-        React.createElement(HashRouter, null,
-          React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
-            React.createElement(OfflineBanner, null),
-            React.createElement(Header, null),
-            React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]" },
-              React.createElement(AppRoutes, null)
-            ),
-            React.createElement(AppFooter, null),
-            React.createElement(CookieBanner, null)
+        React.createElement(ToastProvider, null,
+          React.createElement(HashRouter, null,
+            React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
+              React.createElement(OfflineBanner, null),
+              React.createElement(Header, null),
+              React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]" },
+                React.createElement(AppRoutes, null)
+              ),
+              React.createElement(AppFooter, null),
+              React.createElement(CookieBanner, null)
+            )
           )
         )
       )

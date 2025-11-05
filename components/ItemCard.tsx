@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { ICONS } from '../constants.tsx';
+import { ItemCondition } from '../types.ts';
 import SwapSpinner from './SwapSpinner.tsx';
 
 const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleFavorite, columns = 2 }) => {
@@ -11,6 +12,13 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
   const isReserved = item.status === 'RESERVED';
   const isBeingDeleted = deletingItemId === item.id;
   const isSmall = columns > 2;
+
+  const conditionClasses = {
+    [ItemCondition.New]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    [ItemCondition.LikeNew]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    [ItemCondition.Good]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    [ItemCondition.Acceptable]: 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200',
+  };
 
   return React.createElement("div", { 
       className: `relative bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 group ${isSwapped || isReserved ? 'opacity-60' : ''}` 
@@ -48,6 +56,7 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
               React.createElement("span", { className: "text-white text-2xl font-bold border-4 border-white px-4 py-2 rounded-lg transform -rotate-12" }, "RESERVADO")
           )
         ),
+        item.condition && !isSwapped && !isReserved && React.createElement("div", { className: `absolute top-2 left-2 text-xs font-bold px-2 py-1 rounded-full ${conditionClasses[item.condition]}` }, item.condition),
         !isSwapped && !isReserved && React.createElement("div", { className: `absolute top-2 right-2 bg-gradient-to-r ${theme.bg} text-white text-xs font-bold px-2 py-1 rounded-full` }, item.category),
         item.imageUrls.length > 1 && (
           React.createElement("div", { className: "absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1" },
