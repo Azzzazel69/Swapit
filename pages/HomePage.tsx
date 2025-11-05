@@ -28,8 +28,8 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
     
     const gridLayoutClasses = {
         2: 'grid-cols-2',
-        3: 'grid-cols-2 md:grid-cols-3',
-        4: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+        3: 'grid-cols-3',
+        4: 'grid-cols-4',
     };
 
 
@@ -278,8 +278,8 @@ const HomePage = () => {
     const skeletonCount = 8;
     const gridLayoutClasses = {
         2: 'grid-cols-2',
-        3: 'grid-cols-2 md:grid-cols-3',
-        4: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+        3: 'grid-cols-3',
+        4: 'grid-cols-4',
     };
     return (
       React.createElement("div", null,
@@ -382,10 +382,13 @@ const HomePage = () => {
     React.createElement(Link, {
         to: "/add-item",
         title: "Sube tu artículo",
-        className: `fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white rounded-full p-4 shadow-lg hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.focus} transition-transform duration-200 z-40`
+        className: `group fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white rounded-full p-4 shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.focus} transition-all duration-300 ease-in-out z-40 flex items-center gap-0 hover:gap-3 hover:pr-6`
     },
-      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"2" },
+      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8 flex-shrink-0", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"2" },
         React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4v16m8-8H4" })
+      ),
+      React.createElement("span", { className: "max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out font-semibold" },
+        "Subir artículo"
       )
     )
 
