@@ -1,4 +1,3 @@
-
 import { ExchangeStatus } from '../types.ts';
 import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 
@@ -168,13 +167,13 @@ const setupInitialData = () => {
     const fernandoSalt = generateSalt();
 
     users = [
-        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] },
-        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'] },
-        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'] },
-        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'] },
-        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'] },
-        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'] },
-        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'] },
+        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null },
+        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null },
+        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null },
+        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null },
+        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null },
+        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null },
+        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null },
     ];
 
     items = [
@@ -251,7 +250,7 @@ class ApiClient {
     if (userId === 'google-mock-1') {
         let mockUser = users.find(u => u.id === 'google-mock-1');
         if (!mockUser) {
-            mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
+            mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null };
             users.push(mockUser);
             persistData();
         }
@@ -331,6 +330,8 @@ class ApiClient {
               emailVerified: true,
               phoneVerified: false,
               location: null,
+              lastDataChange: null,
+              columnLayout: null,
           };
           users.push(newUser);
           user = newUser;
@@ -358,6 +359,8 @@ class ApiClient {
           preferences: [],
           emailVerified: false,
           phoneVerified: false,
+          lastDataChange: null,
+          columnLayout: null,
       };
       users.push(newUser);
       persistData();
@@ -516,6 +519,7 @@ class ApiClient {
           ...ex,
           requestedItem: items.find(item => item.id === ex.requestedItemId) || { title: 'Artículo eliminado', status: 'DELETED' },
           offeredItems: ex.offeredItemIds.map(id => items.find(item => item.id === id)).filter(Boolean),
+          completedAt: ex.status === 'COMPLETED' ? (ex.completedAt || new Date().toISOString()) : null
       }));
   }
 
@@ -815,6 +819,7 @@ class ApiClient {
 
     if (exchange.confirmedByOwner && exchange.confirmedByRequester) {
         exchange.status = ExchangeStatus.Completed;
+        exchange.completedAt = new Date().toISOString();
         
         const finalTradeItems = [exchange.requestedItemId, ...exchange.acceptedOfferedItemIds];
         items.forEach(item => {
@@ -899,6 +904,16 @@ class ApiClient {
       persistData();
       const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
       return userToReturn;
+  }
+
+  async updateUserColumnLayout(layout) {
+    await this.simulateDelay(100);
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+    currentUser.columnLayout = layout;
+    persistData();
+    const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
+    return userToReturn;
   }
 
   async verifyEmail() {
@@ -1059,6 +1074,91 @@ class ApiClient {
         };
         reader.onerror = (error) => reject(error);
     });
+  }
+  
+  // --- Profile Editing Security ---
+
+  async canEditProfile() {
+    await this.simulateDelay(100);
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+
+    // 1. Cooldown check (24 hours)
+    if (currentUser.lastDataChange) {
+        const lastChange = new Date(currentUser.lastDataChange).getTime();
+        const now = Date.now();
+        if (now - lastChange < 24 * 60 * 60 * 1000) {
+            return { canEdit: false, reason: 'cooldown' };
+        }
+    }
+
+    // 2. Active exchanges check (PENDING or ACCEPTED)
+    const hasActiveExchange = exchanges.some(ex => 
+        (ex.ownerId === currentUser.id || ex.requesterId === currentUser.id) &&
+        (ex.status === ExchangeStatus.Pending || ex.status === ExchangeStatus.Accepted)
+    );
+    if (hasActiveExchange) {
+        return { canEdit: false, reason: 'active' };
+    }
+    
+    // 3. Recent completed exchange check (14 days)
+    const hasRecentExchange = exchanges.some(ex => 
+        (ex.ownerId === currentUser.id || ex.requesterId === currentUser.id) &&
+        ex.status === ExchangeStatus.Completed &&
+        ex.completedAt &&
+        (Date.now() - new Date(ex.completedAt).getTime() < 14 * 24 * 60 * 60 * 1000)
+    );
+    if (hasRecentExchange) {
+        return { canEdit: false, reason: 'recent' };
+    }
+
+    return { canEdit: true, reason: null };
+  }
+
+  async updateUserProfileData(data) {
+    await this.simulateDelay();
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+
+    const { name, location } = data;
+    if (name) currentUser.name = name;
+    if (location) currentUser.location = location;
+    
+    currentUser.lastDataChange = new Date().toISOString();
+    persistData();
+    const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
+    return userToReturn;
+  }
+
+  async updateUserPassword(currentPassword, newPassword) {
+    await this.simulateDelay();
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+
+    if (currentUser.hashedPassword !== hashPassword(currentPassword, currentUser.salt)) {
+        throw new Error('La contraseña actual es incorrecta.');
+    }
+    
+    const newSalt = generateSalt();
+    currentUser.salt = newSalt;
+    currentUser.hashedPassword = hashPassword(newPassword, newSalt);
+    currentUser.lastDataChange = new Date().toISOString();
+    persistData();
+    return { success: true };
+  }
+  
+  async changeUserPhone(phone) {
+    await this.simulateDelay();
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error('Autenticación requerida');
+    
+    currentUser.phone = phone;
+    currentUser.phoneVerified = false; // Important for re-verification
+    currentUser.lastDataChange = new Date().toISOString();
+    persistData();
+    
+    // In a real app, this might just return success and then you'd call sendPhoneVerificationCode separately
+    return await this.sendPhoneVerificationCode(phone);
   }
 }
 

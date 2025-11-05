@@ -27,6 +27,7 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
     }
     
     const gridLayoutClasses = {
+        1: 'grid-cols-1',
         2: 'grid-cols-2',
         3: 'grid-cols-3',
         4: 'grid-cols-4',
@@ -57,8 +58,9 @@ const LayoutSelector = ({ layout, setLayout }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const options = [2, 3, 4];
+    const options = [1, 2, 3, 4];
     const icons = {
+        1: React.createElement("div", { className: "flex gap-0.5", title:"1 columna" }, React.createElement("div", { className: "w-4 h-4 bg-gray-500 rounded-sm" })),
         2: React.createElement("div", { className: "flex gap-0.5", title:"2 columnas" }, React.createElement("div", { className: "w-3 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-3 h-4 bg-gray-500 rounded-sm" })),
         3: React.createElement("div", { className: "flex gap-0.5", title:"3 columnas" }, React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" })),
         4: React.createElement("div", { className: "flex gap-0.5", title:"4 columnas" }, React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" })),
@@ -101,39 +103,45 @@ const HomePage = () => {
   const [searchType, setSearchType] = useState('articles'); // 'articles' or 'location'
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
   const searchDropdownRef = useRef(null);
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { theme } = useColorTheme();
   
   const [columnLayout, setColumnLayout] = useState(() => {
+    if (user?.columnLayout) {
+        return user.columnLayout;
+    }
     if (typeof window !== 'undefined') {
-        const savedLayout = window.localStorage.getItem('item_layout_columns');
-        if (savedLayout) {
-            return Number(savedLayout);
-        }
-        // Set default based on screen size if nothing is saved
         return window.innerWidth < 768 ? 2 : 4;
     }
-    return 2; // Fallback for SSR/build time
+    return 2;
   });
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-        window.localStorage.setItem('item_layout_columns', columnLayout.toString());
+  const handleSetLayout = async (newLayout) => {
+    if (newLayout === columnLayout || !user) return;
+    
+    const oldLayout = columnLayout;
+    setColumnLayout(newLayout);
+    updateUser({ ...user, columnLayout: newLayout });
+
+    try {
+        await api.updateUserColumnLayout(newLayout);
+    } catch (error) {
+        console.error("Failed to save layout preference:", error);
+        setColumnLayout(oldLayout);
+        updateUser({ ...user, columnLayout: oldLayout });
     }
-  }, [columnLayout]);
+  };
   
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        // Caching strategy: stale-while-revalidate
-        // 1. Try to load from cache immediately
         let hasCache = false;
         if (typeof window !== 'undefined') {
             const cachedItems = window.localStorage.getItem(CACHE_KEY);
             if (cachedItems) {
                 const parsedItems = JSON.parse(cachedItems);
                 setItems(parsedItems);
-                setLoading(false); // Stop loading, show cached data
+                setLoading(false);
                 hasCache = true;
             }
         }
@@ -142,11 +150,9 @@ const HomePage = () => {
             setLoading(true);
         }
 
-        // 2. Always fetch fresh data from the API
         const allItems = await api.getAllItems();
         const otherUsersItems = allItems.filter(item => item.userId !== user?.id && item.status !== 'EXCHANGED');
         
-        // 3. Update state and cache with fresh data
         setItems(otherUsersItems);
         if (typeof window !== 'undefined') {
             window.localStorage.setItem(CACHE_KEY, JSON.stringify(otherUsersItems));
@@ -277,6 +283,7 @@ const HomePage = () => {
   if (loading && items.length === 0) {
     const skeletonCount = 8;
     const gridLayoutClasses = {
+        1: 'grid-cols-1',
         2: 'grid-cols-2',
         3: 'grid-cols-3',
         4: 'grid-cols-4',
@@ -299,7 +306,7 @@ const HomePage = () => {
   }
 
   return React.createElement("div", null,
-    React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between items-center" },
+    React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between md:items-center" },
       React.createElement("div", { className: "w-full md:w-1/2 lg:w-1/3" },
           React.createElement("form", { className: "flex items-center" },
               React.createElement("div", { className: "relative", ref: searchDropdownRef },
@@ -343,7 +350,9 @@ const HomePage = () => {
               )
           )
       ),
-      React.createElement(LayoutSelector, { layout: columnLayout, setLayout: setColumnLayout })
+      React.createElement("div", { className: "w-full md:w-auto flex justify-end" },
+        React.createElement(LayoutSelector, { layout: columnLayout, setLayout: handleSetLayout })
+      )
     ),
 
     React.createElement(ItemGroup, {
