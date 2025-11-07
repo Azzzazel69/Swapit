@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
@@ -268,7 +267,8 @@ const ChatDetailPage = () => {
 
     return (
         React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_4rem_-_2.5rem_-_env(safe-area-inset-bottom,0))] md:h-[calc(100vh_-_4.5rem_-_3rem_-_env(safe-area-inset-bottom,0))] bg-gray-50 dark:bg-gray-900 max-w-4xl mx-auto rounded-lg shadow-lg border dark:border-gray-700" },
-            React.createElement("div", { className: "p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg" },
+            React.createElement("div", { className: "p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg flex items-center justify-center gap-3" },
+                React.createElement("img", { src: otherUser.avatarUrl, alt: otherUser.name, className: "w-8 h-8 rounded-full object-cover" }),
                 React.createElement("h1", { className: "text-lg font-bold text-center" }, "Intercambio con ", otherUser.name)
             ),
             React.createElement(MemoizedItemBar, { exchange: exchange }),

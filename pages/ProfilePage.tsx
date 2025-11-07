@@ -80,6 +80,7 @@ const ProfilePage = () => {
 
     // General states
     const [isLoading, setIsLoading] = useState(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [error, setError] = useState('');
 
     // My Items/Favorites states
@@ -131,6 +132,23 @@ const ProfilePage = () => {
         fetchUserItems();
         fetchFavoriteItems();
     }, [user]);
+
+    const handleAvatarChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingAvatar(true);
+        try {
+            const resizedImage = await api.resizeImageBeforeUpload(file);
+            await api.updateUserAvatar(resizedImage);
+            await refreshUser();
+            showToast('Avatar actualizado con éxito.', 'success');
+        } catch (err) {
+            showToast(err.message || 'Error al subir el avatar.', 'error');
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
 
     const handleSaveInfo = async () => {
         setIsLoading(true); setError('');
@@ -263,8 +281,30 @@ const ProfilePage = () => {
             onSave: handleSavePreferences
         }),
         isPhoneModalOpen && React.createElement(PhoneVerificationModal, null),
-        React.createElement("h1", { className: "text-3xl font-bold mb-6 text-gray-900 dark:text-white" }, "Mi Perfil"),
         
+        React.createElement("div", { className: "flex flex-col sm:flex-row items-center gap-6 mb-8" },
+            React.createElement("div", { className: "relative group" },
+                isUploadingAvatar ? (
+                    React.createElement("div", { className: "w-32 h-32 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700" },
+                        React.createElement(SwapSpinner, null)
+                    )
+                ) : (
+                    React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "w-32 h-32 rounded-full object-cover shadow-lg" })
+                ),
+                React.createElement("label", { 
+                    htmlFor: "avatar-upload", 
+                    className: "absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center text-white cursor-pointer transition-all duration-300" 
+                },
+                    React.createElement("span", { className: "opacity-0 group-hover:opacity-100" }, "Cambiar")
+                ),
+                React.createElement("input", { type: "file", id: "avatar-upload", className: "hidden", accept: "image/*", onChange: handleAvatarChange, disabled: isUploadingAvatar })
+            ),
+            React.createElement("div", null,
+                React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, user.name),
+                React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, user.email)
+            )
+        ),
+
         React.createElement(ProfileSection, {
             title: "Información Personal",
             onEdit: () => setIsEditingInfo(true),

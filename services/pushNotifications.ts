@@ -40,7 +40,9 @@ const performInitialization = async (): Promise<void> => {
         }
 
         // 4. Register the Service Worker
-        const swUrl = `${location.origin}/firebase-messaging-sw.js`;
+        // Construct the full URL based on the document's location to ensure the correct origin,
+        // which prevents cross-origin errors in certain sandboxed environments.
+        const swUrl = new URL('/firebase-messaging-sw.js', document.location.href).href;
         const registration = await navigator.serviceWorker.register(swUrl);
         console.log('Firebase Service Worker registered successfully with scope:', registration.scope);
         

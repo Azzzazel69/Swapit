@@ -6,7 +6,6 @@ import ItemCard from '../components/ItemCard.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
-// FIX: Changed import from 'CATEGORIES' to 'CATEGORIES_WITH_SUBCATEGORIES' as 'CATEGORIES' is not exported from constants.tsx.
 import { ICONS, CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
@@ -77,7 +76,6 @@ const MyItemsPage = () => {
 
   const MAX_IMAGES = 5;
 
-  // FIX: Add type annotation for the event parameter to resolve errors with file properties.
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
           setError(null);
@@ -88,7 +86,6 @@ const MyItemsPage = () => {
               return;
           }
 
-          // FIX: Add explicit type for 'file' to resolve type inference issue.
           filesArray.forEach((file: File) => {
               if (file.size > 10 * 1024 * 1024) { // 10MB limit
                   setError(`La imagen ${file.name} es demasiado grande (máx 10MB).`);
@@ -106,11 +103,11 @@ const MyItemsPage = () => {
       }
   };
 
-  const handleRemoveImage = (index) => {
+  const handleRemoveImage = (index: number) => {
       setImages(images.filter((_, i) => i !== index));
   };
 
-  const handleAddItem = async (e) => {
+  const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (images.length === 0) {
         setError('Debes subir al menos una foto.');
@@ -138,7 +135,7 @@ const MyItemsPage = () => {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
+  const handleDeleteItem = async (itemId: string) => {
     if (typeof window !== 'undefined' && window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
         try {
             await api.deleteItem(itemId);
@@ -176,7 +173,6 @@ const MyItemsPage = () => {
         ),
         React.createElement("div", null,
           React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-          // FIX: Updated category dropdown to use CATEGORIES_WITH_SUBCATEGORIES with optgroups.
           React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
             React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
             CATEGORIES_WITH_SUBCATEGORIES.map(cat => 

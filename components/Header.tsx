@@ -27,7 +27,13 @@ const Header = () => {
           // Left side: User Profile link
           React.createElement("div", { className: "flex-1 flex items-center justify-start" },
             user && (
-              React.createElement(NavLink, { to: "/profile", className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass}` }, user.name)
+              React.createElement(NavLink, { 
+                to: "/profile", 
+                className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2` 
+              }, 
+                React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 rounded-full object-cover" }),
+                React.createElement("span", null, user.name)
+              )
             )
           ),
 

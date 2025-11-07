@@ -4,7 +4,6 @@ import { api } from '../services/api.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import Input from '../components/Input.tsx';
 import Button from '../components/Button.tsx';
-// FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { ICONS } from '../constants.tsx';
@@ -42,6 +41,7 @@ const PasswordStrengthIndicator = ({ password }) => {
 const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -63,6 +63,10 @@ const RegisterPage = () => {
         setError("Debes aceptar los Términos de Servicio para registrarte.");
         return;
     }
+    if (!gender) {
+        setError("Por favor, selecciona tu género.");
+        return;
+    }
     if (!isPasswordValid) {
         setError("La contraseña no cumple los requisitos de seguridad.");
         return;
@@ -74,7 +78,7 @@ const RegisterPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.register(name, email, password);
+      await api.register(name, email, password, gender);
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('cookie_consent', 'accepted');
       }
@@ -130,6 +134,22 @@ const RegisterPage = () => {
         error && React.createElement("div", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
         React.createElement("div", { className: "rounded-md shadow-sm -space-y-px flex flex-col gap-y-4" },
           React.createElement(Input, { id: "name", label: "Nombre Completo", name: "name", type: "text", autoComplete: "name", required: true, value: name, onChange: (e) => setName(e.target.value), placeholder: "Tu Nombre" }),
+          React.createElement("div", null,
+            React.createElement("label", { htmlFor: "gender", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Género"),
+            React.createElement("select", {
+                id: "gender",
+                name: "gender",
+                value: gender,
+                onChange: (e) => setGender(e.target.value),
+                required: true,
+                className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+            },
+                React.createElement("option", { value: "", disabled: true }, "-- Selecciona una opción --"),
+                React.createElement("option", { value: "female" }, "Femenino"),
+                React.createElement("option", { value: "male" }, "Masculino"),
+                React.createElement("option", { value: "neutral" }, "Prefiero no decirlo / Otro")
+            )
+          ),
           React.createElement(Input, { id: "email-address", label: "Correo electrónico", name: "email", type: "email", autoComplete: "email", required: true, value: email, onChange: (e) => setEmail(e.target.value), placeholder: "Correo electrónico" }),
           React.createElement("div", null,
               React.createElement(Input, { 
@@ -186,8 +206,7 @@ const RegisterPage = () => {
             )
         ),
         React.createElement("div", null,
-// FIX: Pass children as a prop to the Button component to satisfy the type checker.
-          React.createElement(Button, { type: "submit", isLoading: isLoading, className: "w-full", disabled: !isPasswordValid || password !== confirmPassword || !agreedToTerms, children: "Crear Cuenta" })
+          React.createElement(Button, { type: "submit", isLoading: isLoading, className: "w-full", disabled: !isPasswordValid || password !== confirmPassword || !agreedToTerms || !gender, children: "Crear Cuenta" })
         )
       ),
       React.createElement("p", { className: "mt-2 text-center text-sm text-gray-600 dark:text-gray-400" },

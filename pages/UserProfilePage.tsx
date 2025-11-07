@@ -74,9 +74,12 @@ const UserProfilePage = () => {
     }
     
     return React.createElement("div", null,
-        React.createElement("div", { className: "mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md" },
-            React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Perfil de ", profile.name),
-            React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, `Se unió a Swapit y está listo para intercambiar.`)
+        React.createElement("div", { className: "mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md flex items-center gap-6" },
+            React.createElement("img", { src: profile.avatarUrl, alt: "Avatar", className: "w-24 h-24 rounded-full object-cover shadow-lg" }),
+            React.createElement("div", null,
+                React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Perfil de ", profile.name),
+                React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, `Se unió a Swapit y está listo para intercambiar.`)
+            )
         ),
         
         React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-white mb-4" }, "Artículos disponibles de ", profile.name),

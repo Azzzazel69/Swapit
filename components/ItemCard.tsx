@@ -90,7 +90,8 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
         ),
 
         React.createElement("div", { className: `flex items-center justify-between ${isSmall ? 'mt-2' : 'mt-4'}` },
-          React.createElement("div", { className: `${isSmall ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400` },
+          React.createElement("div", { className: `${isSmall ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 flex items-center gap-2` },
+            React.createElement("img", { src: item.ownerAvatarUrl, alt: item.ownerName, className: "w-5 h-5 rounded-full object-cover" }),
             React.createElement("p", null, "Propietario: ", React.createElement("strong", null, isOwnItem ? 'Tú' : item.ownerName))
           )
         )

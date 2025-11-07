@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import { api } from '../services/api.ts';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -12,7 +11,7 @@ import SwapSpinner from '../components/SwapSpinner.tsx';
 // This is a placeholder Client ID. For a production application, you must create your own in the Google Cloud Console.
 const GOOGLE_CLIENT_ID = "1028313539190-e5cih2p67j6c9t2k333ife2fr5f52g4o.apps.googleusercontent.com";
 
-// FIX: Add type definitions for the Google Identity Services library to the global window object.
+// Add type definitions for the Google Identity Services library to the global window object.
 declare global {
   interface Window {
     google?: {
@@ -26,7 +25,7 @@ declare global {
   }
 }
 
-// FIX: Define the type for the Google Sign-In response.
+// Define the type for the Google Sign-In response.
 interface CredentialResponse {
   credential?: string;
 }

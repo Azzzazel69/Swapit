@@ -4,11 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import { ExchangeStatus } from '../types.ts';
 import SwapSpinner from '../components/SwapSpinner.tsx';
-// FIX: Changed import from useAuth.js to useAuth.tsx
 import { useAuth } from '../hooks/useAuth.tsx';
 import Button from '../components/Button.tsx';
 
-// FIX: Changed component signature to use props object directly to avoid TypeScript overload resolution issues with React.createElement.
 const ExchangeCard = (props) => {
     const { exchange, perspective, isSelected, onSelect } = props;
     const isOwner = perspective === 'owner';

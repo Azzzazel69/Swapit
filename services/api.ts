@@ -1,6 +1,12 @@
 import { ExchangeStatus, ItemCondition } from '../types.ts';
 import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 
+// --- Default Avatars ---
+const DEFAULT_AVATAR_NEUTRAL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0UwRTAxMCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
+const DEFAULT_AVATAR_MALE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0JCREVGQiI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
+const DEFAULT_AVATAR_FEMALE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0Y4QkJETCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
+
+
 // --- Helper function to generate placeholder images ---
 const generatePlaceholderImage = (text: string): string => {
     const canvas = document.createElement('canvas');
@@ -93,7 +99,7 @@ async function markAllNotificationsReadDev(userId: string) {
 // Mock login con Google (dev-only)
 async function loginWithGoogleMock() {
   await new Promise(r => setTimeout(r, 120));
-  const mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'] };
+  const mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], avatarUrl: DEFAULT_AVATAR_NEUTRAL };
   const token = 'mock-jwt-google-mock-1';
   
   const hasLocal = typeof window !== 'undefined' && window.localStorage;
@@ -167,13 +173,13 @@ const setupInitialData = () => {
     const fernandoSalt = generateSalt();
 
     users = [
-        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null },
-        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null },
-        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null },
-        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null },
-        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null },
-        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null },
-        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null },
+        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE },
+        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE },
+        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null, gender: 'neutral', avatarUrl: DEFAULT_AVATAR_NEUTRAL },
+        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE },
+        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE },
+        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE },
+        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE },
     ];
 
     items = [
@@ -250,7 +256,7 @@ class ApiClient {
     if (userId === 'google-mock-1') {
         let mockUser = users.find(u => u.id === 'google-mock-1');
         if (!mockUser) {
-            mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null };
+            mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, avatarUrl: DEFAULT_AVATAR_NEUTRAL };
             users.push(mockUser);
             persistData();
         }
@@ -267,7 +273,8 @@ class ApiClient {
               ...item,
               isFavorited: false,
               isMatch: false,
-              ownerLocation: owner ? owner.location : null
+              ownerLocation: owner ? owner.location : null,
+              ownerAvatarUrl: owner ? owner.avatarUrl : DEFAULT_AVATAR_NEUTRAL
           };
       }
       
@@ -284,7 +291,8 @@ class ApiClient {
           ...item, 
           isFavorited,
           isMatch,
-          ownerLocation: owner ? owner.location : null
+          ownerLocation: owner ? owner.location : null,
+          ownerAvatarUrl: owner ? owner.avatarUrl : DEFAULT_AVATAR_NEUTRAL
       };
   }
 
@@ -332,6 +340,8 @@ class ApiClient {
               location: null,
               lastDataChange: null,
               columnLayout: null,
+              gender: 'neutral',
+              avatarUrl: DEFAULT_AVATAR_NEUTRAL
           };
           users.push(newUser);
           user = newUser;
@@ -343,13 +353,21 @@ class ApiClient {
       return { token: dummyToken };
   }
   
-  async register(name, email, password) {
+  async register(name, email, password, gender) {
       await this.simulateDelay();
       if (users.some(u => u.email === email)) {
           throw new Error('Ya existe un usuario con este correo.');
       }
       const salt = generateSalt();
       const hashedPassword = hashPassword(password, salt);
+      
+      let avatarUrl = DEFAULT_AVATAR_NEUTRAL;
+      if (gender === 'male') {
+        avatarUrl = DEFAULT_AVATAR_MALE;
+      } else if (gender === 'female') {
+        avatarUrl = DEFAULT_AVATAR_FEMALE;
+      }
+
       const newUser = {
           id: String(users.length + 1),
           name,
@@ -361,6 +379,8 @@ class ApiClient {
           phoneVerified: false,
           lastDataChange: null,
           columnLayout: null,
+          gender,
+          avatarUrl
       };
       users.push(newUser);
       persistData();
@@ -730,7 +750,6 @@ class ApiClient {
         return exchange;
     }
 
-// FIX: Add missing 'addCounterOffer' method to handle counter-proposals from the item owner.
     /**
      * Permite al propietario de un artículo hacer una contraoferta
      * pidiendo artículos adicionales del solicitante.
@@ -869,7 +888,6 @@ class ApiClient {
       return { success: true };
   }
 
-  // FIX: Add missing 'saveFcmToken' method to handle saving push notification tokens.
   async saveFcmToken(fcmToken: string) {
     await this.simulateDelay(100);
     const currentUser = this._getCurrentUserFromToken();
@@ -1128,6 +1146,17 @@ class ApiClient {
     persistData();
     const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
     return userToReturn;
+  }
+  
+  async updateUserAvatar(base64Image) {
+      await this.simulateDelay();
+      const currentUser = this._getCurrentUserFromToken();
+      if (!currentUser) throw new Error('Autenticación requerida');
+      
+      currentUser.avatarUrl = base64Image;
+      persistData();
+      const { hashedPassword: _, salt: __, ...userToReturn } = currentUser;
+      return userToReturn;
   }
 
   async updateUserPassword(currentPassword, newPassword) {
