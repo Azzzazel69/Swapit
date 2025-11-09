@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { ICONS } from '../constants.tsx';
@@ -12,6 +12,18 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
   const isReserved = item.status === 'RESERVED';
   const isBeingDeleted = deletingItemId === item.id;
   const isSmall = columns > 2;
+  
+  const [animateFavorite, setAnimateFavorite] = useState(false);
+  const prevIsFavorited = useRef(item.isFavorited);
+
+  useEffect(() => {
+    if (prevIsFavorited.current !== item.isFavorited) {
+        setAnimateFavorite(true);
+        const timer = setTimeout(() => setAnimateFavorite(false), 500); // Duración de la animación
+        prevIsFavorited.current = item.isFavorited;
+        return () => clearTimeout(timer);
+    }
+  }, [item.isFavorited]);
 
   const conditionClasses = {
     [ItemCondition.New]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -73,7 +85,9 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
               className: "flex-shrink-0 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400",
               title: "Añadir a favoritos"
             },
-              item.isFavorited ? React.createElement("span", { className: "text-red-500" }, React.cloneElement(ICONS.heartSolid, { className: "h-4 w-4" })) : React.cloneElement(ICONS.heart, { className: "h-4 w-4" }),
+              React.createElement("span", { className: animateFavorite ? 'animate-heartbeat' : '' },
+                item.isFavorited ? React.createElement("span", { className: "text-red-500" }, React.cloneElement(ICONS.heartSolid, { className: "h-4 w-4" })) : React.cloneElement(ICONS.heart, { className: "h-4 w-4" })
+              ),
               React.createElement("span", { className: "font-bold" }, item.likes || 0)
             )
         ),

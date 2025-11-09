@@ -1,6 +1,5 @@
-
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { api, viewHistoryService } from '../services/api.ts';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { api } from '../services/api.ts';
 import ItemCard from '../components/ItemCard.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -8,7 +7,7 @@ import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { Link } from 'react-router-dom';
 import ItemCardSkeleton from '../components/ItemCardSkeleton.tsx';
 
-const CACHE_KEY = 'home_page_items';
+const PAGE_SIZE = 12;
 
 const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns = 2 }) => {
     const { theme } = useColorTheme();
@@ -94,11 +93,39 @@ const LayoutSelector = ({ layout, setLayout }) => {
     );
 };
 
+const applySearch = (items, query, type) => {
+    if (!query.trim()) {
+        return items;
+    }
+    const lowercasedQuery = query.toLowerCase();
+    if (type === 'articles') {
+        return items.filter(item =>
+            item.title.toLowerCase().includes(lowercasedQuery) ||
+            item.description.toLowerCase().includes(lowercasedQuery)
+        );
+    } else { // searchType === 'location'
+        return items.filter(item =>
+            item.ownerLocation && (
+                item.ownerLocation.city.toLowerCase().includes(lowercasedQuery) ||
+                item.ownerLocation.postalCode.toLowerCase().includes(lowercasedQuery)
+            )
+        );
+    }
+};
+
 
 const HomePage = () => {
-  const [items, setItems] = useState([]);
+  const [directMatches, setDirectMatches] = useState([]);
+  const [recommended, setRecommended] = useState([]);
+  const [exploreItems, setExploreItems] = useState([]);
+  const [totalExploreItems, setTotalExploreItems] = useState(0);
+
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('articles'); // 'articles' or 'location'
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
@@ -132,33 +159,47 @@ const HomePage = () => {
     }
   };
   
+  const observer = useRef();
+
+  const loadMoreItems = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+        const nextPage = page + 1;
+        const data = await api.getHomePageData({ page: nextPage, limit: PAGE_SIZE });
+        setExploreItems(prev => [...prev, ...data.exploreItems]);
+        setPage(nextPage);
+        setHasMore((exploreItems.length + data.exploreItems.length) < data.totalExploreItems);
+    } catch (err) {
+        console.error("Failed to load more items", err);
+    } finally {
+        setLoadingMore(false);
+    }
+  }, [page, loadingMore, hasMore, exploreItems.length]);
+
+  const loaderRef = useCallback(node => {
+      if (loading || loadingMore) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver(entries => {
+          if (entries[0].isIntersecting && hasMore) {
+              loadMoreItems();
+          }
+      });
+      if (node) observer.current.observe(node);
+  }, [loading, loadingMore, hasMore, loadMoreItems]);
+
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        let hasCache = false;
-        if (typeof window !== 'undefined') {
-            const cachedItems = window.localStorage.getItem(CACHE_KEY);
-            if (cachedItems) {
-                const parsedItems = JSON.parse(cachedItems);
-                setItems(parsedItems);
-                setLoading(false);
-                hasCache = true;
-            }
-        }
-        
-        if (!hasCache) {
-            setLoading(true);
-        }
-
-        const allItems = await api.getAllItems();
-        const otherUsersItems = allItems.filter(item => item.userId !== user?.id && item.status !== 'EXCHANGED');
-        
-        setItems(otherUsersItems);
-        if (typeof window !== 'undefined') {
-            window.localStorage.setItem(CACHE_KEY, JSON.stringify(otherUsersItems));
-        }
+        setLoading(true);
+        const data = await api.getHomePageData({ page: 1, limit: PAGE_SIZE });
+        setDirectMatches(data.directMatches || []);
+        setRecommended(data.recommended || []);
+        setExploreItems(data.exploreItems || []);
+        setTotalExploreItems(data.totalExploreItems || 0);
+        setHasMore((data.exploreItems?.length || 0) < (data.totalExploreItems || 0));
+        setPage(1);
         setError(null);
-
       } catch (err) {
         setError('Error al cargar los artículos. Por favor, inténtalo de nuevo más tarde.');
         console.error(err);
@@ -187,100 +228,22 @@ const HomePage = () => {
   const handleToggleFavorite = async (itemId) => {
     try {
         const updatedItem = await api.toggleFavorite(itemId);
-        setItems(prevItems => {
-            const newItems = prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item);
-            if (typeof window !== 'undefined') {
-                window.localStorage.setItem(CACHE_KEY, JSON.stringify(newItems));
-            }
-            return newItems;
-        });
+        const updater = (prevItems) => prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item);
+        setDirectMatches(updater);
+        setRecommended(updater);
+        setExploreItems(updater);
     } catch (error) {
         console.error("Error toggling favorite", error);
         setError("No se pudo actualizar el estado de favorito.");
     }
   };
 
-  const groupedItems = useMemo(() => {
-    let searchedItems = items;
-    if (searchQuery.trim()) {
-        const lowercasedQuery = searchQuery.toLowerCase();
-        if (searchType === 'articles') {
-            searchedItems = items.filter(item =>
-                item.title.toLowerCase().includes(lowercasedQuery) ||
-                item.description.toLowerCase().includes(lowercasedQuery)
-            );
-        } else { // searchType === 'location'
-            searchedItems = items.filter(item =>
-                item.ownerLocation && (
-                    item.ownerLocation.city.toLowerCase().includes(lowercasedQuery) ||
-                    item.ownerLocation.postalCode.toLowerCase().includes(lowercasedQuery)
-                )
-            );
-        }
-    }
-
-    const viewHistory = viewHistoryService.getHistory();
-    const categoryFrequencies = viewHistory.reduce((acc, item) => {
-        acc[item.category] = (acc[item.category] || 0) + 1;
-        return acc;
-    }, {});
-
-    const itemsWithScores = searchedItems.map(item => {
-        const historyScore = categoryFrequencies[item.category] || 0;
-        const preferenceScore = user?.preferences?.includes(item.category) ? 1 : 0;
-        const score = (historyScore * 3) + preferenceScore;
-        return { ...item, recommendationScore: score };
-    });
-
-    const directMatches = [];
-    const recommended = [];
-    const newArrivals = [];
-    const nearbyItems = [];
-    const displayedIds = new Set();
-    
-    // 1. Direct Matches
-    itemsWithScores.forEach(item => {
-        if (item.isMatch) {
-            directMatches.push(item);
-            displayedIds.add(item.id);
-        }
-    });
-
-    // 2. Recommended by user history and preferences
-    const potentialRecommendations = itemsWithScores
-        .filter(item => !displayedIds.has(item.id) && item.recommendationScore > 0)
-        .sort((a, b) => b.recommendationScore - a.recommendationScore);
-    
-    potentialRecommendations.forEach(item => {
-        recommended.push(item);
-        displayedIds.add(item.id);
-    });
-    
-    const remaining = itemsWithScores.filter(item => !displayedIds.has(item.id));
-    
-    // 3. New Arrivals (sort remaining by date)
-    const sortedByDate = [...remaining].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    const NEW_ARRIVALS_COUNT = 8;
-    newArrivals.push(...sortedByDate.slice(0, NEW_ARRIVALS_COUNT));
-    newArrivals.forEach(item => displayedIds.add(item.id));
-    
-    // 4. Nearby (the rest of the items, sorted by location)
-    const lastRemaining = sortedByDate.slice(NEW_ARRIVALS_COUNT);
-    if (user?.location) {
-        lastRemaining.sort((a, b) => {
-            const aScore = a.ownerLocation?.postalCode === user.location.postalCode ? 2 : a.ownerLocation?.city === user.location.city ? 1 : 0;
-            const bScore = b.ownerLocation?.postalCode === user.location.postalCode ? 2 : b.ownerLocation?.city === user.location.city ? 1 : 0;
-            if (aScore !== bScore) return bScore - aScore;
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // secondary sort by newest
-        });
-    }
-    nearbyItems.push(...lastRemaining);
-
-    return { directMatches, recommended, newArrivals, nearbyItems };
-  }, [items, user, searchQuery, searchType]);
+  const filteredMatches = useMemo(() => applySearch(directMatches, searchQuery, searchType), [directMatches, searchQuery, searchType]);
+  const filteredRecommended = useMemo(() => applySearch(recommended, searchQuery, searchType), [recommended, searchQuery, searchType]);
+  const filteredExplore = useMemo(() => applySearch(exploreItems, searchQuery, searchType), [exploreItems, searchQuery, searchType]);
 
 
-  if (loading && items.length === 0) {
+  if (loading && exploreItems.length === 0) {
     const skeletonCount = 8;
     const gridLayoutClasses = {
         1: 'grid-cols-1',
@@ -301,7 +264,7 @@ const HomePage = () => {
     );
   }
 
-  if (error && items.length === 0) {
+  if (error && exploreItems.length === 0) {
     return React.createElement("div", { className: "text-center text-red-500" }, error);
   }
 
@@ -358,7 +321,7 @@ const HomePage = () => {
     React.createElement(ItemGroup, {
         title: "¡Matches Directos!",
         icon: "⚡️",
-        items: groupedItems.directMatches,
+        items: filteredMatches,
         onToggleFavorite: handleToggleFavorite,
         emptyMessage: "No hemos encontrado ningún match directo. ¡Prueba a añadir qué buscas en tus artículos!",
         columns: columnLayout
@@ -366,27 +329,31 @@ const HomePage = () => {
     React.createElement(ItemGroup, {
         title: "Recomendado para Ti",
         icon: "❤️",
-        items: groupedItems.recommended,
+        items: filteredRecommended,
         onToggleFavorite: handleToggleFavorite,
         emptyMessage: "No hay recomendaciones por ahora. ¡Empieza a explorar artículos para que aprendamos qué te gusta!",
         columns: columnLayout
     }),
     React.createElement(ItemGroup, {
-        title: "Novedades",
-        icon: "✨",
-        items: groupedItems.newArrivals,
+        title: "Explorar",
+        icon: "🌍",
+        items: filteredExplore,
         onToggleFavorite: handleToggleFavorite,
-        emptyMessage: "No hay artículos nuevos en este momento.",
+        emptyMessage: "No hay artículos disponibles en este momento.",
         columns: columnLayout
     }),
-    React.createElement(ItemGroup, {
-        title: "Cerca de Ti",
-        icon: "📍",
-        items: groupedItems.nearbyItems,
-        onToggleFavorite: handleToggleFavorite,
-        emptyMessage: "No hay más artículos disponibles en tu zona.",
-        columns: columnLayout
-    }),
+    
+    React.createElement("div", { ref: loaderRef }),
+    loadingMore && (
+        React.createElement("div", { className: "flex justify-center items-center h-24" },
+            React.createElement(SwapSpinner, null)
+        )
+    ),
+    !hasMore && exploreItems.length > 0 && !loading && (
+        React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400 py-8" },
+            "¡Has llegado al final! No hay más artículos por ahora."
+        )
+    ),
     
     React.createElement(Link, {
         to: "/add-item",

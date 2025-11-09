@@ -99,7 +99,7 @@ async function markAllNotificationsReadDev(userId: string) {
 // Mock login con Google (dev-only)
 async function loginWithGoogleMock() {
   await new Promise(r => setTimeout(r, 120));
-  const mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], avatarUrl: DEFAULT_AVATAR_NEUTRAL };
+  const mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], avatarUrl: DEFAULT_AVATAR_NEUTRAL, ratings: [] };
   const token = 'mock-jwt-google-mock-1';
   
   const hasLocal = typeof window !== 'undefined' && window.localStorage;
@@ -173,13 +173,13 @@ const setupInitialData = () => {
     const fernandoSalt = generateSalt();
 
     users = [
-        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE },
-        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE },
-        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null, gender: 'neutral', avatarUrl: DEFAULT_AVATAR_NEUTRAL },
-        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE },
-        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE },
-        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE },
-        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE },
+        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [] },
+        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [] },
+        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null, gender: 'neutral', avatarUrl: DEFAULT_AVATAR_NEUTRAL, ratings: [] },
+        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [] },
+        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [] },
+        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [] },
+        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [] },
     ];
 
     items = [
@@ -256,7 +256,7 @@ class ApiClient {
     if (userId === 'google-mock-1') {
         let mockUser = users.find(u => u.id === 'google-mock-1');
         if (!mockUser) {
-            mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, avatarUrl: DEFAULT_AVATAR_NEUTRAL };
+            mockUser = { id: 'google-mock-1', name: 'Google Dev Mock', email: 'google.mock@example.com', emailVerified: true, phoneVerified: true, location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, avatarUrl: DEFAULT_AVATAR_NEUTRAL, ratings: [] };
             users.push(mockUser);
             persistData();
         }
@@ -341,7 +341,8 @@ class ApiClient {
               lastDataChange: null,
               columnLayout: null,
               gender: 'neutral',
-              avatarUrl: DEFAULT_AVATAR_NEUTRAL
+              avatarUrl: DEFAULT_AVATAR_NEUTRAL,
+              ratings: [],
           };
           users.push(newUser);
           user = newUser;
@@ -380,7 +381,8 @@ class ApiClient {
           lastDataChange: null,
           columnLayout: null,
           gender,
-          avatarUrl
+          avatarUrl,
+          ratings: [],
       };
       users.push(newUser);
       persistData();
@@ -402,13 +404,71 @@ class ApiClient {
       throw new Error('Usuario no encontrado');
   }
   
-  async getAllItems() {
-      await this.simulateDelay();
-      const currentUser = this._getCurrentUserFromToken();
-      const currentUserItems = currentUser ? items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE') : [];
-      return items.map(item => this._enrichItem(item, currentUser, currentUserItems));
+  async getHomePageData({ page = 1, limit = 12 }) {
+    await this.simulateDelay(page === 1 ? 500 : 300);
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser) throw new Error("Autenticación requerida para el feed principal.");
+
+    const currentUserItems = items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE');
+    const allEnrichedItems = items.map(item => this._enrichItem(item, currentUser, currentUserItems));
+    const otherUsersItems = allEnrichedItems.filter(item => item.userId !== currentUser.id && item.status !== 'EXCHANGED');
+
+    const viewHistory = viewHistoryService.getHistory();
+    const categoryFrequencies = viewHistory.reduce((acc, item) => {
+        acc[item.category] = (acc[item.category] || 0) + 1;
+        return acc;
+    }, {});
+    const itemsWithScores = otherUsersItems.map(item => {
+        const historyScore = categoryFrequencies[item.category] || 0;
+        const preferenceScore = currentUser?.preferences?.includes(item.category) ? 1 : 0;
+        const score = (historyScore * 3) + preferenceScore;
+        return { ...item, recommendationScore: score };
+    });
+
+    const directMatches = [];
+    const recommended = [];
+    const displayedIds = new Set();
+
+    itemsWithScores.forEach(item => {
+        if (item.isMatch) {
+            directMatches.push(item);
+            displayedIds.add(item.id);
+        }
+    });
+
+    const potentialRecommendations = itemsWithScores
+        .filter(item => !displayedIds.has(item.id) && item.recommendationScore > 0)
+        .sort((a, b) => b.recommendationScore - a.recommendationScore);
+    potentialRecommendations.forEach(item => {
+        recommended.push(item);
+        displayedIds.add(item.id);
+    });
+
+    let exploreFeedSource = itemsWithScores.filter(item => !displayedIds.has(item.id));
+    
+    if (currentUser?.location) {
+        exploreFeedSource.sort((a, b) => {
+            const aScore = a.ownerLocation?.postalCode === currentUser.location.postalCode ? 2 : a.ownerLocation?.city === currentUser.location.city ? 1 : 0;
+            const bScore = b.ownerLocation?.postalCode === currentUser.location.postalCode ? 2 : b.ownerLocation?.city === currentUser.location.city ? 1 : 0;
+            if (aScore !== bScore) return bScore - aScore;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+    } else {
+        exploreFeedSource.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    const totalExploreItems = exploreFeedSource.length;
+    const start = (page - 1) * limit;
+    const end = page * limit;
+    const paginatedExploreItems = exploreFeedSource.slice(start, end);
+    
+    if (page === 1) {
+        return { directMatches, recommended, exploreItems: paginatedExploreItems, totalExploreItems };
+    } else {
+        return { exploreItems: paginatedExploreItems, totalExploreItems };
+    }
   }
-  
+
   async getItemById(itemId) {
       await this.simulateDelay(300);
       const currentUser = this._getCurrentUserFromToken();
@@ -579,6 +639,7 @@ class ApiClient {
           confirmedByRequester: false,
           createdAt: new Date().toISOString(),
           deletedBy: [],
+          ratings: {},
       };
       exchanges.unshift(newExchange);
       
@@ -808,32 +869,46 @@ class ApiClient {
         return exchange;
     }
 
-  async confirmFinalExchange(exchangeId) {
+  async rateUserAndCompleteExchange(exchangeId, rating) {
     await this.simulateDelay();
     const currentUser = this._getCurrentUserFromToken();
     if (!currentUser) throw new Error('Autenticación requerida');
-
+    
     const exchange = exchanges.find(ex => ex.id === exchangeId);
     if (!exchange || exchange.status !== ExchangeStatus.Accepted) {
-        throw new Error('No se puede confirmar este intercambio.');
+        throw new Error('No se puede valorar este intercambio.');
     }
-    
-    const chat = chats.find(c => c.id === exchangeId);
 
-    if (exchange.ownerId === currentUser.id) {
-        if (exchange.confirmedByOwner) return exchange; // Already confirmed
-        exchange.confirmedByOwner = true;
-    } else if (exchange.requesterId === currentUser.id) {
-        if (exchange.confirmedByRequester) return exchange; // Already confirmed
-        exchange.confirmedByRequester = true;
-    } else {
+    const isOwner = exchange.ownerId === currentUser.id;
+    const isRequester = exchange.requesterId === currentUser.id;
+
+    if (!isOwner && !isRequester) {
         throw new Error('No eres parte de este intercambio.');
     }
-    
-    if (chat) {
-        chat.messages.push({
-            id: `msg-system-${Date.now()}`, senderId: 'system', text: `${currentUser.name} ha confirmado el intercambio.`, timestamp: new Date().toISOString(), type: 'SYSTEM'
-        });
+
+    if (!exchange.ratings) {
+        exchange.ratings = {};
+    }
+
+    if ((isOwner && exchange.ratings[currentUser.id]) || (isRequester && exchange.ratings[currentUser.id])) {
+        throw new Error('Ya has valorado este intercambio.');
+    }
+
+    exchange.ratings[currentUser.id] = rating;
+
+    const otherUserId = isOwner ? exchange.requesterId : exchange.ownerId;
+    const otherUser = users.find(u => u.id === otherUserId);
+    if (otherUser) {
+        if (!otherUser.ratings) {
+            otherUser.ratings = [];
+        }
+        otherUser.ratings.push({ from: currentUser.id, rating, exchangeId });
+    }
+
+    if (isOwner) {
+        exchange.confirmedByOwner = true;
+    } else {
+        exchange.confirmedByRequester = true;
     }
 
     if (exchange.confirmedByOwner && exchange.confirmedByRequester) {
@@ -847,7 +922,6 @@ class ApiClient {
             }
         });
         
-        // Reject other pending exchanges involving these now-exchanged items
         exchanges.forEach(ex => {
             if (ex.id !== exchangeId && ex.status === ExchangeStatus.Pending) {
                 const otherInvolvedItems = [ex.requestedItemId, ...ex.offeredItemIds];
@@ -857,14 +931,15 @@ class ApiClient {
             }
         });
 
+        const chat = chats.find(c => c.id === exchangeId);
         if (chat) {
             chat.messages.push({
-                id: `msg-system-final-${Date.now()}`, senderId: 'system', text: '¡TRATO CONFIRMADO! Aquí están los datos para coordinar.', timestamp: new Date().toISOString(), type: 'SYSTEM'
+                id: `msg-system-final-${Date.now()}`, senderId: 'system', text: '¡TRATO COMPLETADO Y VALORADO! Aquí están los datos para coordinar.', timestamp: new Date().toISOString(), type: 'SYSTEM'
             });
         }
     }
+    
     persistData();
-
     return exchange;
   }
   

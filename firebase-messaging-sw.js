@@ -1,35 +1,60 @@
 // firebase-messaging-sw.js
 
-// Scripts for Firebase. These are needed because service workers can't use ES modules.
-importScripts('https://www.gstatic.com/firebasejs/12.5.0/firebase-app-compat.js');
-// The analytics script is a recommended dependency for the messaging service to initialize correctly in all environments.
-importScripts('https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/12.5.0/firebase-messaging-compat.js');
+// --- PWA Cache Logic ---
+// This part remains to provide offline capabilities for the PWA.
+const CACHE_NAME = 'swapit-cache-v1';
+const APP_SHELL_URLS = [
+  '/',
+  '/index.html',
+  '/index.js',
+  '/vite.svg',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/manifest.json'
+];
 
-// NOTE: These are demo credentials for a placeholder project.
-const firebaseConfig = {
-  apiKey: "AIzaSyDOCAbp_DEMO_KEY_NOT_REAL_Q4pI",
-  authDomain: "swapit-pwa-demo.firebaseapp.com",
-  projectId: "swapit-pwa-demo",
-  storageBucket: "swapit-pwa-demo.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:1a2b3c4d5e6f7a8b9c0d",
-  measurementId: "G-DEMO123ABC"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: payload.notification.icon || '/vite.svg' // Default icon
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('Opened cache and caching app shell');
+      return cache.addAll(APP_SHELL_URLS);
+    })
+  );
 });
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  return self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/');
+      })
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    })
+  );
+});
+
+// --- Firebase Messaging Logic has been removed ---
+// Push notifications are now handled natively via the Capacitor Push Notifications plugin.
+// This ensures reliable delivery on both iOS and Android.

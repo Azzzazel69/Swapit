@@ -51,6 +51,32 @@ const ProfileSection = ({ title, children, onEdit, isEditing, onSave, onCancel, 
     );
 };
 
+const UserRating = ({ ratings = [] }) => {
+    const averageRating = useMemo(() => {
+        if (!ratings || ratings.length === 0) return 0;
+        const total = ratings.reduce((acc, r) => acc + r.rating, 0);
+        return total / ratings.length;
+    }, [ratings]);
+
+    if (ratings.length === 0) {
+        return React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "Aún no tiene valoraciones");
+    }
+
+    return (
+        React.createElement("div", { className: "flex items-center gap-2" },
+            React.createElement("div", { className: "flex items-center" },
+                [...Array(5)].map((_, i) => (
+                    React.createElement("svg", { key: i, className: `w-5 h-5 ${averageRating > i ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"}`, fill: "currentColor", viewBox: "0 0 20 20" },
+                        React.createElement("path", { d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" })
+                    )
+                ))
+            ),
+            React.createElement("span", { className: "font-bold text-gray-700 dark:text-gray-300" }, averageRating.toFixed(1)),
+            React.createElement("span", { className: "text-sm text-gray-500 dark:text-gray-400" }, `(${ratings.length} valoraciones)`)
+        )
+    );
+};
+
 const ProfilePage = () => {
     const { user, updateUser, refreshUser } = useAuth();
     const { showToast } = useToast();
@@ -299,9 +325,10 @@ const ProfilePage = () => {
                 ),
                 React.createElement("input", { type: "file", id: "avatar-upload", className: "hidden", accept: "image/*", onChange: handleAvatarChange, disabled: isUploadingAvatar })
             ),
-            React.createElement("div", null,
+            React.createElement("div", { className: "flex flex-col gap-2" },
                 React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, user.name),
-                React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, user.email)
+                React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, user.email),
+                React.createElement(UserRating, { ratings: user.ratings })
             )
         ),
 

@@ -32,7 +32,7 @@ const Header = () => {
                 className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2` 
               }, 
                 React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 rounded-full object-cover" }),
-                React.createElement("span", null, user.name)
+                React.createElement("span", { className: "hidden sm:inline-block" }, user.name)
               )
             )
           ),

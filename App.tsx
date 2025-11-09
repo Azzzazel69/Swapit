@@ -1,6 +1,7 @@
 
 
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { ColorThemeProvider } from './hooks/useColorTheme.tsx';
@@ -24,9 +25,19 @@ import UserProfilePage from './pages/UserProfilePage.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
 import CookieBanner from './components/CookieBanner.tsx';
 import AddItemPage from './pages/AddItemPage.tsx';
+import RateExchangePage from './pages/RateExchangePage.tsx';
 import { initializePushNotifications, requestNotificationPermission } from './services/pushNotifications.ts';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 const App = () => {
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: Style.Dark });
+      StatusBar.setBackgroundColor({ color: '#111827' }); // dark:bg-gray-900
+    }
+  }, []);
+
   return React.createElement(AuthProvider, null,
     React.createElement(ColorThemeProvider, null,
       React.createElement(ConfettiProvider, null,
@@ -94,6 +105,7 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ItemDetailPage, null)) }),
     React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ExchangesPage, null)) }),
     React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ChatDetailPage, null)) }),
+    React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(RateExchangePage, null)) }),
     React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),
     React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(UserProfilePage, null)) }),
 

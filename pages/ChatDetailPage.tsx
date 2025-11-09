@@ -48,9 +48,9 @@ const Message = ({ message, senderName, isOwnMessage }) => {
 const ItemBar = ({ exchange }) => {
     const { theme } = useColorTheme();
     const ItemPreview = ({ item, isRequested }) => (
-        React.createElement(Link, { to: `/item/${item.id}`, className: "flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" },
+        React.createElement(Link, { to: `/item/${item.id}`, className: "flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0 w-52" },
             React.createElement("img", { src: item.imageUrls[0], alt: item.title, className: "w-10 h-10 rounded-md object-cover" }),
-            React.createElement("div", { className: "flex-grow" },
+            React.createElement("div", { className: "flex-grow overflow-hidden" },
                 React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-400" }, isRequested ? `${exchange.owner.name} ofrece:` : `${exchange.requester.name} ofrece:`),
                 React.createElement("p", { className: "text-sm font-semibold truncate" }, item.title)
             )
@@ -60,12 +60,12 @@ const ItemBar = ({ exchange }) => {
     const requestedItem = exchange.allItems.find(i => i.id === exchange.requestedItemId);
     const offeredItems = exchange.allItems.filter(i => exchange.offeredItemIds.includes(i.id));
 
-    return React.createElement("div", { className: "p-2 bg-white dark:bg-gray-800 border-b dark:border-gray-700" },
-      React.createElement("div", { className: "flex items-center justify-center gap-4 flex-wrap" },
-        React.createElement("div", { className: "flex flex-col gap-2" },
+    return React.createElement("div", { className: "bg-white dark:bg-gray-800 border-b dark:border-gray-700" },
+      React.createElement("div", { className: "flex items-center justify-start md:justify-center gap-4 flex-nowrap overflow-x-auto p-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" },
+        React.createElement("div", { className: "flex flex-col sm:flex-row gap-2" },
             offeredItems.map(item => React.createElement(ItemPreview, { key: item.id, item: item, isRequested: false }))
         ),
-        React.createElement("div", { className: `text-2xl font-bold ${theme.textColor}` }, ICONS.swap),
+        React.createElement("div", { className: `text-2xl font-bold ${theme.textColor} flex-shrink-0 mx-2` }, ICONS.swap),
         React.createElement(ItemPreview, { item: requestedItem, isRequested: true })
       )
     );
@@ -147,14 +147,14 @@ const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onMod
         return (
             React.createElement("div", { className: "p-3 bg-blue-50 dark:bg-blue-900/50 border-t border-blue-200 dark:border-blue-800 text-center" },
                 React.createElement("p", { className: "font-semibold text-blue-800 dark:text-blue-200 mb-2" }, "¡Propuesta Aceptada!"),
-                React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-400 mb-3" }, "Ambos debéis confirmar para finalizar el intercambio y ver vuestros datos de contacto."),
+                React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-400 mb-3" }, "Ambos debéis confirmar la realización del intercambio para finalizar y poder valoraros."),
                 alreadyConfirmed ? (
                     React.createElement("div", { className: "flex items-center justify-center gap-2 text-sm font-bold text-green-600" },
                         ICONS.checkCircle,
                         React.createElement("span", null, "¡Has confirmado! Esperando al otro usuario.")
                     )
                 ) : (
-                    React.createElement(Button, { onClick: onConfirm, isLoading: isLoading, size: "sm", children: "Confirmar Intercambio Final" })
+                    React.createElement(Button, { onClick: onConfirm, isLoading: isLoading, size: "sm", children: "Confirmar Intercambio Realizado y Votar" })
                 )
             )
         );
@@ -183,6 +183,21 @@ const ChatDetailPage = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
     
+    useEffect(() => {
+        if (!exchange || !currentUser) return;
+
+        // Confetti logic: Show it once per user when an exchange is accepted or completed.
+        const confettiKey = `confetti_seen_for_exchange_${exchange.id}_by_user_${currentUser.id}`;
+        const hasSeenConfetti = typeof window !== 'undefined' ? window.localStorage.getItem(confettiKey) === 'true' : false;
+
+        if ((exchange.status === ExchangeStatus.Accepted || exchange.status === ExchangeStatus.Completed) && !hasSeenConfetti) {
+            showConfetti();
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem(confettiKey, 'true');
+            }
+        }
+    }, [exchange, showConfetti, currentUser]);
+
     const fetchData = useCallback(async (isInitialLoad = false) => {
         if (!exchangeId || !currentUser) return;
         try {
@@ -197,12 +212,6 @@ const ChatDetailPage = () => {
             if (isInitialLoad) setLoading(false);
         }
     }, [exchangeId, currentUser]);
-    
-    useEffect(() => {
-        if (exchange?.status === ExchangeStatus.Completed) {
-            showConfetti();
-        }
-    }, [exchange?.status, showConfetti]);
     
     useEffect(() => {
         let isMounted = true;
@@ -242,7 +251,10 @@ const ChatDetailPage = () => {
     const handleSendMessage = (text) => handleAction(() => api.sendMessage(exchangeId, text));
     const handleAccept = () => handleAction(() => api.respondToExchange(exchangeId, 'ACCEPT'));
     const handleReject = () => handleAction(() => api.respondToExchange(exchangeId, 'REJECT'));
-    const handleConfirm = () => handleAction(() => api.confirmFinalExchange(exchangeId));
+    
+    const handleNavigateToRating = () => {
+        navigate(`/rate-exchange/${exchangeId}`);
+    };
     
     const handleModify = async () => {
         const currentUserItems = await api.getUserItems(currentUser.id);
@@ -290,7 +302,7 @@ const ChatDetailPage = () => {
                 currentUser: currentUser,
                 onAccept: handleAccept,
                 onReject: handleReject,
-                onConfirm: handleConfirm,
+                onConfirm: handleNavigateToRating,
                 onModify: handleModify,
                 onCounterOffer: handleCounterOffer,
                 isLoading: actionLoading

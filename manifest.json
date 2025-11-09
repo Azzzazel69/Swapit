@@ -1,0 +1,26 @@
+{
+  "short_name": "Swapit",
+  "name": "Swapit - No te compliques, !cambialo!",
+  "description": "Una aplicación web moderna para intercambiar y hacer trueques de artículos con otros usuarios.",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#3B82F6",
+  "background_color": "#ffffff"
+}
