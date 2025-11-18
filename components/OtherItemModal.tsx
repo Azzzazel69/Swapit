@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Button from './Button.tsx';
 import { ICONS } from '../constants.tsx';
@@ -73,8 +74,25 @@ const OtherItemModal = ({ isOpen, onClose, onSave }) => {
         }
     };
 
+    // Fix: Extract props for textarea to fix TS error
+    const textareaProps = {
+        id: "other-description",
+        value: description,
+        onChange: (e) => setDescription(e.target.value),
+        required: true,
+        rows: 4,
+        placeholder: "Describe el estado, marca, modelo, etc.",
+        className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+    };
+
+    // Fix: Extract props for div to fix TS error
+    const divProps = {
+        className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col",
+        onClick: (e: React.MouseEvent) => e.stopPropagation()
+    };
+
     return React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4", onClick: handleClose },
-        React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col", onClick: e => e.stopPropagation() },
+        React.createElement("div", divProps,
             React.createElement("div", { className: "p-4 border-b dark:border-gray-700 flex justify-between items-center" },
                 React.createElement("h2", { className: "text-xl font-bold" }, "Añadir Otro Artículo"),
                 React.createElement("button", { onClick: handleClose, className: "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" }, ICONS.close)
@@ -83,7 +101,7 @@ const OtherItemModal = ({ isOpen, onClose, onSave }) => {
                 error && React.createElement("p", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
                 React.createElement("div", null,
                     React.createElement("label", { htmlFor: "other-description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción Detallada"),
-                    React.createElement("textarea", { id: "other-description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, placeholder: "Describe el estado, marca, modelo, etc.", className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
+                    React.createElement("textarea", textareaProps)
                 ),
                 React.createElement("div", null,
                     React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Fotos (Opcional, máx. 5)"),

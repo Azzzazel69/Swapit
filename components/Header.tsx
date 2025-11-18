@@ -1,5 +1,7 @@
 
 
+
+
 import React from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -19,6 +21,10 @@ const Header = () => {
   
   const showAuthButtons = !['/login', '/register', '/forgot-password'].includes(location.pathname);
 
+  const ICONS_ADMIN = {
+    shield: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.944A12.02 12.02 0 0012 22a12.02 12.02 0 009-1.056 11.955 11.955 0 01-5.382-3.042z" }))
+  };
+
   return (
     React.createElement("header", { className: "bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50" },
       React.createElement("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8" },
@@ -27,12 +33,23 @@ const Header = () => {
           // Left side: User Profile link
           React.createElement("div", { className: "flex-1 flex items-center justify-start" },
             user && (
-              React.createElement(NavLink, { 
-                to: "/profile", 
-                className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2` 
-              }, 
-                React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 rounded-full object-cover" }),
-                React.createElement("span", { className: "hidden sm:inline-block" }, user.name)
+              React.createElement("div", { className: "flex items-center gap-2" },
+                React.createElement(NavLink, { 
+                  to: "/profile", 
+                  className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2` 
+                }, 
+                  React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 rounded-full object-cover" }),
+                  React.createElement("span", { className: "hidden sm:inline-block" }, user.name)
+                ),
+                user.role === 'SUPER_ADMIN' && (
+                  React.createElement(Link, {
+                    to: "/admin",
+                    title: "Panel de Administración",
+                    className: "p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-yellow-100 dark:hover:bg-yellow-800 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors"
+                  },
+                    ICONS_ADMIN.shield
+                  )
+                )
               )
             )
           ),

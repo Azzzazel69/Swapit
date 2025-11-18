@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
@@ -81,6 +82,7 @@ const ProfilePage = () => {
     const { user, updateUser, refreshUser } = useAuth();
     const { showToast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Editability state
     const [editability, setEditability] = useState({ canEdit: false, reason: 'loading' });
@@ -97,7 +99,8 @@ const ProfilePage = () => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [location, setLocation] = useState(user?.location || { country: '', city: '', postalCode: '', address: '' });
+    const [locationData, setLocationData] = useState(user?.location || { country: '', city: '', postalCode: '', address: '' });
+    const [contactCard, setContactCard] = useState(user?.contactCard || { enabled: false, name: '', email: '', phone: '', meetingPoint: '', preferredSchedule: '' });
     
     // Phone verification state
     const [phone, setPhone] = useState(user?.phone || '');
@@ -117,6 +120,13 @@ const ProfilePage = () => {
     const [deletingItemId, setDeletingItemId] = useState(null);
 
     useEffect(() => {
+        if (location.state?.message) {
+            showToast(location.state.message, 'success');
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, showToast, navigate]);
+
+    useEffect(() => {
         const checkEditability = async () => {
             try {
                 const status = await api.canEditProfile();
@@ -131,8 +141,9 @@ const ProfilePage = () => {
     useEffect(() => {
         if(user) {
             setName(user.name);
-            setLocation(user.location || { country: 'España', city: '', postalCode: '', address: '' });
+            setLocationData(user.location || { country: 'España', city: '', postalCode: '', address: '' });
             setPhone(user.phone || '');
+            setContactCard(user.contactCard || { enabled: false, name: user.name, email: user.email, phone: user.phone, meetingPoint: '', preferredSchedule: '' });
         }
     }, [user]);
 
@@ -205,11 +216,24 @@ const ProfilePage = () => {
     const handleSaveLocation = async () => {
         setIsLoading(true); setError('');
         try {
-            const updatedUser = await api.updateUserProfileData({ location });
+            const updatedUser = await api.updateUserProfileData({ location: locationData });
             updateUser(updatedUser);
             setIsEditingLocation(false);
             showToast('Ubicación actualizada.', 'success');
         } catch (err) { setError(err.message); } finally { setIsLoading(false); }
+    };
+
+    const handleSaveContactCard = async () => {
+        setIsLoading(true); setError('');
+        try {
+            const updatedUser = await api.updateUserProfileData({ contactCard });
+            updateUser(updatedUser);
+            showToast('Tarjeta de Presentación guardada.', 'success');
+        } catch (err) { 
+            showToast(err.message, 'error');
+        } finally { 
+            setIsLoading(false); 
+        }
     };
     
     const handleSendCode = async (e) => {
@@ -271,8 +295,8 @@ const ProfilePage = () => {
     
     const countries = useMemo(() => Object.keys(locations), []);
     const citiesForSelectedCountry = useMemo(() => {
-        return location.country && locations[location.country] ? locations[location.country] : [];
-    }, [location.country]);
+        return locationData.country && locations[locationData.country] ? locations[locationData.country] : [];
+    }, [locationData.country]);
 
     if (!user) return React.createElement(SwapSpinner, null);
 
@@ -384,13 +408,34 @@ const ProfilePage = () => {
                 )
             )
         ),
-
+        
+        React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
+            React.createElement("div", { className: "flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-3" },
+                React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2" }, ICONS.card, "Tarjeta de Presentación"),
+                React.createElement("label", { htmlFor: "enable-card", className: "relative inline-flex items-center cursor-pointer" },
+                    React.createElement("input", { type: "checkbox", id: "enable-card", className: "sr-only peer", checked: contactCard.enabled, onChange: e => setContactCard(c => ({ ...c, enabled: e.target.checked })) }),
+                    React.createElement("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
+                )
+            ),
+            React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400 mb-4" }, "Activa esta opción para compartir automáticamente tus datos de contacto cuando aceptes un intercambio. Esto facilita que la otra persona se ponga en contacto contigo."),
+            React.createElement("div", { className: `space-y-4 transition-opacity ${!contactCard.enabled ? 'opacity-50' : 'opacity-100'}` },
+                React.createElement(Input, { label: "Nombre a mostrar", id: "cc-name", value: contactCard.name, onChange: e => setContactCard(c => ({...c, name: e.target.value})), disabled: !contactCard.enabled }),
+                React.createElement(Input, { label: "Email de contacto", id: "cc-email", type: "email", value: contactCard.email, onChange: e => setContactCard(c => ({...c, email: e.target.value})), disabled: !contactCard.enabled }),
+                React.createElement(Input, { label: "Teléfono de contacto", id: "cc-phone", type: "tel", value: contactCard.phone, onChange: e => setContactCard(c => ({...c, phone: e.target.value})), disabled: !contactCard.enabled }),
+                React.createElement(Input, { label: "Punto de encuentro preferido", id: "cc-meeting", value: contactCard.meetingPoint, onChange: e => setContactCard(c => ({...c, meetingPoint: e.target.value})), disabled: !contactCard.enabled, placeholder:"Ej: Estación de metro Sol" }),
+                React.createElement(Input, { label: "Horario preferido", id: "cc-schedule", value: contactCard.preferredSchedule, onChange: e => setContactCard(c => ({...c, preferredSchedule: e.target.value})), disabled: !contactCard.enabled, placeholder:"Ej: Tardes de L-V, Fines de semana" }),
+            ),
+             React.createElement("div", { className: "flex justify-end mt-4" },
+                React.createElement(Button, { onClick: handleSaveContactCard, isLoading: isLoading, children: "Guardar Tarjeta" })
+            )
+        ),
+        
         React.createElement(ProfileSection, {
             title: "Ubicación",
             onEdit: () => setIsEditingLocation(true),
             isEditing: isEditingLocation,
             onSave: handleSaveLocation,
-            onCancel: () => { setIsEditingLocation(false); setError(''); setLocation(user.location); },
+            onCancel: () => { setIsEditingLocation(false); setError(''); setLocationData(user.location); },
             isLoading: isLoading,
             isEditable: editability.canEdit,
             disabledReason: editability.reason
@@ -398,10 +443,10 @@ const ProfilePage = () => {
             error && isEditingLocation && React.createElement("p", { className: "text-red-500 text-sm mb-2" }, error),
             isEditingLocation ? (
                 React.createElement("div", { className: "space-y-4" },
-                    React.createElement(AutocompleteInput, { id: "country", label: "País", value: location.country, onChange: val => setLocation(l => ({...l, country: val, city: ''})), required: true, suggestions: countries }),
-                    React.createElement(AutocompleteInput, { id: "city", label: "Ciudad", value: location.city, onChange: val => setLocation(l => ({...l, city: val})), required: true, suggestions: citiesForSelectedCountry, disabled: !location.country }),
-                    React.createElement(Input, { id: "address", label: "Dirección", value: location.address, onChange: e => setLocation(l => ({...l, address: e.target.value})) }),
-                    React.createElement(Input, { id: "postalCode", label: "Código Postal", value: location.postalCode, onChange: e => setLocation(l => ({...l, postalCode: e.target.value})) })
+                    React.createElement(AutocompleteInput, { id: "country", label: "País", value: locationData.country, onChange: val => setLocationData(l => ({...l, country: val, city: ''})), required: true, suggestions: countries }),
+                    React.createElement(AutocompleteInput, { id: "city", label: "Ciudad", value: locationData.city, onChange: val => setLocationData(l => ({...l, city: val})), required: true, suggestions: citiesForSelectedCountry, disabled: !locationData.country }),
+                    React.createElement(Input, { id: "address", label: "Dirección", value: locationData.address, onChange: e => setLocationData(l => ({...l, address: e.target.value})) }),
+                    React.createElement(Input, { id: "postalCode", label: "Código Postal", value: locationData.postalCode, onChange: e => setLocationData(l => ({...l, postalCode: e.target.value})) })
                 )
             ) : (
                 React.createElement("p", null, `${user.location?.address}, ${user.location?.postalCode}, ${user.location?.city}, ${user.location?.country}`)

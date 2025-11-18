@@ -2,7 +2,8 @@
 import React from 'react';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
-const Input = ({ label, id, icon, onIconClick, ...props }) => {
+// Fix: Make icon and onIconClick props optional to resolve type errors in multiple components.
+const Input = ({ label, id, icon, onIconClick, ...props }: {label?: string, id: string, icon?: React.ReactNode, onIconClick?: (e: React.MouseEvent<HTMLButtonElement>) => void, [key: string]: any}) => {
   const { theme } = useColorTheme();
   return React.createElement("div", null,
     React.createElement("label", { htmlFor: id, className: "block text-sm font-medium text-gray-700 dark:text-gray-300" },

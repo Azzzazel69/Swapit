@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
@@ -76,9 +77,15 @@ const PreferencesModal = ({ isOpen, onClose, initialPreferences, onSave }) => {
         }
     };
 
+    // Fix: Extract props to a variable to bypass excess property checking
+    const divProps = {
+        className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col",
+        onClick: (e: React.MouseEvent) => e.stopPropagation()
+    };
+
     return (
         React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4", onClick: onClose },
-            React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col", onClick: e => e.stopPropagation() },
+            React.createElement("div", divProps,
                 React.createElement("div", { className: "p-4 border-b dark:border-gray-700 flex justify-between items-center" },
                     React.createElement("h2", { className: "text-xl font-bold" }, "Editar Intereses"),
                     React.createElement("button", { onClick: onClose, className: "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" }, ICONS.close)

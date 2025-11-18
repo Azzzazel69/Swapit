@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
@@ -118,7 +119,8 @@ const UserProfilePage = () => {
           React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
             items.map((item) => (
                 React.createElement("div", { key: item.id, className: "relative" },
-                    React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite }),
+                    // Fix: Pass missing 'onDelete' and 'deletingItemId' props to ItemCard
+                    React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite, onDelete: undefined, deletingItemId: undefined }),
                     fromExchangeId && item.userId !== currentUser.id && (
                         React.createElement(Button, {
                             onClick: () => handleCounterOffer(item.id),

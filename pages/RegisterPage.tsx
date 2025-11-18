@@ -82,9 +82,7 @@ const RegisterPage = () => {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('cookie_consent', 'accepted');
       }
-      const { token } = await api.login(email, password);
-      await login(token);
-      navigate('/onboarding');
+      navigate('/verify-email', { state: { email } });
     } catch (err) {
       if (err.message.includes('Ya existe un usuario con este correo')) {
           setError(
@@ -123,6 +121,16 @@ const RegisterPage = () => {
     }
   };
 
+  // Fix: Extracted props for select to fix TS error
+  const selectProps = {
+      id: "gender",
+      name: "gender",
+      value: gender,
+      onChange: (e) => setGender(e.target.value),
+      required: true,
+      className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+  };
+
   return React.createElement("div", { className: "flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" },
     React.createElement("div", { className: "max-w-md w-full space-y-8 p-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg" },
       React.createElement("div", null,
@@ -136,14 +144,7 @@ const RegisterPage = () => {
           React.createElement(Input, { id: "name", label: "Nombre Completo", name: "name", type: "text", autoComplete: "name", required: true, value: name, onChange: (e) => setName(e.target.value), placeholder: "Tu Nombre" }),
           React.createElement("div", null,
             React.createElement("label", { htmlFor: "gender", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Género"),
-            React.createElement("select", {
-                id: "gender",
-                name: "gender",
-                value: gender,
-                onChange: (e) => setGender(e.target.value),
-                required: true,
-                className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
-            },
+            React.createElement("select", selectProps,
                 React.createElement("option", { value: "", disabled: true }, "-- Selecciona una opción --"),
                 React.createElement("option", { value: "female" }, "Femenino"),
                 React.createElement("option", { value: "male" }, "Masculino"),

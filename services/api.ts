@@ -11,6 +11,13 @@ const DEFAULT_AVATAR_FEMALE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDo
 const generatePlaceholderImage = (text: string): string => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+        console.error("Failed to get 2D context from canvas");
+        // Return a default transparent pixel to avoid a crash
+        return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    }
+
     canvas.width = 500;
     canvas.height = 500;
 
@@ -55,13 +62,7 @@ const generatePlaceholderImage = (text: string): string => {
 };
 
 
-// --- DEV PATCH: polyfills y notifications (dev-only) ---
-
-// Polyfill seguro para atob en entornos node/controlados
-if (typeof globalThis.atob === 'undefined') {
-  // @ts-ignore
-  globalThis.atob = (s: string) => Buffer.from(s, 'base64').toString('binary');
-}
+// --- DEV PATCH: notifications (dev-only) ---
 
 // In-memory notifications store (dev-only)
 const notificationsStore: Record<string, Array<any>> = {};
@@ -148,15 +149,28 @@ let exchanges = [];
 let chats = [];
 
 const setupInitialData = () => {
-    const data = typeof window !== 'undefined' ? window.localStorage.getItem('swapit_data') : null;
-    if (data) {
-        const parsedData = JSON.parse(data);
-        users = parsedData.users;
-        items = parsedData.items;
-        exchanges = parsedData.exchanges;
-        chats = parsedData.chats;
-        return;
+    try {
+        const data = typeof window !== 'undefined' ? window.localStorage.getItem('swapit_data') : null;
+        if (data) {
+            const parsedData = JSON.parse(data);
+            if (parsedData.users && parsedData.items && parsedData.exchanges && parsedData.chats) {
+                users = parsedData.users;
+                items = parsedData.items;
+                exchanges = parsedData.exchanges;
+                chats = parsedData.chats;
+                return; // Successfully loaded from localStorage
+            } else {
+                // Data is valid JSON but has an incorrect structure
+                throw new Error("LocalStorage data has an incorrect structure.");
+            }
+        }
+    } catch (error) {
+        console.error("Could not load data from localStorage, will reset to default.", error);
+        if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('swapit_data');
+        }
     }
+
 
     users = [];
     items = [];
@@ -171,15 +185,42 @@ const setupInitialData = () => {
     const danielaSalt = generateSalt();
     const elenaSalt = generateSalt();
     const fernandoSalt = generateSalt();
+    
+    const defaultContactCard = {
+        enabled: false,
+        name: '',
+        email: '',
+        phone: '',
+        meetingPoint: '',
+        preferredSchedule: '',
+    };
 
     users = [
-        { id: '1', name: 'Ana', email: 'ana@example.com', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [] },
-        { id: '2', name: 'Benito', email: 'benito@example.com', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [] },
-        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null, gender: 'neutral', avatarUrl: DEFAULT_AVATAR_NEUTRAL, ratings: [] },
-        { id: '4', name: 'Carlos', email: 'carlos@example.com', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [] },
-        { id: '5', name: 'Daniela', email: 'daniela@example.com', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [] },
-        { id: '6', name: 'Elena', email: 'elena@example.com', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [] },
-        { id: '7', name: 'Fernando', email: 'fernando@example.com', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [] },
+        { id: '1', name: 'Ana', email: 'ana@example.com', role: 'USER', salt: anaSalt, hashedPassword: hashPassword('Password123', anaSalt), emailVerified: true, phoneVerified: true, phone: '611222333', location: { country: 'España', city: 'Madrid', postalCode: '28013', address: 'Plaza Mayor, 1' }, preferences: ['Libros', 'Música', 'Hogar'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [], 
+            contactCard: {
+                enabled: true,
+                name: 'Ana G.',
+                email: 'ana.contacto@email.com',
+                phone: '611222333',
+                meetingPoint: 'Estación de metro Sol, salida del oso y el madroño.',
+                preferredSchedule: 'L-V por las tardes, a partir de las 18:00.'
+            }
+        },
+        { id: '2', name: 'Benito', email: 'benito@example.com', role: 'USER', salt: benitoSalt, hashedPassword: hashPassword('Password456', benitoSalt), emailVerified: true, phoneVerified: true, phone: '655444333', location: { country: 'España', city: 'Barcelona', postalCode: '08001', address: 'Las Ramblas, 1' }, preferences: ['Electrónica', 'Videojuegos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [],
+            contactCard: {
+                enabled: false,
+                name: 'Benito López',
+                email: 'b.lopez.swap@email.com',
+                phone: '655444333',
+                meetingPoint: 'Cerca de Plaza Cataluña',
+                preferredSchedule: 'Fines de semana por la mañana.'
+            }
+        },
+        { id: '3', name: 'Admin', email: 'azzazel69@gmail.com', role: 'SUPER_ADMIN', salt: adminSalt, hashedPassword: hashPassword('AdminPassword123', adminSalt), emailVerified: true, phoneVerified: true, phone: '600000000', location: { country: 'España', city: 'Valencia', postalCode: '46002', address: 'Plaza del Ayuntamiento, 1' }, preferences: ['Otros'], lastDataChange: null, columnLayout: null, gender: 'neutral', avatarUrl: DEFAULT_AVATAR_NEUTRAL, ratings: [], contactCard: { ...defaultContactCard } },
+        { id: '4', name: 'Carlos', email: 'carlos@example.com', role: 'USER', salt: carlosSalt, hashedPassword: hashPassword('Password789', carlosSalt), emailVerified: true, phoneVerified: true, phone: '622333444', location: { country: 'España', city: 'Barcelona', postalCode: '08002', address: 'Carrer de Ferran, 1' }, preferences: ['Ropa', 'Coleccionismo'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [], contactCard: { ...defaultContactCard } },
+        { id: '5', name: 'Daniela', email: 'daniela@example.com', role: 'USER', salt: danielaSalt, hashedPassword: hashPassword('Password101', danielaSalt), emailVerified: true, phoneVerified: true, phone: '633444555', location: { country: 'España', city: 'Badalona', postalCode: '08911', address: 'Carrer del Mar, 1' }, preferences: ['Hogar', 'Muebles'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [], contactCard: { ...defaultContactCard } },
+        { id: '6', name: 'Elena', email: 'elena@example.com', role: 'USER', salt: elenaSalt, hashedPassword: hashPassword('Password212', elenaSalt), emailVerified: true, phoneVerified: true, phone: '644555666', location: { country: 'España', city: 'Barcelona', postalCode: '08028', address: 'Avinguda Diagonal, 600' }, preferences: ['Servicios', 'Otros'], lastDataChange: null, columnLayout: null, gender: 'female', avatarUrl: DEFAULT_AVATAR_FEMALE, ratings: [], contactCard: { ...defaultContactCard } },
+        { id: '7', name: 'Fernando', email: 'fernando@example.com', role: 'USER', salt: fernandoSalt, hashedPassword: hashPassword('Password313', fernandoSalt), emailVerified: true, phoneVerified: true, phone: '655666777', location: { country: 'España', city: 'Badalona', postalCode: '08912', address: 'Avinguda de Martí Pujol, 1' }, preferences: ['Vehículos'], lastDataChange: null, columnLayout: null, gender: 'male', avatarUrl: DEFAULT_AVATAR_MALE, ratings: [], contactCard: { ...defaultContactCard } },
     ];
 
     items = [
@@ -283,8 +324,8 @@ class ApiClient {
       const currentUserItems = currentUserItemsCache || items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE');
       
       const isMatch = currentUserItems.some(userItem =>
-        (userItem.wishedItem && item.title.toLowerCase().includes(userItem.wishedItem.toLowerCase())) &&
-        (item.wishedItem && userItem.title.toLowerCase().includes(item.wishedItem.toLowerCase()))
+        (userItem.wishedItem && typeof item.title === 'string' && item.title.toLowerCase().includes(userItem.wishedItem.toLowerCase())) &&
+        (item.wishedItem && typeof userItem.title === 'string' && userItem.title.toLowerCase().includes(item.wishedItem.toLowerCase()))
       );
 
       return { 
@@ -332,6 +373,7 @@ class ApiClient {
               id: String(users.length + 1),
               name: googleUser.name,
               email: googleUser.email,
+              role: 'USER',
               salt,
               hashedPassword,
               preferences: [],
@@ -343,6 +385,7 @@ class ApiClient {
               gender: 'neutral',
               avatarUrl: DEFAULT_AVATAR_NEUTRAL,
               ratings: [],
+              contactCard: { enabled: false, name: '', email: '', phone: '', meetingPoint: '', preferredSchedule: '' },
           };
           users.push(newUser);
           user = newUser;
@@ -368,27 +411,45 @@ class ApiClient {
       } else if (gender === 'female') {
         avatarUrl = DEFAULT_AVATAR_FEMALE;
       }
+      
+      const verificationToken = `verify-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      console.log(`SIMULACIÓN: Enlace de verificación para ${email}: /#/verify-email/${verificationToken}`);
 
       const newUser = {
           id: String(users.length + 1),
           name,
           email,
+          role: 'USER',
           salt,
           hashedPassword,
           preferences: [],
           emailVerified: false,
+          verificationToken,
           phoneVerified: false,
           lastDataChange: null,
           columnLayout: null,
           gender,
           avatarUrl,
           ratings: [],
+          contactCard: { enabled: false, name: '', email: '', phone: '', meetingPoint: '', preferredSchedule: '' },
       };
       users.push(newUser);
       persistData();
       
       const { hashedPassword: _, salt: __, ...userToReturn } = newUser;
       return userToReturn;
+  }
+
+  async verifyEmailWithToken(token) {
+    await this.simulateDelay(300);
+    const user = users.find(u => u.verificationToken === token);
+    if (user) {
+        user.emailVerified = true;
+        delete user.verificationToken;
+        persistData();
+        return { success: true, email: user.email };
+    }
+    throw new Error('Token de verificación inválido o expirado.');
   }
 
   async getCurrentUser() {
@@ -411,7 +472,7 @@ class ApiClient {
 
     const currentUserItems = items.filter(i => i.userId === currentUser.id && i.status === 'AVAILABLE');
     const allEnrichedItems = items.map(item => this._enrichItem(item, currentUser, currentUserItems));
-    const otherUsersItems = allEnrichedItems.filter(item => item.userId !== currentUser.id && item.status !== 'EXCHANGED');
+    const otherUsersItems = allEnrichedItems.filter(item => item && item.userId !== currentUser.id && item.status !== 'EXCHANGED');
 
     const viewHistory = viewHistoryService.getHistory();
     const categoryFrequencies = viewHistory.reduce((acc, item) => {
@@ -566,7 +627,7 @@ class ApiClient {
       );
 
       for (const exchange of affectedExchanges) {
-          exchange.status = ExchangeStatus.Rejected;
+          exchange.status = ExchangeStatus.Cancelled;
           const chat = chats.find(c => c.id === exchange.id);
           if (chat) {
               chat.messages.push({
@@ -614,7 +675,13 @@ class ApiClient {
       const owner = users.find(u => u.id === requestedItem.userId);
       if (!owner) throw new Error('Propietario del artículo no encontrado.');
       
-      addNotificationDev(owner.id, { title: 'Nueva propuesta de intercambio', body: `${requester.name} quiere tu ${requestedItem.title}` });
+      const exchangeId = `ex-${Date.now()}`;
+
+      addNotificationDev(owner.id, { 
+          title: 'Nueva propuesta de intercambio', 
+          body: `${requester.name} quiere tu ${requestedItem.title}`,
+          meta: { exchangeId: exchangeId }
+      });
 
       const offeredOtherItems = proposal.otherItems || [];
       const allOfferedIds = [...proposal.offeredItemIds, ...offeredOtherItems.map(item => item.id)];
@@ -624,7 +691,7 @@ class ApiClient {
       }, {});
 
       const newExchange = {
-          id: `ex-${Date.now()}`,
+          id: exchangeId,
           requesterId: requester.id,
           requesterName: requester.name,
           ownerId: owner.id,
@@ -670,7 +737,10 @@ class ApiClient {
     const chat = chats.find(c => c.id === chatId);
     const exchange = exchanges.find(ex => ex.id === chatId);
 
-    if (!chat || !exchange || (chat.participantIds.indexOf(currentUser.id) === -1)) {
+    const isParticipant = chat?.participantIds.includes(currentUser.id);
+    const isAdmin = currentUser.role === 'SUPER_ADMIN';
+
+    if (!chat || !exchange || (!isParticipant && !isAdmin)) {
         throw new Error('Chat no encontrado o acceso denegado.');
     }
     
@@ -745,14 +815,16 @@ class ApiClient {
             
             addNotificationDev(requester.id, { 
                 title: '¡Tu propuesta ha sido aceptada!', 
-                body: `${owner.name} ha aceptado. Por favor, confirma el intercambio para finalizar.` 
+                body: `${owner.name} ha aceptado. Por favor, confirma el intercambio para finalizar.`,
+                meta: { exchangeId: exchange.id }
             });
             addNotificationDev(owner.id, { 
                 title: 'Has aceptado un intercambio', 
-                body: `Esperando tu confirmación final para el intercambio con ${requester.name}.` 
+                body: `Esperando tu confirmación final para el intercambio con ${requester.name}.`,
+                meta: { exchangeId: exchange.id }
             });
 
-            const systemMessageText = `${owner.name} ha aceptado la propuesta. Ambos usuarios deben confirmar el intercambio en este chat para finalizarlo.`;
+            const systemMessageText = `${owner.name} ha aceptado la propuesta. Ya podéis ver los datos de contacto del otro para coordinar. Ambos debéis confirmar el intercambio una vez realizado para finalizarlo.`;
             if (chat) {
                 chat.messages.push({
                     id: `msg-system-${Date.now()}`, senderId: 'system', text: systemMessageText, timestamp: new Date().toISOString(), type: 'SYSTEM'
@@ -861,7 +933,8 @@ class ApiClient {
         if(requester) {
             addNotificationDev(requester.id, {
                 title: 'Has recibido una contraoferta',
-                body: `${currentUser.name} ha modificado la oferta de intercambio.`
+                body: `${currentUser.name} ha modificado la oferta de intercambio.`,
+                meta: { exchangeId: exchange.id }
             });
         }
 
@@ -926,7 +999,7 @@ class ApiClient {
             if (ex.id !== exchangeId && ex.status === ExchangeStatus.Pending) {
                 const otherInvolvedItems = [ex.requestedItemId, ...ex.offeredItemIds];
                 if (otherInvolvedItems.some(id => finalTradeItems.includes(id))) {
-                    ex.status = ExchangeStatus.Rejected;
+                    ex.status = ExchangeStatus.Cancelled;
                 }
             }
         });
@@ -934,7 +1007,7 @@ class ApiClient {
         const chat = chats.find(c => c.id === exchangeId);
         if (chat) {
             chat.messages.push({
-                id: `msg-system-final-${Date.now()}`, senderId: 'system', text: '¡TRATO COMPLETADO Y VALORADO! Aquí están los datos para coordinar.', timestamp: new Date().toISOString(), type: 'SYSTEM'
+                id: `msg-system-final-${Date.now()}`, senderId: 'system', text: 'Ambos usuarios han confirmado y valorado el intercambio. ¡El trato está completado!', timestamp: new Date().toISOString(), type: 'SYSTEM'
             });
         }
     }
@@ -1213,9 +1286,10 @@ class ApiClient {
     const currentUser = this._getCurrentUserFromToken();
     if (!currentUser) throw new Error('Autenticación requerida');
 
-    const { name, location } = data;
+    const { name, location, contactCard } = data;
     if (name) currentUser.name = name;
     if (location) currentUser.location = location;
+    if (contactCard) currentUser.contactCard = contactCard;
     
     currentUser.lastDataChange = new Date().toISOString();
     persistData();
@@ -1263,6 +1337,84 @@ class ApiClient {
     
     // In a real app, this might just return success and then you'd call sendPhoneVerificationCode separately
     return await this.sendPhoneVerificationCode(phone);
+  }
+
+  // --- ADMIN FUNCTIONS ---
+  
+  async _verifyAdmin() {
+    const currentUser = this._getCurrentUserFromToken();
+    if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
+        throw new Error('Acción no autorizada.');
+    }
+  }
+
+  async getAdminDashboardStats() {
+    await this._verifyAdmin();
+    await this.simulateDelay(200);
+    return {
+        totalUsers: users.length,
+        totalItems: items.length,
+        activeExchanges: exchanges.filter(ex => ex.status === 'PENDING' || ex.status === 'ACCEPTED').length,
+    };
+  }
+
+  async getAllUsersForAdmin() {
+    await this._verifyAdmin();
+    await this.simulateDelay();
+    return users.map(({ hashedPassword, salt, ...user }) => user);
+  }
+  
+  async deleteUserByAdmin(userIdToDelete) {
+    await this._verifyAdmin();
+    await this.simulateDelay();
+    
+    // Delete user's items
+    items = items.filter(item => item.userId !== userIdToDelete);
+    
+    // Cancel user's exchanges
+    exchanges.forEach(ex => {
+        if (ex.ownerId === userIdToDelete || ex.requesterId === userIdToDelete) {
+            ex.status = ExchangeStatus.Cancelled;
+        }
+    });
+
+    // Delete user
+    users = users.filter(user => user.id !== userIdToDelete);
+
+    persistData();
+    return { success: true };
+  }
+
+  async getAllItemsForAdmin() {
+    await this._verifyAdmin();
+    await this.simulateDelay();
+    return items.map(item => ({
+        ...item,
+        ownerName: users.find(u => u.id === item.userId)?.name || 'Desconocido',
+    }));
+  }
+
+  async deleteItemByAdmin(itemId) {
+    await this._verifyAdmin();
+    await this.simulateDelay();
+    const itemIndex = items.findIndex(i => i.id === itemId);
+    if (itemIndex > -1) {
+        items.splice(itemIndex, 1);
+        persistData();
+        return { success: true };
+    }
+    throw new Error('Artículo no encontrado.');
+  }
+
+  async getAllExchangesForAdmin() {
+    await this._verifyAdmin();
+    await this.simulateDelay();
+    return exchanges.map(ex => ({
+        ...ex,
+        ownerName: users.find(u => u.id === ex.ownerId)?.name,
+        requesterName: users.find(u => u.id === ex.requesterId)?.name,
+        requestedItemTitle: items.find(i => i.id === ex.requestedItemId)?.title || 'Artículo Eliminado'
+    }));
   }
 }
 

@@ -15,7 +15,8 @@
     "firebase": "^12.5.0",
     "@capacitor/core": "^7.4.4",
     "@capacitor/status-bar": "^7.0.3",
-    "@capacitor/push-notifications": "^7.0.3"
+    "@capacitor/push-notifications": "^7.0.3",
+    "@capacitor/splash-screen": "^7.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

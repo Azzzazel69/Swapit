@@ -75,11 +75,15 @@ const TutorialModal = ({ isOpen, onClose }) => {
 
     const slide = slides[currentSlide];
 
+    // Fix: Extract props to a variable to bypass excess property checking
+    const divProps = {
+        className: "bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-auto text-center flex flex-col",
+        onClick: (e: React.MouseEvent) => e.stopPropagation()
+    };
+
     return (
         React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" },
-            React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-auto text-center flex flex-col",
-                 onClick: e => e.stopPropagation()
-            },
+            React.createElement("div", divProps,
                 React.createElement("div", { className: "p-8 flex-grow" },
                     React.createElement("div", { className: "flex items-center justify-center h-48 mb-6" },
                         slide.illustration
@@ -95,10 +99,10 @@ const TutorialModal = ({ isOpen, onClose }) => {
                         ))
                     ),
                     React.createElement("div", { className: "flex items-center justify-between" },
-                        React.createElement(Button, { variant: "secondary", onClick: handleSkip, className: "!bg-transparent !text-gray-500 hover:!bg-gray-200 dark:hover:!bg-gray-700" }, "Omitir"),
-                        React.createElement(Button, { onClick: handleNext },
+                        React.createElement(Button, { variant: "secondary", onClick: handleSkip, className: "!bg-transparent !text-gray-500 hover:!bg-gray-200 dark:hover:!bg-gray-700", children: "Omitir" }),
+                        React.createElement(Button, { onClick: handleNext, children: 
                             currentSlide === slides.length - 1 ? '¡Entendido!' : 'Siguiente'
-                        )
+                        })
                     )
                 )
             )

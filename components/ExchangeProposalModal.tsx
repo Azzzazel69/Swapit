@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Button from './Button.tsx';
 import { ICONS } from '../constants.tsx';
@@ -14,10 +15,13 @@ const SelectableItemCard = ({ item, isSelected, onSelect, isOther = false, isMat
         )
     );
     
-    return React.createElement("div", {
+    // Fix: Extract props to a variable to bypass excess property checking
+    const divProps = {
         onClick: () => onSelect(item.id),
         className: `relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 h-full flex flex-col ${isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'}`
-    },
+    };
+
+    return React.createElement("div", divProps,
         isMatch && !isOther && (
             React.createElement("div", { className: "absolute top-1 left-1 z-10 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1" },
                 "⚡️ ¡MATCH!"
@@ -39,10 +43,13 @@ const SelectableItemCard = ({ item, isSelected, onSelect, isOther = false, isMat
 };
 
 const AddOtherItemCard = ({ onClick }) => {
-    return React.createElement("div", {
+    // Fix: Extract props to a variable to bypass excess property checking
+    const divProps = {
         onClick: onClick,
         className: `cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-lg flex flex-col items-center justify-center p-2 text-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors h-full`
-    },
+    };
+
+    return React.createElement("div", divProps,
         React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8 mb-1", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
             React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 9v6m3-3H9" })
         ),
@@ -117,6 +124,16 @@ const ExchangeProposalModal = ({
     
     const allSelectableItems = [...sortedUserItems, ...otherItems];
 
+    // Fix: Extract props for textarea to fix TS error
+    const textareaProps = {
+        id: "proposal-message",
+        rows: 3,
+        value: message,
+        onChange: (e) => setMessage(e.target.value),
+        placeholder: "Puedes añadir un mensaje a tu propuesta...",
+        className: "appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+    };
+
     return (
         React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4", onClick: onClose },
             React.createElement(OtherItemModal, { 
@@ -164,14 +181,7 @@ const ExchangeProposalModal = ({
                     ),
                     React.createElement("div", null,
                         React.createElement("label", { htmlFor: "proposal-message", className: "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" }, "Mensaje (opcional)"),
-                        React.createElement("textarea", {
-                            id: "proposal-message",
-                            rows: 3,
-                            value: message,
-                            onChange: (e) => setMessage(e.target.value),
-                            placeholder: "Puedes añadir un mensaje a tu propuesta...",
-                            className: "appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        })
+                        React.createElement("textarea", textareaProps)
                     )
                 ),
                 React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-900 border-t dark:border-gray-700 flex justify-end gap-2" },

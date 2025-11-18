@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import ItemCard from '../components/ItemCard.tsx';
@@ -37,7 +38,8 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
         React.createElement("div", { className: "mb-12" },
             React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
             React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4 md:gap-6` },
-                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns }))
+                // Fix: Pass missing 'onDelete' and 'deletingItemId' props to ItemCard
+                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns, onDelete: undefined, deletingItemId: undefined }))
             )
         )
     );
@@ -100,8 +102,8 @@ const applySearch = (items, query, type) => {
     const lowercasedQuery = query.toLowerCase();
     if (type === 'articles') {
         return items.filter(item =>
-            item.title.toLowerCase().includes(lowercasedQuery) ||
-            item.description.toLowerCase().includes(lowercasedQuery)
+            (item.title && typeof item.title === 'string' && item.title.toLowerCase().includes(lowercasedQuery)) ||
+            (item.description && typeof item.description === 'string' && item.description.toLowerCase().includes(lowercasedQuery))
         );
     } else { // searchType === 'location'
         return items.filter(item =>
@@ -134,6 +136,12 @@ const HomePage = () => {
   const { theme } = useColorTheme();
   
   const [columnLayout, setColumnLayout] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+        const savedLayout = window.localStorage.getItem('swapit_column_layout');
+        if (savedLayout && !isNaN(parseInt(savedLayout, 10))) {
+            return parseInt(savedLayout, 10);
+        }
+    }
     if (user?.columnLayout) {
         return user.columnLayout;
     }
@@ -142,24 +150,43 @@ const HomePage = () => {
     }
     return 2;
   });
-
-  const handleSetLayout = async (newLayout) => {
-    if (newLayout === columnLayout || !user) return;
-    
-    const oldLayout = columnLayout;
-    setColumnLayout(newLayout);
-    updateUser({ ...user, columnLayout: newLayout });
-
-    try {
-        await api.updateUserColumnLayout(newLayout);
-    } catch (error) {
-        console.error("Failed to save layout preference:", error);
-        setColumnLayout(oldLayout);
-        updateUser({ ...user, columnLayout: oldLayout });
-    }
-  };
   
-  const observer = useRef();
+    useEffect(() => {
+        if (user?.columnLayout && user.columnLayout !== columnLayout) {
+            setColumnLayout(user.columnLayout);
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem('swapit_column_layout', user.columnLayout.toString());
+            }
+        }
+    }, [user, columnLayout]);
+
+    const handleSetLayout = async (newLayout) => {
+        if (newLayout === columnLayout) return;
+        
+        const oldLayout = columnLayout;
+        setColumnLayout(newLayout);
+
+        if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem('swapit_column_layout', newLayout.toString());
+        }
+
+        if (user) {
+            updateUser({ ...user, columnLayout: newLayout });
+            try {
+                await api.updateUserColumnLayout(newLayout);
+            } catch (error) {
+                console.error("Failed to save layout preference:", error);
+                setColumnLayout(oldLayout);
+                updateUser({ ...user, columnLayout: oldLayout });
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem('swapit_column_layout', oldLayout.toString());
+                }
+            }
+        }
+    };
+  
+  // Fix: Add type to useRef for IntersectionObserver
+  const observer = useRef<IntersectionObserver>(null);
 
   const loadMoreItems = useCallback(async () => {
     if (loadingMore || !hasMore) return;

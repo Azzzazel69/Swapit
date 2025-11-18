@@ -1,8 +1,7 @@
 // firebase-messaging-sw.js
 
 // --- PWA Cache Logic ---
-// This part remains to provide offline capabilities for the PWA.
-const CACHE_NAME = 'swapit-cache-v1';
+const CACHE_NAME = 'swapit-cache-v2';
 const APP_SHELL_URLS = [
   '/',
   '/index.html',
@@ -39,6 +38,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Para las peticiones de navegación, intentamos ir a la red primero.
+  // Si falla (estamos offline), servimos la página principal desde la caché.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -48,12 +49,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
+  // Para todos los demás recursos (assets, etc.), usamos la estrategia "stale-while-revalidate".
+  // Esto sirve el contenido desde la caché inmediatamente si está disponible (rápido),
+  // y al mismo tiempo, busca una versión actualizada en la red para la próxima vez.
+  if (event.request.method === 'GET') {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          const fetchPromise = fetch(event.request).then((networkResponse) => {
+            // Si la petición a la red tiene éxito, la guardamos en caché para futuras visitas.
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+
+          // Devolvemos la respuesta de la caché si existe, si no, esperamos la respuesta de la red.
+          return cachedResponse || fetchPromise;
+        });
+      })
+    );
+  }
 });
+
 
 // --- Firebase Messaging Logic has been removed ---
 // Push notifications are now handled natively via the Capacitor Push Notifications plugin.

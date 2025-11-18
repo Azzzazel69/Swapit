@@ -82,6 +82,33 @@ const AddItemPage = () => {
         }
     };
 
+    // Fix: Extract props for textarea to fix TS error
+    const textareaProps = {
+        id: "description",
+        value: description,
+        onChange: (e) => setDescription(e.target.value),
+        required: true,
+        rows: 4,
+        placeholder: "Describe tu artículo, su estado, etc.",
+        className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+    };
+
+    // Fix: Extract props for select elements to fix TS error
+    const categorySelectProps = {
+        id: "category",
+        value: category,
+        onChange: (e) => setCategory(e.target.value),
+        required: true,
+        className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+    };
+    const conditionSelectProps = {
+        id: "condition",
+        value: condition,
+        onChange: (e) => setCondition(e.target.value),
+        required: true,
+        className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+    };
+
     return (
         React.createElement("div", { className: "max-w-2xl mx-auto" },
             React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md" },
@@ -91,12 +118,12 @@ const AddItemPage = () => {
                     React.createElement(Input, { id: "title", label: "Título", type: "text", value: title, onChange: e => setTitle(e.target.value), required: true, placeholder: "Ej: Bicicleta de montaña" }),
                     React.createElement("div", null,
                         React.createElement("label", { htmlFor: "description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
-                        React.createElement("textarea", { id: "description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, placeholder: "Describe tu artículo, su estado, etc.", className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
+                        React.createElement("textarea", textareaProps)
                     ),
                     React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4" },
                         React.createElement("div", null,
                             React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-                            React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                            React.createElement("select", categorySelectProps,
                                 React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
                                 CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
                                     cat.sub.length > 0 ? (
@@ -111,7 +138,7 @@ const AddItemPage = () => {
                         ),
                         React.createElement("div", null,
                             React.createElement("label", { htmlFor: "condition", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Condición"),
-                            React.createElement("select", { id: "condition", value: condition, onChange: (e) => setCondition(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                            React.createElement("select", conditionSelectProps,
                                 React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
                                 Object.values(ItemCondition).map(cond => React.createElement("option", { key: cond, value: cond }, cond))
                             )

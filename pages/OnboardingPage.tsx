@@ -211,9 +211,9 @@ const OnboardingPage = () => {
                         React.createElement(AutocompleteInput, { id: "country", label: "País", value: country, onChange: handleCountryChange, required: true, suggestions: countries, placeholder: "Escribe tu país..." }),
                         React.createElement(AutocompleteInput, { id: "city", label: "Ciudad", value: city, onChange: setCity, required: true, suggestions: citiesForSelectedCountry, placeholder: "Escribe tu ciudad...", disabled: !country }),
                         React.createElement(Input, { id: "address", label: "Dirección (Calle, número, piso)", type: "text", value: address, onChange: e => setAddress(e.target.value), required: true, placeholder:"Ej: Calle Principal, 123, 2B" }),
-                        React.createElement(Input, { id: "postalCode", label: "Código Postal", type: "text", value: postalCode, onChange: e => setPostalCode(e.target.value), required: true }),
-                        React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Guardar Ubicación" })
-                    )
+                        React.createElement(Input, { id: "postalCode", label: "Código Postal", type: "text", value: postalCode, onChange: e => setPostalCode(e.target.value), required: true })
+                    ),
+                    React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Guardar Ubicación", form: "location-form" })
                 );
             case 'preferences':
                 return React.createElement("div", null,

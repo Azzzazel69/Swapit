@@ -151,6 +151,25 @@ const MyItemsPage = () => {
     return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(SwapSpinner, null));
   }
 
+  // Fix: Extract props for textarea to fix TS error
+  const textareaProps = {
+      id: "description",
+      value: description,
+      onChange: (e) => setDescription(e.target.value),
+      required: true,
+      rows: 4,
+      className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+  };
+
+  // Fix: Extract props for select to fix TS error
+  const selectProps = {
+      id: "category",
+      value: category,
+      onChange: (e) => setCategory(e.target.value),
+      required: true,
+      className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
+  };
+
   return React.createElement("div", null,
     React.createElement("div", { className: "flex justify-between items-center mb-6" },
       React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Mis Artículos"),
@@ -169,11 +188,11 @@ const MyItemsPage = () => {
         React.createElement(Input, { id: "title", label: "Título", type: "text", value: title, onChange: e => setTitle(e.target.value), required: true }),
         React.createElement("div", null,
           React.createElement("label", { htmlFor: "description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
-          React.createElement("textarea", { id: "description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
+          React.createElement("textarea", textareaProps)
         ),
         React.createElement("div", null,
           React.createElement("label", { htmlFor: "category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-          React.createElement("select", { id: "category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+          React.createElement("select", selectProps,
             React.createElement("option", { value: "", disabled: true }, "-- Selecciona una Categoría --"),
             CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
                                 cat.sub.length > 0 ? (
@@ -223,7 +242,7 @@ const MyItemsPage = () => {
       React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo.")
     ) : (
       React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-        items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem }))
+        items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem, deletingItemId: null, onToggleFavorite: undefined }))
       )
     ),
     notification.show && React.createElement("div", {

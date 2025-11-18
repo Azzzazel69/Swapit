@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
@@ -10,16 +11,67 @@ import { useConfetti } from '../hooks/useConfetti.tsx';
 import { ICONS } from '../constants.tsx';
 import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
 
-const DealCompletedInfo = ({ exchange, currentUser }) => {
-    const otherUser = currentUser.id === exchange.owner.id ? exchange.requester : exchange.owner;
-    
+const ContactCardContent = ({ contactCard, avatarUrl }) => {
+    const canShare = contactCard?.name && contactCard?.phone;
+
+    const handleShare = () => {
+        if (navigator.share && canShare) {
+            navigator.share({
+                title: `Contacto de ${contactCard.name} en Swapit`,
+                text: `Aquí tienes los datos de contacto de ${contactCard.name} para nuestro intercambio en Swapit:\n\nNombre: ${contactCard.name}\nTeléfono: ${contactCard.phone}\nEmail: ${contactCard.email || 'No proporcionado'}`,
+            }).catch((error) => console.log('Error sharing', error));
+        }
+    };
+
+    const handleAddToContacts = () => {
+        if (!canShare) return;
+        const vCardData = `BEGIN:VCARD
+VERSION:3.0
+FN:${contactCard.name}
+TEL;TYPE=CELL:${contactCard.phone}
+${contactCard.email ? `EMAIL:${contactCard.email}` : ''}
+NOTE:Contacto de Swapit. Punto de encuentro: ${contactCard.meetingPoint || 'No especificado'}. Horario: ${contactCard.preferredSchedule || 'No especificado'}.
+END:VCARD`;
+        const blob = new Blob([vCardData], { type: 'text/vcard;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${contactCard.name.replace(/\s/g, '_')}.vcf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     return (
-        React.createElement("div", { className: "text-center p-4 my-4 bg-green-50 dark:bg-green-900/50 border-2 border-dashed border-green-400 rounded-lg" },
-            React.createElement("h2", { className: "text-2xl font-bold text-green-700 dark:text-green-300 mb-2" }, "¡Intercambio Completado!"),
-            React.createElement("p", { className: "text-gray-600 dark:text-gray-400" }, "Ponte en contacto con ", React.createElement("strong", null, otherUser.name), " para coordinar la entrega."),
-            React.createElement("div", { className: "mt-4 text-left inline-block" },
-                React.createElement("p", null, React.createElement("strong", null, "Correo: "), React.createElement("a", { href: `mailto:${otherUser.email}`, className: "text-blue-600 hover:underline" }, otherUser.email)),
-                React.createElement("p", null, React.createElement("strong", null, "Teléfono: "), React.createElement("a", { href: `tel:${otherUser.phone}`, className: "text-blue-600 hover:underline" }, otherUser.phone))
+        React.createElement("div", { className: "mt-4 text-left p-4 bg-white dark:bg-gray-800 rounded-lg shadow-inner max-w-sm mx-auto" },
+            React.createElement("div", { className: "flex items-center gap-4 mb-4" },
+                React.createElement("img", { src: avatarUrl, alt: contactCard.name, className: "w-16 h-16 rounded-full object-cover" }),
+                React.createElement("div", null,
+                    React.createElement("p", { className: "text-lg font-bold" }, contactCard.name)
+                )
+            ),
+            React.createElement("div", { className: "space-y-3" },
+                contactCard.email && React.createElement("div", { className: "flex items-center gap-3" },
+                    React.createElement("span", { className: "text-gray-500 flex-shrink-0" }, React.cloneElement(ICONS.envelope, {className: "w-5 h-5"})),
+                    React.createElement("a", { href: `mailto:${contactCard.email}`, className: "text-blue-600 hover:underline break-all" }, contactCard.email)
+                ),
+                contactCard.phone && React.createElement("div", { className: "flex items-center gap-3" },
+                    React.createElement("span", { className: "text-gray-500 flex-shrink-0" }, React.cloneElement(ICONS.phone, {className: "w-5 h-5"})),
+                    React.createElement("a", { href: `tel:${contactCard.phone}`, className: "text-blue-600 hover:underline" }, contactCard.phone)
+                ),
+                contactCard.meetingPoint && React.createElement("div", { className: "flex items-start gap-3" },
+                    React.createElement("span", { className: "text-gray-500 mt-0.5 flex-shrink-0" }, React.cloneElement(ICONS.meetingPoint, {className: "w-5 h-5"})),
+                    React.createElement("span", null, contactCard.meetingPoint)
+                ),
+                contactCard.preferredSchedule && React.createElement("div", { className: "flex items-start gap-3" },
+                    React.createElement("span", { className: "text-gray-500 mt-0.5 flex-shrink-0" }, React.cloneElement(ICONS.schedule, {className: "w-5 h-5"})),
+                    React.createElement("span", null, contactCard.preferredSchedule)
+                )
+            ),
+            React.createElement("div", { className: "flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" },
+                React.createElement(Button, { size: "sm", variant: "secondary", onClick: handleShare, disabled: !canShare, title: "Compartir Contacto", children: ICONS.share }),
+                React.createElement(Button, { size: "sm", variant: "secondary", onClick: handleAddToContacts, disabled: !canShare, title: "Añadir a Contactos", children: ICONS.addContact })
             )
         )
     );
@@ -118,6 +170,14 @@ const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onMod
         return (
             React.createElement("div", { className: "p-3 bg-red-50 dark:bg-red-900/50 border-t border-red-200 dark:border-red-800 text-center" },
                 React.createElement("p", { className: "font-semibold text-red-800 dark:text-red-200" }, "Propuesta Rechazada")
+            )
+        );
+    }
+
+    if (exchange.status === ExchangeStatus.Cancelled) {
+        return (
+            React.createElement("div", { className: "p-3 bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 text-center" },
+                React.createElement("p", { className: "font-semibold text-gray-700 dark:text-gray-200" }, "Intercambio Cancelado")
             )
         );
     }
@@ -276,28 +336,55 @@ const ChatDetailPage = () => {
     if (!chat || !exchange || !currentUser) return React.createElement("div", { className: "text-center" }, "No se encontraron datos del chat.");
 
     const otherUser = currentUser.id === exchange.owner.id ? exchange.requester : exchange.owner;
+    const otherUserContactCard = otherUser.contactCard;
+
+    const isViewingAsAdmin = currentUser.role === 'SUPER_ADMIN' && !chat.participantIds.includes(currentUser.id);
+
+    const renderContactInfo = (title) => (
+        React.createElement("div", { className: "p-4 my-4 bg-blue-50 dark:bg-blue-900/50 border-2 border-dashed border-blue-400 rounded-lg" },
+            React.createElement("h2", { className: "text-xl font-bold text-blue-700 dark:text-blue-300 mb-3 text-center" }, title),
+            otherUserContactCard?.enabled ? (
+                React.createElement(ContactCardContent, { contactCard: otherUserContactCard, avatarUrl: otherUser.avatarUrl })
+            ) : (
+                React.createElement("p", { className: "text-center text-gray-600 dark:text-gray-400" }, "El usuario no ha habilitado su tarjeta de presentación.")
+            )
+        )
+    );
 
     return (
         React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_4rem_-_2.5rem_-_env(safe-area-inset-bottom,0))] md:h-[calc(100vh_-_4.5rem_-_3rem_-_env(safe-area-inset-bottom,0))] bg-gray-50 dark:bg-gray-900 max-w-4xl mx-auto rounded-lg shadow-lg border dark:border-gray-700" },
-            React.createElement("div", { className: "p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg flex items-center justify-center gap-3" },
-                React.createElement("img", { src: otherUser.avatarUrl, alt: otherUser.name, className: "w-8 h-8 rounded-full object-cover" }),
-                React.createElement("h1", { className: "text-lg font-bold text-center" }, "Intercambio con ", otherUser.name)
+            React.createElement("div", { className: "p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg flex items-center justify-center gap-3 relative" },
+                React.createElement("div", { className: "flex items-center gap-3" },
+                    React.createElement("img", { src: exchange.requester.avatarUrl, alt: exchange.requester.name, className: "w-8 h-8 rounded-full object-cover" }),
+                    React.createElement("h1", { className: "text-lg font-bold text-center" }, "Intercambio entre ", exchange.requester.name, " y ", exchange.owner.name),
+                    React.createElement("img", { src: exchange.owner.avatarUrl, alt: exchange.owner.name, className: "w-8 h-8 rounded-full object-cover" })
+                ),
+                isViewingAsAdmin && (
+                    React.createElement("div", { className: "absolute top-2 right-2 text-xs font-bold bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full" }, "Viendo como Administrador")
+                )
             ),
             React.createElement(MemoizedItemBar, { exchange: exchange }),
             React.createElement("div", { className: "flex-grow overflow-y-auto p-4 space-y-4" },
-                chat.messages.map(msg => (
-                    React.createElement(Message, { key: msg.id, message: msg, senderName: msg.senderId === currentUser.id ? 'Tú' : otherUser.name, isOwnMessage: msg.senderId === currentUser.id })
-                )),
+                chat.messages.map(msg => {
+                    const sender = msg.senderId === exchange.owner.id ? exchange.owner : exchange.requester;
+                    return React.createElement(Message, { 
+                        key: msg.id, 
+                        message: msg, 
+                        senderName: sender.name, 
+                        isOwnMessage: msg.senderId === currentUser.id 
+                    })
+                }),
+
+                exchange.status === ExchangeStatus.Accepted && renderContactInfo("Datos de Contacto para el Intercambio"),
+                
+                exchange.status === ExchangeStatus.Completed && renderContactInfo("Datos del Intercambio Completado"),
+
                 React.createElement("div", { ref: messagesEndRef })
             ),
 
             error && React.createElement("p", { className: "text-red-500 text-sm text-center p-2" }, error),
-            
-            exchange.status === ExchangeStatus.Completed && (
-                React.createElement(DealCompletedInfo, { exchange: exchange, currentUser: currentUser })
-            ),
 
-            React.createElement(ActionBar, { 
+            !isViewingAsAdmin && React.createElement(ActionBar, { 
                 exchange: exchange, 
                 currentUser: currentUser,
                 onAccept: handleAccept,
@@ -308,7 +395,7 @@ const ChatDetailPage = () => {
                 isLoading: actionLoading
             }),
             
-            exchange.status !== ExchangeStatus.Completed && exchange.status !== ExchangeStatus.Rejected && (
+            !isViewingAsAdmin && exchange.status !== ExchangeStatus.Completed && exchange.status !== ExchangeStatus.Rejected && exchange.status !== ExchangeStatus.Cancelled && (
                 React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: isSending || actionLoading })
             ),
             

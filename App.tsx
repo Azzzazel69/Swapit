@@ -1,6 +1,4 @@
 
-
-
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
@@ -26,15 +24,19 @@ import OfflineBanner from './components/OfflineBanner.tsx';
 import CookieBanner from './components/CookieBanner.tsx';
 import AddItemPage from './pages/AddItemPage.tsx';
 import RateExchangePage from './pages/RateExchangePage.tsx';
+import AdminPage from './pages/AdminPage.tsx';
+import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
 import { initializePushNotifications, requestNotificationPermission } from './services/pushNotifications.ts';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 const App = () => {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({ style: Style.Dark });
       StatusBar.setBackgroundColor({ color: '#111827' }); // dark:bg-gray-900
+      SplashScreen.hide();
     }
   }, []);
 
@@ -68,7 +70,9 @@ const AppFooter = () => {
       React.createElement("div", { className: "mt-2" },
         React.createElement(Link, { to: "/terms-of-service", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Términos de Servicio"),
         "|",
-        React.createElement(Link, { to: "/cookie-policy", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Política de Cookies")
+        React.createElement(Link, { to: "/cookie-policy", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Política de Cookies"),
+        "|",
+        React.createElement(Link, { to: "/terms-of-service#privacy", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Política de Privacidad")
       )
     )
   );
@@ -95,6 +99,8 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/login", element: !user ? React.createElement(LoginPage, null) : React.createElement(Navigate, { to: "/" }) }),
     React.createElement(Route, { path: "/register", element: !user ? React.createElement(RegisterPage, null) : React.createElement(Navigate, { to: "/" }) }),
     React.createElement(Route, { path: "/forgot-password", element: !user ? React.createElement(ForgotPasswordPage, null) : React.createElement(Navigate, { to: "/" }) }),
+    React.createElement(Route, { path: "/verify-email", element: !user ? React.createElement(VerifyEmailPage, null) : React.createElement(Navigate, { to: "/" }) }),
+    React.createElement(Route, { path: "/verify-email/:token", element: !user ? React.createElement(VerifyEmailPage, null) : React.createElement(Navigate, { to: "/" }) }),
     React.createElement(Route, { path: "/onboarding", element: React.createElement(OnboardingGuard, null, React.createElement(OnboardingPage, null)) }),
     
     React.createElement(Route, { path: "/terms-of-service", element: React.createElement(TermsOfServicePage, null) }),
@@ -108,6 +114,8 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(RateExchangePage, null)) }),
     React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),
     React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(UserProfilePage, null)) }),
+    
+    React.createElement(Route, { path: "/admin", element: React.createElement(AdminRoute, null, React.createElement(AdminPage, null)) }),
 
     React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
   );
@@ -127,6 +135,14 @@ const ProtectedRoute = ({ children }) => {
     return React.createElement(Navigate, { to: "/onboarding", state: { from: location }, replace: true });
   }
 
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (!user || user.role !== 'SUPER_ADMIN') {
+    return React.createElement(Navigate, { to: "/", replace: true });
+  }
   return children;
 };
 

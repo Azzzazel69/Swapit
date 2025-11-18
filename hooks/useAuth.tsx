@@ -1,11 +1,5 @@
 
-
-
-
-
-
-
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../services/api.ts';
 
 const AuthContext = createContext(undefined);
@@ -24,6 +18,17 @@ export const AuthProvider = ({ children }) => {
     api.setToken(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+        const currentUser = await api.getCurrentUser();
+        setUser(currentUser);
+    } catch(error) {
+        console.error("Fallo al refrescar el usuario", error);
+        logout();
+        throw error; // Re-throw to allow callers to handle it
+    }
+  }, [logout]);
+
   const login = useCallback(async (newToken) => {
     if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('jwt_token', newToken);
@@ -31,27 +36,16 @@ export const AuthProvider = ({ children }) => {
     setToken(newToken);
     api.setToken(newToken);
     try {
-      const currentUser = await api.getCurrentUser();
-      setUser(currentUser);
+      await refreshUser();
     } catch (error) {
       console.error('Fallo al obtener el usuario al iniciar sesión:', error);
-      logout(); // Logout if user fetch fails
+      // logout() is already called inside refreshUser on failure
     }
-  }, [logout]);
+  }, [refreshUser]);
 
-  const refreshUser = async () => {
-    try {
-        const currentUser = await api.getCurrentUser();
-        setUser(currentUser);
-    } catch(error) {
-        console.error("Fallo al refrescar el usuario", error);
-        logout();
-    }
-  };
-
-  const updateUser = (updatedUser) => {
+  const updateUser = useCallback((updatedUser) => {
     setUser(updatedUser);
-  };
+  }, []);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -62,23 +56,25 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (storedToken) {
+        api.setToken(storedToken);
+        setToken(storedToken);
         try {
-          setToken(storedToken);
-          api.setToken(storedToken);
           await refreshUser();
         } catch (error) {
-          // Token might be expired or invalid
-          logout();
+          // Token might be expired or invalid. 
+          // `refreshUser` already called `logout`.
         }
       }
       setLoading(false);
     };
     initAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshUser]);
 
+  const value = useMemo(() => ({ user, token, loading, login, logout, updateUser, refreshUser }), 
+    [user, token, loading, login, logout, updateUser, refreshUser]
+  );
 
-  return React.createElement(AuthContext.Provider, { value: { user, token, loading, login, logout, updateUser, refreshUser } },
+  return React.createElement(AuthContext.Provider, { value: value },
       children
   );
 };

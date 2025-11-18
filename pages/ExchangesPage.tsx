@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
@@ -15,6 +16,7 @@ const ExchangeCard = (props) => {
         [ExchangeStatus.Accepted]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
         [ExchangeStatus.Rejected]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
         [ExchangeStatus.Completed]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+        [ExchangeStatus.Cancelled]: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200',
     };
     
     const offeredItemsPreview = exchange.offeredItems?.map(item => item.title).join(', ') || 'un artículo';
@@ -24,11 +26,14 @@ const ExchangeCard = (props) => {
         [ExchangeStatus.Accepted]: 'Aceptado - Confirmación Pendiente',
         [ExchangeStatus.Rejected]: 'Rechazado',
         [ExchangeStatus.Completed]: 'Completado',
+        [ExchangeStatus.Cancelled]: 'Cancelado',
     };
 
+    // Fix: Extract props to a variable to bypass excess property checking
+    const divProps = { onClick: (e: React.MouseEvent) => e.stopPropagation() };
 
     return React.createElement("div", { className: `relative flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}` },
-        React.createElement("div", { onClick: e => e.stopPropagation() },
+        React.createElement("div", divProps,
             React.createElement("input", {
                 type: "checkbox",
                 checked: isSelected,
@@ -145,7 +150,13 @@ const ExchangesPage = () => {
 
     const NotificationItem = ({ notification }) => {
         const isFavorite = notification.meta?.type === 'favorite';
-        const linkTo = isFavorite ? `/user/${notification.meta.userId}` : `/exchanges`;
+        const exchangeId = notification.meta?.exchangeId;
+        
+        const linkTo = isFavorite 
+            ? `/user/${notification.meta.userId}` 
+            : exchangeId 
+                ? `/chat/${exchangeId}` 
+                : '/exchanges';
         
         return (
             React.createElement(Link, { 
