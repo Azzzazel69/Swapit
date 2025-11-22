@@ -15,7 +15,8 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
 
     if (!items || items.length === 0) {
         if (title === "¡Matches Directos!") return null; // Ocultar si no hay matches
-        
+        if (title === "De tus Swappers Favoritos") return null; // Ocultar si no hay items de seguidos
+
         return (
             React.createElement("div", { className: "mb-12" },
                 React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
@@ -120,6 +121,7 @@ const HomePage = () => {
   const [directMatches, setDirectMatches] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [exploreItems, setExploreItems] = useState([]);
+  const [followedUsersItems, setFollowedUsersItems] = useState([]);
   const [totalExploreItems, setTotalExploreItems] = useState(0);
 
   const [loading, setLoading] = useState(true);
@@ -223,6 +225,7 @@ const HomePage = () => {
         setDirectMatches(data.directMatches || []);
         setRecommended(data.recommended || []);
         setExploreItems(data.exploreItems || []);
+        setFollowedUsersItems(data.followedUsersItems || []);
         setTotalExploreItems(data.totalExploreItems || 0);
         setHasMore((data.exploreItems?.length || 0) < (data.totalExploreItems || 0));
         setPage(1);
@@ -259,6 +262,7 @@ const HomePage = () => {
         setDirectMatches(updater);
         setRecommended(updater);
         setExploreItems(updater);
+        setFollowedUsersItems(updater);
     } catch (error) {
         console.error("Error toggling favorite", error);
         setError("No se pudo actualizar el estado de favorito.");
@@ -268,6 +272,7 @@ const HomePage = () => {
   const filteredMatches = useMemo(() => applySearch(directMatches, searchQuery, searchType), [directMatches, searchQuery, searchType]);
   const filteredRecommended = useMemo(() => applySearch(recommended, searchQuery, searchType), [recommended, searchQuery, searchType]);
   const filteredExplore = useMemo(() => applySearch(exploreItems, searchQuery, searchType), [exploreItems, searchQuery, searchType]);
+  const filteredFollowed = useMemo(() => applySearch(followedUsersItems, searchQuery, searchType), [followedUsersItems, searchQuery, searchType]);
 
 
   if (loading && exploreItems.length === 0) {
@@ -284,7 +289,7 @@ const HomePage = () => {
             React.createElement("div", { className: "h-11 bg-gray-200 dark:bg-gray-700 rounded-lg w-full md:w-1/2 lg:w-1/3 animate-pulse" }),
             React.createElement("div", { className: "h-11 bg-gray-200 dark:bg-gray-700 rounded-full w-24 animate-pulse" })
         ),
-        React.createElement("div", { className: `grid ${gridLayoutClasses[columnLayout] || 'grid-cols-2'} gap-4 md:gap-6` },
+        React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6" },
           [...Array(skeletonCount)].map((_, i) => React.createElement(ItemCardSkeleton, { key: i }))
         )
       )
@@ -344,6 +349,15 @@ const HomePage = () => {
         React.createElement(LayoutSelector, { layout: columnLayout, setLayout: handleSetLayout })
       )
     ),
+
+    React.createElement(ItemGroup, {
+        title: "De tus Swappers Favoritos",
+        icon: "⭐",
+        items: filteredFollowed,
+        onToggleFavorite: handleToggleFavorite,
+        emptyMessage: "Los usuarios que sigues aún no han subido nada nuevo.",
+        columns: columnLayout
+    }),
 
     React.createElement(ItemGroup, {
         title: "¡Matches Directos!",

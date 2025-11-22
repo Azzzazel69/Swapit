@@ -77,6 +77,19 @@ const LoginPage = () => {
     }
   };
 
+  const handleQuickLogin = async (uEmail, uPassword) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+          const { token } = await api.login(uEmail, uPassword);
+          await login(token);
+          await navigateAfterLogin();
+      } catch (err) {
+          setError(err.message);
+          setIsLoading(false);
+      }
+  };
+
   useEffect(() => {
     let timeoutId: any;
 
@@ -133,20 +146,6 @@ const LoginPage = () => {
     } catch (err)
       {
       setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleDevLogin = async (userEmail, userPass) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { token } = await api.login(userEmail, userPass);
-      await login(token);
-      await navigateAfterLogin();
-    } catch (err) {
-      setError("Error en el inicio de sesión de desarrollo.");
     } finally {
       setIsLoading(false);
     }
@@ -216,6 +215,17 @@ const LoginPage = () => {
         React.createElement("div", { className: "flex justify-center pt-4 h-[40px]" }, React.createElement(SwapSpinner, { size: 'md-small' }) )
       ),
 
+      // --- DEV BUTTONS START ---
+      React.createElement("div", { className: "mt-8 border-t border-gray-200 dark:border-gray-700 pt-6" },
+        React.createElement("h3", { className: "text-center text-xs font-bold text-gray-400 uppercase tracking-wide mb-3" }, "🛠️ Acceso Rápido (Pruebas)"),
+        React.createElement("div", { className: "grid grid-cols-2 gap-2" },
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('azzazel69@gmail.com', 'AdminPassword123'), className: "bg-yellow-100 dark:bg-yellow-900/50" }, "🛡️ Admin"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('carlos@test.com', 'password123') }, "👤 Carlos (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('pedro_troll@test.com', 'password123'), className: "bg-red-50 dark:bg-red-900/20" }, "👹 Pedro (Troll)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('scammer@test.com', 'password123'), className: "bg-orange-50 dark:bg-orange-900/20" }, "🤖 Bot (Scammer)")
+        )
+      ),
+      // --- DEV BUTTONS END ---
 
       React.createElement("p", { className: "mt-2 text-center text-sm text-gray-600 dark:text-gray-400" },
         "¿No tienes una cuenta?",
@@ -223,12 +233,6 @@ const LoginPage = () => {
         React.createElement(Link, { to: "/register", className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
           "Crea una aquí"
         )
-      ),
-      React.createElement("div", {className: "mt-6 border-t pt-4 space-y-2"},
-        React.createElement("p", {className: "text-center text-xs text-gray-500"}, "ACCESO RÁPIDO (DESARROLLO)"),
-        React.createElement(Button, { onClick: () => handleDevLogin('ana@example.com', 'Password123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Ana" }),
-        React.createElement(Button, { onClick: () => handleDevLogin('benito@example.com', 'Password456'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Benito" }),
-        React.createElement(Button, { onClick: () => handleDevLogin('azzazel69@gmail.com', 'AdminPassword123'), isLoading: isLoading, variant: "secondary", className: "w-full", children: "Entrar como Admin" })
       )
     )
   );

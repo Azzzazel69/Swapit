@@ -78,7 +78,7 @@ const RegisterPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.register(name, email, password, gender);
+      await api.register(name, email, password, gender, '');
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('cookie_consent', 'accepted');
       }
@@ -97,25 +97,6 @@ const RegisterPage = () => {
       } else {
           setError(err.message);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSkipLogin = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Pick a random user to login
-      const randomUser = Math.random() > 0.5 
-        ? { email: 'ana@example.com', pass: 'Password123' } 
-        : { email: 'benito@example.com', pass: 'Password456' };
-      
-      const { token } = await api.login(randomUser.email, randomUser.pass);
-      await login(token);
-      navigate('/');
-    } catch (err) {
-      setError("Error en el inicio de sesión de desarrollo.");
     } finally {
       setIsLoading(false);
     }
@@ -216,15 +197,6 @@ const RegisterPage = () => {
         React.createElement(Link, { to: "/login", className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
           "Inicia sesión"
         )
-      ),
-      React.createElement("div", {className: "mt-4"},
-        React.createElement(Button, { 
-          onClick: handleSkipLogin, 
-          isLoading: isLoading, 
-          variant: "secondary",
-          className: "w-full", 
-          children: "Omitir Registro (Desarrollo)" 
-        })
       )
     )
   );

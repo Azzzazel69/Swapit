@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api, viewHistoryService } from '../services/api.ts';
@@ -12,6 +11,7 @@ import { ItemCondition } from '../types.ts';
 import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
 import EditItemModal from '../components/EditItemModal.tsx';
 import ItemDetailSkeleton from '../components/ItemDetailSkeleton.tsx';
+import ReportModal from '../components/ReportModal.tsx';
 
 const ImageLightbox = (props) => {
   return React.createElement("div", 
@@ -53,6 +53,7 @@ const ItemDetailPage = () => {
   const [noItemsError, setNoItemsError] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
   useEffect(() => {
     const fetchItem = async () => {
@@ -148,6 +149,32 @@ const ItemDetailPage = () => {
     }
   };
 
+  const handleShare = async () => {
+      if (navigator.share) {
+          try {
+              await navigator.share({
+                  title: `Swapit: ${item.title}`,
+                  text: `¡Mira este artículo que encontré en Swapit! ${item.title}`,
+                  url: window.location.href,
+              });
+          } catch (error) {
+              console.log('Error sharing', error);
+          }
+      } else {
+          navigator.clipboard.writeText(window.location.href);
+          showToast('Enlace copiado al portapapeles', 'success');
+      }
+  };
+
+  const handleReport = async (reason) => {
+      try {
+          await api.reportContent(item.id, 'ITEM', reason);
+          showToast('Reporte enviado. Gracias por ayudar a la comunidad.', 'success');
+      } catch (err) {
+          showToast(err.message || 'Error al enviar el reporte.', 'error');
+      }
+  };
+
   if (loading) {
     return React.createElement(ItemDetailSkeleton, null);
   }
@@ -178,6 +205,12 @@ const ItemDetailPage = () => {
         onClose: () => setIsEditModalOpen(false),
         item: item,
         onSave: handleSaveItem,
+    }),
+    React.createElement(ReportModal, {
+        isOpen: isReportModalOpen,
+        onClose: () => setIsReportModalOpen(false),
+        title: "Reportar Artículo",
+        onSubmit: handleReport
     }),
     isModalOpen && React.createElement(ExchangeProposalModal, {
         isOpen: isModalOpen,
@@ -213,13 +246,27 @@ const ItemDetailPage = () => {
         },
           React.createElement("span", { className: "sr-only" }, "Cerrar"),
           React.createElement("svg", { className: "h-5 w-5", xmlns: "http://www.w3.org/2000/svg", fill: "currentColor", viewBox: "0 0 20 20" },
-            React.createElement("path", { fillRule:"evenodd", d:"M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z", clipRule:"evenodd" })
+            React.createElement("path", { fillRule:"evenodd", d:"M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z", clipRule:"evenodd" })
           )
         )
       )
     ),
-    React.createElement("button", { onClick: () => navigate(-1), className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline mb-4` },
-      "← Volver a los artículos"
+    React.createElement("div", { className: "flex justify-between items-center mb-4" },
+        React.createElement("button", { onClick: () => navigate(-1), className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline` },
+          "← Volver a los artículos"
+        ),
+        React.createElement("div", { className: "flex gap-2" },
+            React.createElement("button", { 
+                onClick: handleShare, 
+                className: "p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors",
+                title: "Compartir"
+            }, ICONS.share),
+            !isOwnItem && React.createElement("button", { 
+                onClick: () => setIsReportModalOpen(true),
+                className: "p-2 text-gray-400 hover:text-red-500 transition-colors",
+                title: "Reportar artículo"
+            }, ICONS.flag)
+        )
     ),
     React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-8" },
       React.createElement("div", null,

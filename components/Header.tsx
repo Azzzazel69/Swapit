@@ -1,7 +1,4 @@
 
-
-
-
 import React from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -13,7 +10,7 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
-  const APP_VERSION = "1.0";
+  const APP_VERSION = "1.1 (Test Mode)";
 
   const activeLinkClass = `bg-gray-200 dark:bg-gray-700`;
   const inactiveLinkClass = 'hover:bg-gray-200 dark:hover:bg-gray-700';
@@ -30,10 +27,10 @@ const Header = () => {
       React.createElement("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8" },
         React.createElement("div", { className: "flex items-center justify-between h-16" },
           
-          // Left side: User Profile link
+          // Left side: User Profile link (Desktop only, moves to bottom nav on mobile)
           React.createElement("div", { className: "flex-1 flex items-center justify-start" },
             user && (
-              React.createElement("div", { className: "flex items-center gap-2" },
+              React.createElement("div", { className: "hidden md:flex items-center gap-2" },
                 React.createElement(NavLink, { 
                   to: "/profile", 
                   className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2` 
@@ -54,19 +51,55 @@ const Header = () => {
             )
           ),
 
-          // Center: Logo
-          React.createElement("div", { className: "flex-shrink-0 px-4 flex items-center gap-2" },
+          // Center: Logo (Dual Mask Implementation)
+          React.createElement("div", { className: "flex-shrink-0 px-4 flex items-center gap-1" },
             React.createElement(Link, { 
               to: "/", 
-              className: `flex items-center gap-2 text-3xl font-bold ${theme.textGradient} transition-transform hover:scale-105`,
+              className: "block transition-transform hover:scale-105 relative",
               title: "Página de inicio"
             },
-              React.createElement("span", { className: "transform rotate-12" }, ICONS.swap),
-              "Swapit"
+               /* 
+                 LOGIC: Dual Layer Logo 
+                 1. Layer 'Dynamic': The border and "IT" text. Takes the theme gradient.
+                 2. Layer 'Static': The "SWAP" text. Takes a solid color (white in dark mode, dark gray in light mode).
+                 
+                 Requires two files in /public:
+                 - logo_dynamic.png (The border + IT shape)
+                 - logo_static.png (The SWAP text shape)
+              */
+              React.createElement("div", { className: "relative h-10 w-32" },
+                  // Layer 1: Dynamic Gradient (Border + IT)
+                  React.createElement("div", {
+                    className: `absolute inset-0 bg-gradient-to-r ${theme.bg}`,
+                    style: {
+                        maskImage: 'url(/logo_dynamic.png)',
+                        WebkitMaskImage: 'url(/logo_dynamic.png)',
+                        maskSize: 'contain',
+                        WebkitMaskSize: 'contain',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskPosition: 'center',
+                        WebkitMaskPosition: 'center'
+                    }
+                  }),
+                  // Layer 2: Static Color (SWAP) - Dark text in light mode, White text in dark mode
+                  React.createElement("div", {
+                    className: `absolute inset-0 bg-gray-800 dark:bg-white`,
+                    style: {
+                        maskImage: 'url(/logo_static.png)',
+                        WebkitMaskImage: 'url(/logo_static.png)',
+                        maskSize: 'contain',
+                        WebkitMaskSize: 'contain',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskPosition: 'center',
+                        WebkitMaskPosition: 'center'
+                    }
+                  })
+              )
             ),
-            React.createElement("div", { className: "flex flex-col items-start -ml-1 self-end mb-1" },
-              React.createElement("span", { className: "text-xs italic text-gray-400 leading-none" }, "(beta)"),
-              React.createElement("span", { className: "text-xs font-semibold text-gray-500 dark:text-gray-400 leading-none" }, `Versión ${APP_VERSION}`)
+            React.createElement("div", { className: "flex flex-col items-start self-end mb-2" },
+              React.createElement("span", { className: "text-[10px] font-bold text-gray-400 dark:text-gray-500 leading-none" }, `${APP_VERSION}`)
             )
           ),
 
@@ -74,14 +107,22 @@ const Header = () => {
           React.createElement("div", { className: "flex-1 flex items-center justify-end gap-2 sm:gap-4" },
             user ? (
               React.createElement(React.Fragment, null,
+                // Desktop: Show Inbox
                 React.createElement(Link, { 
                     to: "/exchanges", 
                     title: "Buzón",
-                    className: "relative p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
+                    className: "hidden md:flex relative p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
                   },
                     ICONS.envelope,
                     React.createElement(NotificationBadge, null)
                   ),
+                // Mobile: Admin icon if applicable (since profile moves to bottom, admin needs a place or stay in hamburger menu, keeping here for now)
+                user.role === 'SUPER_ADMIN' && (
+                     React.createElement(Link, {
+                        to: "/admin",
+                        className: "md:hidden p-2 text-yellow-500"
+                     }, ICONS_ADMIN.shield)
+                ),
                 React.createElement("button", { 
                   onClick: logout, 
                   title: "Cerrar Sesión",

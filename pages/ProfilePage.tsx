@@ -102,6 +102,10 @@ const ProfilePage = () => {
     const [locationData, setLocationData] = useState(user?.location || { country: '', city: '', postalCode: '', address: '' });
     const [contactCard, setContactCard] = useState(user?.contactCard || { enabled: false, name: '', email: '', phone: '', meetingPoint: '', preferredSchedule: '' });
     
+    // Notification Settings
+    const [notificationSettings, setNotificationSettings] = useState(user?.notificationSettings || { newItemsFromFavorites: true });
+    const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
+
     // Phone verification state
     const [phone, setPhone] = useState(user?.phone || '');
     const [code, setCode] = useState('');
@@ -144,6 +148,7 @@ const ProfilePage = () => {
             setLocationData(user.location || { country: 'España', city: '', postalCode: '', address: '' });
             setPhone(user.phone || '');
             setContactCard(user.contactCard || { enabled: false, name: user.name, email: user.email, phone: user.phone, meetingPoint: '', preferredSchedule: '' });
+            setNotificationSettings(user.notificationSettings || { newItemsFromFavorites: true });
         }
     }, [user]);
 
@@ -271,6 +276,22 @@ const ProfilePage = () => {
         }
     };
     
+    const handleToggleNotification = async (key) => {
+        const newSettings = { ...notificationSettings, [key]: !notificationSettings[key] };
+        setNotificationSettings(newSettings);
+        setIsUpdatingNotifications(true);
+        try {
+            const updatedUser = await api.updateNotificationSettings(newSettings);
+            updateUser(updatedUser);
+        } catch (err) {
+            showToast('Error al guardar la configuración de notificaciones.', 'error');
+            // Revert state on error
+            setNotificationSettings({ ...notificationSettings, [key]: notificationSettings[key] });
+        } finally {
+            setIsUpdatingNotifications(false);
+        }
+    };
+    
     const handleDeleteItem = async (itemId) => {
         if (window.confirm('¿Estás seguro de que quieres eliminar este artículo?')) {
             setDeletingItemId(itemId);
@@ -314,8 +335,10 @@ const ProfilePage = () => {
                     ) : (
                         React.createElement("form", { onSubmit: handleVerifyCode, className: "space-y-4" },
                             React.createElement("p", { className: "text-sm text-green-600" }, "Código enviado a ", phone, " (Pista: 123456)"),
-                            React.createElement(Input, { id: "code-reverify", label: "Código de Verificación", type: "text", value: code, onChange: e => setCode(e.target.value), required: true }),
-                            React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Verificar y Guardar" })
+                            React.createElement("div", { className: "flex items-center gap-2" },
+                                React.createElement(Input, { id: "code-reverify", label: "Código de Verificación", type: "text", value: code, onChange: e => setCode(e.target.value), required: true }),
+                                React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Verificar" })
+                            )
                         )
                     )
                 )
@@ -427,6 +450,35 @@ const ProfilePage = () => {
             ),
              React.createElement("div", { className: "flex justify-end mt-4" },
                 React.createElement(Button, { onClick: handleSaveContactCard, isLoading: isLoading, children: "Guardar Tarjeta" })
+            )
+        ),
+        
+        React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
+            React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white mb-4 border-b dark:border-gray-700 pb-3" }, "Configuración de Notificaciones"),
+            React.createElement("div", { className: "space-y-4" },
+                React.createElement("div", { className: "flex items-center justify-between" },
+                    React.createElement("div", null,
+                        React.createElement("p", { className: "font-medium text-gray-900 dark:text-white" }, "Avisarme cuando mis Swappers favoritos publiquen un nuevo artículo"),
+                        React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "Recibe una alerta instantánea cuando un usuario que sigues suba algo.")
+                    ),
+                    React.createElement("label", { htmlFor: "toggle-favorites-notif", className: "relative inline-flex items-center cursor-pointer" },
+                        React.createElement("input", { 
+                            type: "checkbox", 
+                            id: "toggle-favorites-notif", 
+                            className: "sr-only peer", 
+                            checked: notificationSettings.newItemsFromFavorites, 
+                            onChange: () => handleToggleNotification('newItemsFromFavorites'),
+                            disabled: isUpdatingNotifications
+                        }),
+                        React.createElement("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
+                    )
+                ),
+                React.createElement("div", { className: "mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md" },
+                    React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-300" }, 
+                        React.createElement("strong", null, "Nota: "),
+                        "Algunas notificaciones importantes no se pueden desactivar, como las nuevas propuestas de intercambio, los mensajes del chat y las actualizaciones de estado de tus transacciones."
+                    )
+                )
             )
         ),
         
