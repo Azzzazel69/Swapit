@@ -10,7 +10,7 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
-  const APP_VERSION = "1.1 (Test Mode)";
+  const APP_VERSION = "1.2 (Test Mode)";
 
   const activeLinkClass = `bg-gray-200 dark:bg-gray-700`;
   const inactiveLinkClass = 'hover:bg-gray-200 dark:hover:bg-gray-700';
@@ -27,7 +27,7 @@ const Header = () => {
       React.createElement("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8" },
         React.createElement("div", { className: "flex items-center justify-between h-16" },
           
-          // Left side: User Profile link (Desktop only, moves to bottom nav on mobile)
+          // Left side: User Profile link
           React.createElement("div", { className: "flex-1 flex items-center justify-start" },
             user && (
               React.createElement("div", { className: "hidden md:flex items-center gap-2" },
@@ -51,24 +51,14 @@ const Header = () => {
             )
           ),
 
-          // Center: Logo (Dual Mask Implementation)
+          // Center: Logo
           React.createElement("div", { className: "flex-shrink-0 px-4 flex items-center gap-1" },
             React.createElement(Link, { 
               to: "/", 
               className: "block transition-transform hover:scale-105 relative",
               title: "Página de inicio"
             },
-               /* 
-                 LOGIC: Dual Layer Logo 
-                 1. Layer 'Dynamic': The border and "IT" text. Takes the theme gradient.
-                 2. Layer 'Static': The "SWAP" text. Takes a solid color (white in dark mode, dark gray in light mode).
-                 
-                 Requires two files in /public:
-                 - logo_dynamic.png (The border + IT shape)
-                 - logo_static.png (The SWAP text shape)
-              */
               React.createElement("div", { className: "relative h-10 w-32" },
-                  // Layer 1: Dynamic Gradient (Border + IT)
                   React.createElement("div", {
                     className: `absolute inset-0 bg-gradient-to-r ${theme.bg}`,
                     style: {
@@ -82,7 +72,6 @@ const Header = () => {
                         WebkitMaskPosition: 'center'
                     }
                   }),
-                  // Layer 2: Static Color (SWAP) - Dark text in light mode, White text in dark mode
                   React.createElement("div", {
                     className: `absolute inset-0 bg-gray-800 dark:bg-white`,
                     style: {
@@ -107,16 +96,15 @@ const Header = () => {
           React.createElement("div", { className: "flex-1 flex items-center justify-end gap-2 sm:gap-4" },
             user ? (
               React.createElement(React.Fragment, null,
-                // Desktop: Show Inbox
+                // Inbox Icon (Badge visible on both Desktop and Mobile)
                 React.createElement(Link, { 
                     to: "/exchanges", 
                     title: "Buzón",
-                    className: "hidden md:flex relative p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
+                    className: "relative p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
                   },
                     ICONS.envelope,
                     React.createElement(NotificationBadge, null)
                   ),
-                // Mobile: Admin icon if applicable (since profile moves to bottom, admin needs a place or stay in hamburger menu, keeping here for now)
                 user.role === 'SUPER_ADMIN' && (
                      React.createElement(Link, {
                         to: "/admin",

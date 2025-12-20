@@ -220,7 +220,12 @@ const LoginPage = () => {
         React.createElement("h3", { className: "text-center text-xs font-bold text-gray-400 uppercase tracking-wide mb-3" }, "🛠️ Acceso Rápido (Pruebas)"),
         React.createElement("div", { className: "grid grid-cols-2 gap-2" },
             React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('azzazel69@gmail.com', 'AdminPassword123'), className: "bg-yellow-100 dark:bg-yellow-900/50" }, "🛡️ Admin"),
-            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('carlos@test.com', 'password123') }, "👤 Carlos (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('carlos@test.com', 'password123') }, "Carlos (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('lucia@test.com', 'password123') }, "Lucía (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('ana@test.com', 'password123') }, "Ana (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('miguel@test.com', 'password123') }, "Miguel (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('elena@test.com', 'password123') }, "Elena (User)"),
+            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('david@test.com', 'password123') }, "David (User)"),
             React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('pedro_troll@test.com', 'password123'), className: "bg-red-50 dark:bg-red-900/20" }, "👹 Pedro (Troll)"),
             React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => handleQuickLogin('scammer@test.com', 'password123'), className: "bg-orange-50 dark:bg-orange-900/20" }, "🤖 Bot (Scammer)")
         )

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { api } from '../services/api.ts';
+import { api, DEFAULT_AVATAR_NEUTRAL } from '../services/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
@@ -12,20 +12,38 @@ import { ICONS } from '../constants.tsx';
 import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
 import ReportModal from '../components/ReportModal.tsx';
 import { useToast } from '../hooks/useToast.tsx';
+import BanUserModal from '../components/BanUserModal.tsx';
 
-const ContactCardContent = ({ contactCard, avatarUrl }) => {
-    const canShare = contactCard?.name && contactCard?.phone;
-    const handleShare = () => { if (navigator.share && canShare) { navigator.share({ title: `Contacto de ${contactCard.name}`, text: `Tel: ${contactCard.phone}` }).catch(console.log); } };
-    const handleAddToContacts = () => { /*...*/ }; 
+const ContactCard = ({ contactCard, avatarUrl, theme }) => {
+    if (!contactCard || !contactCard.enabled) return null;
+
     return (
-        React.createElement("div", { className: "mt-4 text-left p-4 bg-white dark:bg-gray-800 rounded-lg shadow-inner max-w-sm mx-auto" },
-            React.createElement("div", { className: "flex items-center gap-4 mb-4" },
-                React.createElement("img", { src: avatarUrl, alt: contactCard.name, className: "w-16 h-16 rounded-full object-cover" }),
-                React.createElement("div", null, React.createElement("p", { className: "text-lg font-bold" }, contactCard.name))
-            ),
-            React.createElement("div", { className: "space-y-3" },
-                contactCard.email && React.createElement("p", null, contactCard.email),
-                contactCard.phone && React.createElement("p", null, contactCard.phone)
+        React.createElement("div", { className: "mt-2 mb-4 animate-fade-in-up" },
+            React.createElement("div", { className: "bg-white dark:bg-gray-800 border-2 border-dashed border-blue-400 dark:border-blue-500 rounded-xl p-4 shadow-sm relative overflow-hidden" },
+                React.createElement("div", { className: "absolute top-0 right-0 p-2 opacity-10" }, 
+                    React.cloneElement(ICONS.card, { className: "w-12 h-12" })
+                ),
+                React.createElement("div", { className: "flex items-start gap-4" },
+                    React.createElement("img", { src: avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: "w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" }),
+                    React.createElement("div", { className: "flex-grow" },
+                        React.createElement("p", { className: "text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1" }, "Datos de contacto compartidos"),
+                        React.createElement("h3", { className: "text-lg font-bold text-gray-900 dark:text-white" }, contactCard.name),
+                        React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2" },
+                            contactCard.phone && React.createElement("a", { href: `tel:${contactCard.phone}`, className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500" }, 
+                                ICONS.phone, contactCard.phone
+                            ),
+                            contactCard.email && React.createElement("a", { href: `mailto:${contactCard.email}`, className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500" }, 
+                                ICONS.envelope, contactCard.email
+                            ),
+                            contactCard.meetingPoint && React.createElement("div", { className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 col-span-full" }, 
+                                ICONS.meetingPoint, React.createElement("span", null, React.createElement("strong", null, "Punto: "), contactCard.meetingPoint)
+                            ),
+                            contactCard.preferredSchedule && React.createElement("div", { className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 col-span-full" }, 
+                                ICONS.schedule, React.createElement("span", null, React.createElement("strong", null, "Horario: "), contactCard.preferredSchedule)
+                            )
+                        )
+                    )
+                )
             )
         )
     );
@@ -49,7 +67,6 @@ const Message = ({ message, senderName, isOwnMessage, isAdminView, onCensor }) =
         ),
         React.createElement("p", { className: "text-xs text-gray-400 mt-1" }, new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
         
-        // Admin Censor Button
         isAdminView && message.text !== "[CONTENIDO ELIMINADO POR MODERACIÓN]" && (
             React.createElement("button", { 
                 onClick: () => onCensor(message.id),
@@ -100,13 +117,34 @@ const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onMod
     
     if (exchange.status === ExchangeStatus.Rejected) return React.createElement("div", { className: "p-3 bg-red-50 text-center" }, "Propuesta Rechazada");
     if (exchange.status === ExchangeStatus.Cancelled) return React.createElement("div", { className: "p-3 bg-gray-100 text-center" }, "Cancelado");
+    
     if (exchange.status === ExchangeStatus.Pending) {
         if (isOwner) return React.createElement("div", { className: "p-3 flex justify-center gap-4" }, React.createElement(Button, { onClick: onAccept, size: "sm", children: "Aceptar" }), React.createElement(Button, { onClick: onReject, variant: "danger", size: "sm", children: "Rechazar" }), React.createElement(Button, { onClick: onCounterOffer, variant: "secondary", size: "sm", children: "Contraoferta" }));
         if (isRequester) return React.createElement("div", { className: "p-3 text-center" }, React.createElement("p", {className:"mb-2"}, "Esperando respuesta"), React.createElement(Button, { onClick: onModify, variant: "secondary", size: "sm", children: "Modificar" }));
     }
+    
     if (exchange.status === ExchangeStatus.Accepted) {
-        const alreadyConfirmed = (isOwner && exchange.confirmedByOwner) || (isRequester && exchange.confirmedByRequester);
-        return React.createElement("div", { className: "p-3 text-center bg-blue-50" }, alreadyConfirmed ? "Esperando al otro usuario" : React.createElement(Button, { onClick: onConfirm, size: "sm", children: "Confirmar Intercambio" }));
+        const acceptedDate = exchange.acceptedAt ? new Date(exchange.acceptedAt) : new Date();
+        const now = new Date();
+        const diffMs = now.getTime() - acceptedDate.getTime();
+        const isNextDay = diffMs >= 24 * 60 * 60 * 1000;
+
+        if (!isNextDay) {
+            return React.createElement("div", { className: "p-4 text-center bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700" },
+                React.createElement("p", { className: "text-sm font-medium text-blue-800 dark:text-blue-200" }, 
+                    "¡Propuesta aceptada! Realizad el intercambio. Podréis votar a partir de mañana."
+                )
+            );
+        }
+
+        return React.createElement("div", { className: "p-3 text-center bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700" },
+            React.createElement(Button, { 
+                onClick: onConfirm, 
+                size: "sm", 
+                className: "w-full max-w-md mx-auto",
+                children: "Intercambio realizado, proceder a las votaciones" 
+            })
+        );
     }
     return null;
 };
@@ -116,6 +154,7 @@ const ChatDetailPage = () => {
     const { user: currentUser } = useAuth();
     const { showConfetti } = useConfetti();
     const { showToast } = useToast();
+    const { theme } = useColorTheme();
     const navigate = useNavigate();
     const [chat, setChat] = useState(null);
     const [exchange, setExchange] = useState(null);
@@ -126,8 +165,13 @@ const ChatDetailPage = () => {
     const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
     const [userItems, setUserItems] = useState([]);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    
+    const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+    const [userToBan, setUserToBan] = useState(null);
 
     const messagesEndRef = useRef(null);
+    const prevStatusRef = useRef(null);
+    const confettiFiredRef = useRef(false);
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     
     const fetchData = useCallback(async (isInitialLoad = false) => {
@@ -137,6 +181,11 @@ const ChatDetailPage = () => {
             const { chat: fetchedChat, exchange: fetchedExchange } = await api.getChatAndExchangeDetails(exchangeId);
             setChat(fetchedChat);
             setExchange(fetchedExchange);
+            
+            if (exchangeId) {
+                await api.markChatAsRead(exchangeId);
+            }
+
             if (isInitialLoad) setError(null);
         } catch (err) {
             if (isInitialLoad) setError('Error al cargar el chat.');
@@ -152,6 +201,19 @@ const ChatDetailPage = () => {
         return () => { isMounted = false; clearInterval(intervalId); };
     }, [fetchData]);
 
+    // Lógica de Confeti al aceptar el trato
+    useEffect(() => {
+        if (exchange?.status === ExchangeStatus.Accepted && prevStatusRef.current === ExchangeStatus.Pending) {
+            if (!confettiFiredRef.current) {
+                showConfetti();
+                confettiFiredRef.current = true;
+            }
+        }
+        if (exchange) {
+            prevStatusRef.current = exchange.status;
+        }
+    }, [exchange?.status, showConfetti]);
+
     useEffect(scrollToBottom, [chat?.messages]);
 
     const handleAction = async (actionFn) => {
@@ -163,18 +225,31 @@ const ChatDetailPage = () => {
     const handleAccept = () => handleAction(() => api.respondToExchange(exchangeId, 'ACCEPT'));
     const handleReject = () => handleAction(() => api.respondToExchange(exchangeId, 'REJECT'));
     const handleNavigateToRating = () => navigate(`/rate-exchange/${exchangeId}`);
-    const handleModify = async () => { /*...*/ setIsModifyModalOpen(true); }; 
+    const handleModify = async () => { setIsModifyModalOpen(true); }; 
     const handleSubmitModification = (data) => { setIsModifyModalOpen(false); handleAction(() => api.modifyExchangeProposal(exchangeId, data)); };
     const handleCounterOffer = () => navigate(`/user/${exchange.requester.id}?fromExchange=${exchange.id}`);
 
-    // --- Admin Actions ---
-    const handleBanUser = async (userId, userName) => {
-        if(window.confirm(`¿Estás seguro de que quieres banear a ${userName}?`)) {
-            try {
-                await api.banUser(userId);
-                alert(`Usuario ${userName} baneado/desbaneado.`);
-                fetchData(true);
-            } catch(e) { alert(e.message); }
+    const handleBanClick = (user) => {
+        if (user.isBanned) {
+            handleBanConfirm(user.id, null);
+        } else {
+            setUserToBan(user);
+            setIsBanModalOpen(true);
+        }
+    };
+
+    const handleBanConfirm = async (reasonOrId, details = null) => {
+        const userId = userToBan ? userToBan.id : reasonOrId;
+        const finalReason = userToBan ? reasonOrId : null;
+        
+        try {
+            await api.banUser(userId, finalReason, details);
+            showToast('Estado del usuario actualizado.', 'success');
+            setIsBanModalOpen(false);
+            setUserToBan(null);
+            fetchData(true);
+        } catch(e) {
+            showToast(e.message, 'error');
         }
     };
 
@@ -201,24 +276,31 @@ const ChatDetailPage = () => {
     if (!chat || !exchange || !currentUser) return React.createElement("div", { className: "text-center" }, "Chat no encontrado.");
 
     const isViewingAsAdmin = currentUser.role === 'SUPER_ADMIN';
+    const otherUser = exchange.ownerId === currentUser.id ? exchange.requester : exchange.owner;
+    const isOtherUserBanned = otherUser?.isBanned;
+    const isAccepted = exchange.status === ExchangeStatus.Accepted || exchange.status === ExchangeStatus.Completed;
 
     return (
         React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_4rem_-_2.5rem_-_env(safe-area-inset-bottom,0))] md:h-[calc(100vh_-_4.5rem_-_3rem_-_env(safe-area-inset-bottom,0))] bg-gray-50 dark:bg-gray-900 max-w-4xl mx-auto rounded-lg shadow-lg border dark:border-gray-700" },
+            React.createElement(BanUserModal, {
+                isOpen: isBanModalOpen,
+                onClose: () => setIsBanModalOpen(false),
+                onConfirm: handleBanConfirm,
+                userName: userToBan?.name || ''
+            }),
             React.createElement(ReportModal, {
                 isOpen: isReportModalOpen,
                 onClose: () => setIsReportModalOpen(false),
                 title: "Reportar Chat",
                 onSubmit: handleReport
             }),
-            // Header
             React.createElement("div", { className: "p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg flex flex-col justify-center relative" },
                 React.createElement("div", { className: "flex items-center justify-center gap-3 relative" },
-                    React.createElement("img", { src: exchange.requester.avatarUrl, className: "w-8 h-8 rounded-full" }),
-                    React.createElement("h1", { className: "text-lg font-bold" }, `${exchange.requester.name} ⇄ ${exchange.owner.name}`),
-                    React.createElement("img", { src: exchange.owner.avatarUrl, className: "w-8 h-8 rounded-full" }),
+                    React.createElement("img", { src: exchange.requester?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: `w-8 h-8 rounded-full ${exchange.requester?.isBanned ? 'grayscale opacity-50' : ''}` }),
+                    React.createElement("h1", { className: "text-lg font-bold" }, `${exchange.requester?.name || 'Usuario'} ⇄ ${exchange.owner?.name || 'Usuario'}`),
+                    React.createElement("img", { src: exchange.owner?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: `w-8 h-8 rounded-full ${exchange.owner?.isBanned ? 'grayscale opacity-50' : ''}` }),
                     
-                    // User Report Button (Only for participants, not admin)
-                    !isViewingAsAdmin && (
+                    !isViewingAsAdmin && !isOtherUserBanned && (
                         React.createElement("button", { 
                             onClick: () => setIsReportModalOpen(true),
                             className: "absolute right-0 text-gray-400 hover:text-red-500 transition-colors p-2",
@@ -229,32 +311,53 @@ const ChatDetailPage = () => {
                 isViewingAsAdmin && (
                     React.createElement("div", { className: "flex justify-center gap-2 mt-2" },
                         React.createElement("span", { className: "text-xs font-bold bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full mr-2" }, "ADMIN MODE"),
-                        React.createElement(Button, { size: "sm", variant: "danger", className: "!py-0 !px-2 !text-xs", onClick: () => handleBanUser(exchange.requester.id, exchange.requester.name) }, `Ban ${exchange.requester.name}`),
-                        React.createElement(Button, { size: "sm", variant: "danger", className: "!py-0 !px-2 !text-xs", onClick: () => handleBanUser(exchange.owner.id, exchange.owner.name) }, `Ban ${exchange.owner.name}`)
+                        React.createElement(Button, { 
+                            size: "sm", 
+                            variant: exchange.requester?.isBanned ? "primary" : "danger", 
+                            className: "!py-0 !px-2 !text-xs", 
+                            onClick: (e) => { e.preventDefault(); e.stopPropagation(); handleBanClick(exchange.requester); } 
+                        }, exchange.requester?.isBanned ? `Unban ${exchange.requester?.name}` : `Ban ${exchange.requester?.name}`),
+                        React.createElement(Button, { 
+                            size: "sm", 
+                            variant: exchange.owner?.isBanned ? "primary" : "danger", 
+                            className: "!py-0 !px-2 !text-xs", 
+                            onClick: (e) => { e.preventDefault(); e.stopPropagation(); handleBanClick(exchange.owner); } 
+                        }, exchange.owner?.isBanned ? `Unban ${exchange.owner?.name}` : `Ban ${exchange.owner?.name}`)
                     )
+                )
+            ),
+            
+            !isViewingAsAdmin && isOtherUserBanned && (
+                React.createElement("div", { className: "bg-red-500 text-white p-2 text-center text-sm font-bold" },
+                    "🚫 Chat congelado: El usuario ha sido suspendido."
                 )
             ),
             
             React.createElement(MemoizedItemBar, { exchange: exchange }),
             
-            // Messages
-            React.createElement("div", { className: "flex-grow overflow-y-auto p-4 space-y-4" },
-                chat.messages.map(msg => {
-                    const sender = msg.senderId === exchange.owner.id ? exchange.owner : exchange.requester;
-                    return React.createElement(Message, { 
-                        key: msg.id, 
-                        message: msg, 
-                        senderName: sender.name, 
-                        isOwnMessage: msg.senderId === currentUser.id,
-                        isAdminView: isViewingAsAdmin,
-                        onCensor: handleCensorMessage
-                    })
+            React.createElement("div", { className: "flex-grow overflow-y-auto p-4 flex flex-col" },
+                isAccepted && !isOtherUserBanned && React.createElement(ContactCard, { 
+                    contactCard: otherUser.contactCard, 
+                    avatarUrl: otherUser.avatarUrl,
+                    theme: theme
                 }),
-                React.createElement("div", { ref: messagesEndRef })
+                React.createElement("div", { className: "space-y-4 flex flex-col" },
+                    chat.messages.map(msg => {
+                        const sender = msg.senderId === exchange.owner?.id ? exchange.owner : exchange.requester;
+                        return React.createElement(Message, { 
+                            key: msg.id, 
+                            message: msg, 
+                            senderName: sender?.name || 'Usuario', 
+                            isOwnMessage: msg.senderId === currentUser.id,
+                            isAdminView: isViewingAsAdmin,
+                            onCensor: handleCensorMessage
+                        })
+                    }),
+                    React.createElement("div", { ref: messagesEndRef })
+                )
             ),
 
-            // Controls
-            !isViewingAsAdmin && React.createElement(ActionBar, { 
+            !isViewingAsAdmin && !isOtherUserBanned && React.createElement(ActionBar, { 
                 exchange: exchange, 
                 currentUser: currentUser,
                 onAccept: handleAccept,
@@ -265,7 +368,7 @@ const ChatDetailPage = () => {
                 isLoading: actionLoading
             }),
             
-            !isViewingAsAdmin && exchange.status !== ExchangeStatus.Completed && exchange.status !== ExchangeStatus.Rejected && exchange.status !== ExchangeStatus.Cancelled && (
+            !isViewingAsAdmin && !isOtherUserBanned && exchange.status !== ExchangeStatus.Completed && exchange.status !== ExchangeStatus.Rejected && exchange.status !== ExchangeStatus.Cancelled && (
                 React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: isSending || actionLoading })
             ),
             

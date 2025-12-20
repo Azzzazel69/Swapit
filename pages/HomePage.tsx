@@ -39,7 +39,6 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
         React.createElement("div", { className: "mb-12" },
             React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
             React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4 md:gap-6` },
-                // Fix: Pass missing 'onDelete' and 'deletingItemId' props to ItemCard
                 items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns, onDelete: undefined, deletingItemId: undefined }))
             )
         )
@@ -138,15 +137,18 @@ const HomePage = () => {
   const { theme } = useColorTheme();
   
   const [columnLayout, setColumnLayout] = useState(() => {
+    // 1. Prioridad: Local Storage (Decisión explícita del usuario en el navegador)
     if (typeof window !== 'undefined' && window.localStorage) {
         const savedLayout = window.localStorage.getItem('swapit_column_layout');
         if (savedLayout && !isNaN(parseInt(savedLayout, 10))) {
             return parseInt(savedLayout, 10);
         }
     }
+    // 2. Prioridad: Perfil del usuario (Si hay uno guardado en la "base de datos")
     if (user?.columnLayout) {
         return user.columnLayout;
     }
+    // 3. Fallback: Detección automática por tamaño de pantalla
     if (typeof window !== 'undefined') {
         return window.innerWidth < 768 ? 2 : 4;
     }
@@ -187,7 +189,6 @@ const HomePage = () => {
         }
     };
   
-  // Fix: Add type to useRef for IntersectionObserver
   const observer = useRef<IntersectionObserver>(null);
 
   const loadMoreItems = useCallback(async () => {
@@ -277,12 +278,6 @@ const HomePage = () => {
 
   if (loading && exploreItems.length === 0) {
     const skeletonCount = 8;
-    const gridLayoutClasses = {
-        1: 'grid-cols-1',
-        2: 'grid-cols-2',
-        3: 'grid-cols-3',
-        4: 'grid-cols-4',
-    };
     return (
       React.createElement("div", null,
         React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between items-center" },

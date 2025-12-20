@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
@@ -125,14 +126,21 @@ const UserProfilePage = () => {
     }
     
     const isOwnProfile = currentUser?.id === userId;
+    const isBanned = profile.isBanned;
 
     return React.createElement("div", null,
+        isBanned && (
+            React.createElement("div", { className: "bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6", role: "alert" },
+                React.createElement("p", { className: "font-bold" }, "Cuenta Suspendida"),
+                React.createElement("p", null, "Este usuario ha sido suspendido por violar las normas de la comunidad. Sus artículos y perfil no están disponibles.")
+            )
+        ),
         React.createElement("div", { className: "mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col sm:flex-row items-center gap-6" },
-            React.createElement("img", { src: profile.avatarUrl, alt: "Avatar", className: "w-24 h-24 rounded-full object-cover shadow-lg" }),
+            React.createElement("img", { src: profile.avatarUrl, alt: "Avatar", className: `w-24 h-24 rounded-full object-cover shadow-lg ${isBanned ? 'grayscale opacity-50' : ''}` }),
             React.createElement("div", { className: "flex flex-col gap-2 flex-grow text-center sm:text-left" },
                 React.createElement("div", { className: "flex flex-col sm:flex-row items-center gap-3" },
-                    React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Perfil de ", profile.name),
-                    !isOwnProfile && currentUser && (
+                    React.createElement("h1", { className: `text-3xl font-bold ${isBanned ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}` }, profile.name),
+                    !isOwnProfile && currentUser && !isBanned && (
                         React.createElement(Button, {
                             onClick: handleToggleFollow,
                             isLoading: isFollowingLoading,
@@ -160,30 +168,31 @@ const UserProfilePage = () => {
             )
         ),
         
-        React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-white mb-4" }, "Artículos disponibles de ", profile.name),
-
-        items.length === 0 ? (
-          React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400 mt-10" },
-            `${profile.name} no tiene artículos disponibles en este momento.`
-          )
-        ) : (
-          React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-            items.map((item) => (
-                React.createElement("div", { key: item.id, className: "relative" },
-                    // Fix: Pass missing 'onDelete' and 'deletingItemId' props to ItemCard
-                    React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite, onDelete: undefined, deletingItemId: undefined }),
-                    fromExchangeId && item.userId !== currentUser.id && (
-                        React.createElement(Button, {
-                            onClick: () => handleCounterOffer(item.id),
-                            isLoading: isSubmitting,
-                            className: "w-full mt-2",
-                            size: "sm",
-                            children: "Contraoferta"
-                        })
-                    )
+        !isBanned && React.createElement(React.Fragment, null, 
+            React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-white mb-4" }, "Artículos disponibles de ", profile.name),
+            items.length === 0 ? (
+                React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400 mt-10" },
+                  `${profile.name} no tiene artículos disponibles en este momento.`
                 )
-            ))
-          )
+            ) : (
+                React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+                  items.map((item) => (
+                      React.createElement("div", { key: item.id, className: "relative" },
+                          // Fix: Pass missing 'onDelete' and 'deletingItemId' props to ItemCard
+                          React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite, onDelete: undefined, deletingItemId: undefined }),
+                          fromExchangeId && item.userId !== currentUser.id && (
+                              React.createElement(Button, {
+                                  onClick: () => handleCounterOffer(item.id),
+                                  isLoading: isSubmitting,
+                                  className: "w-full mt-2",
+                                  size: "sm",
+                                  children: "Contraoferta"
+                              })
+                          )
+                      )
+                  ))
+                )
+            )
         )
     );
 };

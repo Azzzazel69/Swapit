@@ -7,6 +7,8 @@ import Input from '../components/Input.tsx';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { ExchangeStatus } from '../types.ts';
+import { ICONS } from '../constants.tsx';
+import BanUserModal from '../components/BanUserModal.tsx';
 
 const StatCard = ({ title, value, icon, alert, onClick }) => (
     React.createElement("div", { 
@@ -26,7 +28,7 @@ const StatCard = ({ title, value, icon, alert, onClick }) => (
 const ICONS_ADMIN = {
     users: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 013.43-5.197" })),
     activeUsers: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13 10V3L4 14h7v7l9-11h-7z" })),
-    items: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" })),
+    items: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 01-2 2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2v-2z" })),
     exchanges: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" })),
     alert: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" })),
     logs: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" }))
@@ -137,6 +139,10 @@ const UserManagement = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [tab, setTab] = useState('active'); // 'active' or 'banned'
+    
+    // Modal State
+    const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -152,12 +158,29 @@ const UserManagement = () => {
 
     useEffect(() => { fetchUsers(); }, []);
 
-    const handleBan = async (userId) => {
-        if (userId === currentUser.id) return;
+    const onBanClick = (user) => {
+        if (user.id === currentUser.id) return;
+        if (user.isBanned) {
+            // Unban directly
+            handleBanConfirm(user.id); 
+        } else {
+            // Open modal to ban
+            setSelectedUser(user);
+            setIsBanModalOpen(true);
+        }
+    };
+
+    const handleBanConfirm = async (reasonOrId, details = null) => {
+        const userId = selectedUser ? selectedUser.id : reasonOrId; // Logic split for modal vs direct unban
+        const finalReason = selectedUser ? reasonOrId : null;
+        
         try {
-            await api.banUser(userId);
+            await api.banUser(userId, finalReason, details);
+            setIsBanModalOpen(false);
             fetchUsers();
-        } catch(err) { alert(err.message); }
+        } catch(err) { 
+            alert(err.message); 
+        }
     };
 
     const filteredUsers = useMemo(() => 
@@ -171,6 +194,12 @@ const UserManagement = () => {
 
     return (
         React.createElement("div", null,
+            React.createElement(BanUserModal, {
+                isOpen: isBanModalOpen,
+                onClose: () => setIsBanModalOpen(false),
+                onConfirm: handleBanConfirm,
+                userName: selectedUser?.name || ''
+            }),
             React.createElement("div", { className: "flex gap-4 mb-4 border-b dark:border-gray-700" },
                 React.createElement("button", { 
                     className: `py-2 px-4 border-b-2 font-medium text-sm ${tab === 'active' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'}`,
@@ -199,7 +228,7 @@ const UserManagement = () => {
                                 React.createElement(Button, { 
                                     variant: user.isBanned ? "primary" : "danger", 
                                     size: "sm", 
-                                    onClick: () => handleBan(user.id), 
+                                    onClick: () => onBanClick(user), 
                                     disabled: user.id === currentUser.id 
                                 }, user.isBanned ? "Desbanear" : "Banear")
                             )
@@ -241,7 +270,14 @@ const AuditLogDashboard = () => {
     useEffect(() => { fetchLogs(); }, [page]);
 
     const renderDiff = (changes) => {
-        if (!changes || changes.length === 0) return null;
+        if (!changes) return null;
+        if (!Array.isArray(changes)) {
+            // Safe fallback for non-array changes (legacy data)
+            return React.createElement("div", { className: "text-xs text-gray-500 italic mt-1" }, 
+                "Detalles no estructurados: " + JSON.stringify(changes)
+            );
+        }
+        if (changes.length === 0) return null;
         return changes.map((change, idx) => (
             React.createElement("div", { key: idx, className: "text-xs text-gray-600 dark:text-gray-400 mt-1" },
                 React.createElement("span", { className: "font-semibold capitalize" }, change.field),
