@@ -19,6 +19,11 @@ interface LocationSelectorProps {
     onError?: (msg: string) => void;
 }
 
+// Helper para normalizar texto (quitar acentos y diacríticos)
+const normalizeText = (text: string) => {
+    return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+};
+
 const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }) => {
     const { theme } = useColorTheme();
     const [mode, setMode] = useState<'initial' | 'auto' | 'manual'>('initial');
@@ -29,17 +34,20 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
 
     // Lógica de búsqueda híbrida (Local + API)
     useEffect(() => {
-        const query = manualValue.trim().toLowerCase();
+        const rawQuery = manualValue.trim();
+        const query = normalizeText(rawQuery);
+        
         if (mode !== 'manual' || query.length < 2) {
             setSuggestions([]);
             return;
         }
 
-        // 1. Prioridad: Búsqueda en nuestra base de datos local de España (Instantánea)
-        const localMatches = FLAT_MUNICIPALITIES.filter(m => 
-            m.muniName.toLowerCase().startsWith(query) || 
-            m.label.toLowerCase().includes(query)
-        ).map(m => ({
+        // 1. Prioridad: Búsqueda en nuestra base de datos local de España (Instantánea y robusta con acentos)
+        const localMatches = FLAT_MUNICIPALITIES.filter(m => {
+            const muniNormalized = normalizeText(m.muniName);
+            const labelNormalized = normalizeText(m.label);
+            return muniNormalized.startsWith(query) || labelNormalized.includes(query);
+        }).map(m => ({
             id: m.id,
             name: m.muniName,
             province: m.provName,
@@ -47,20 +55,16 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
             lat: m.lat,
             lng: m.lng,
             isLocal: true,
-            displayLabel: m.label
+            displayLabel: m.label,
+            priority: 1 // Los locales siempre van primero
         }));
 
-        // Si tenemos muchos matches locales, los mostramos ya
-        if (localMatches.length > 5) {
-            setSuggestions(localMatches.slice(0, 10));
-            return;
-        }
-
-        // 2. Si hay pocos matches o queremos ser exhaustivos, consultamos la API
+        // 2. Si hay pocos matches o queremos ser exhaustivos, consultamos la API de forma inteligente
         const timer = setTimeout(async () => {
             setIsLoadingSuggestions(true);
             try {
-                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=es&addressdetails=1&format=json&limit=20&accept-language=es`;
+                // Nominatim q= query es potente pero ruidosa. Usamos filtros de tipo lugar.
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rawQuery)}&countrycodes=es&addressdetails=1&format=json&limit=30&featuretype=settlement&accept-language=es`;
                 const res = await fetch(url);
                 const data = await res.json();
 
@@ -69,13 +73,21 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                 const apiResults = data
                     .filter((item: any) => {
                         const type = item.addresstype || item.type;
-                        // Filtramos para quedarnos solo con lugares poblados (ciudades, pueblos, aldeas)
+                        const displayName = normalizeText(item.display_name || '');
+                        
+                        // Descartar si el nombre contiene palabras clave de calles (ruido común en OSM)
+                        const forbiddenKeywords = ['calle', 'avenida', 'plaza', 'carretera', 'piso', 'numero'];
+                        if (forbiddenKeywords.some(key => displayName.includes(key))) return false;
+
+                        // Solo queremos lugares poblados
                         return ['city', 'town', 'village', 'municipality', 'hamlet', 'administrative'].includes(type);
                     })
                     .map((item: any) => {
                         const addr = item.address;
                         const name = addr.city || addr.town || addr.village || addr.municipality || item.display_name.split(',')[0];
                         const province = addr.province || addr.state_district || "";
+                        const itemMuniNormalized = normalizeText(name);
+                        
                         return {
                             id: item.place_id,
                             name,
@@ -84,35 +96,38 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                             lat: parseFloat(item.lat),
                             lng: parseFloat(item.lon),
                             isLocal: false,
-                            displayLabel: province ? `${name} (${province})` : name
+                            displayLabel: province ? `${name} (${province})` : name,
+                            priority: itemMuniNormalized.startsWith(query) ? 2 : 3
                         };
                     });
 
-                // Combinamos local y API evitando duplicados
+                // Combinamos local y API evitando duplicados reales
                 const combined = [...localMatches];
                 apiResults.forEach(apiRes => {
                     const exists = combined.some(c => 
-                        c.name.toLowerCase() === apiRes.name.toLowerCase() && 
-                        c.province.toLowerCase() === apiRes.province.toLowerCase()
+                        normalizeText(c.name) === normalizeText(apiRes.name) && 
+                        normalizeText(c.province) === normalizeText(apiRes.province)
                     );
                     if (!exists) combined.push(apiRes);
                 });
 
-                // Ordenar: Primero los que EMPIEZAN por la query, luego por importancia
+                // Ordenación profesional:
+                // 1. Locales que empiezan por el texto (exacto)
+                // 2. API que empiezan por el texto
+                // 3. El resto
                 combined.sort((a, b) => {
-                    const startsA = a.name.toLowerCase().startsWith(query) ? 1 : 0;
-                    const startsB = b.name.toLowerCase().startsWith(query) ? 1 : 0;
-                    return startsB - startsA;
+                    if (a.priority !== b.priority) return a.priority - b.priority;
+                    return b.name.length - a.name.length; // Nombres más largos/específicos suelen ser mejores
                 });
 
                 setSuggestions(combined.slice(0, 10));
             } catch (e) {
                 console.error("Error API:", e);
-                setSuggestions(localMatches); // Fallback a lo que tengamos local
+                setSuggestions(localMatches.slice(0, 10)); // Fallback a lo que tengamos local
             } finally {
                 setIsLoadingSuggestions(false);
             }
-        }, 350);
+        }, 300);
 
         return () => clearTimeout(timer);
     }, [manualValue, mode]);
@@ -214,7 +229,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                     <AutocompleteInput 
                         id="location-search"
                         label="Ciudad o Municipio de España"
-                        placeholder="Escribe 'Ba' para Barcelona, 'Ge' para Getafe..."
+                        placeholder="Ej: Mérida, Alcantarilla, Madrid..."
                         value={manualValue}
                         onChange={setManualValue}
                         isLoading={isLoadingSuggestions}
