@@ -26,6 +26,7 @@ import AddItemPage from './pages/AddItemPage.tsx';
 import RateExchangePage from './pages/RateExchangePage.tsx';
 import AdminPage from './pages/AdminPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
+import MeetingMapPage from './pages/MeetingMapPage.tsx';
 import { initializePushNotifications, requestNotificationPermission } from './services/pushNotifications.ts';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -35,7 +36,7 @@ const App = () => {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({ style: Style.Dark });
-      StatusBar.setBackgroundColor({ color: '#111827' }); // dark:bg-gray-900
+      StatusBar.setBackgroundColor({ color: '#111827' }); 
       SplashScreen.hide();
     }
   }, []);
@@ -45,20 +46,27 @@ const App = () => {
       React.createElement(ConfettiProvider, null,
         React.createElement(ToastProvider, null,
           React.createElement(HashRouter, null,
-            React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
-              React.createElement(OfflineBanner, null),
-              React.createElement(Header, null),
-              React.createElement("main", { className: "flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]" },
-                React.createElement(AppRoutes, null)
-              ),
-              React.createElement(AppFooter, null),
-              React.createElement(CookieBanner, null)
-            )
+            React.createElement(AppContent, null)
           )
         )
       )
     )
   );
+};
+
+const AppContent = () => {
+    const location = useLocation();
+    const isMapPage = location.pathname.startsWith('/meeting-map');
+
+    return React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
+        !isMapPage && React.createElement(OfflineBanner, null),
+        !isMapPage && React.createElement(Header, null),
+        React.createElement("main", { className: `${isMapPage ? 'flex-grow h-screen' : 'flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]'}` },
+            React.createElement(AppRoutes, null)
+        ),
+        !isMapPage && React.createElement(AppFooter, null),
+        !isMapPage && React.createElement(CookieBanner, null)
+    );
 };
 
 const AppFooter = () => {
@@ -83,7 +91,6 @@ const AppRoutes = () => {
 
   React.useEffect(() => {
     if (user) {
-        // Initialize notifications once the user is logged in.
         initializePushNotifications();
     }
   }, [user]);
@@ -111,6 +118,7 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ItemDetailPage, null)) }),
     React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ExchangesPage, null)) }),
     React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ChatDetailPage, null)) }),
+    React.createElement(Route, { path: "/meeting-map/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(MeetingMapPage, null)) }),
     React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(RateExchangePage, null)) }),
     React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),
     React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(UserProfilePage, null)) }),
@@ -157,7 +165,7 @@ const OnboardingGuard = ({ children }) => {
     const isFullyOnboarded = user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0;
 
     if (isFullyOnboarded) {
-        return React.createElement(Navigate, { to: "/", replace: true });
+        return React.createElement(Navigate, { replace: true, to: "/" });
     }
 
     return children;

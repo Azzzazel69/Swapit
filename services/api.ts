@@ -4,7 +4,6 @@ import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 
 // --- Constants & Config ---
 const BAD_WORDS = ['estafa', 'robo', 'arma', 'droga', 'idiota', 'estupida', 'imbecil', 'bizum', 'whatsapp', 'fuera de la app', 'matar', 'muerte', 'sexo', 'desnudo'];
-const MAX_ACCOUNTS_PER_PHONE = 3;
 
 // --- Default Avatars ---
 export const DEFAULT_AVATAR_NEUTRAL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0UwRTAxMCI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
@@ -55,16 +54,17 @@ function addNotificationDev(userId: string, payload: { title: string; body?: str
   if (!userId) return;
   if (!notificationsStore[userId]) notificationsStore[userId] = [];
   
-  // Lógica inteligente: Si es un mensaje de chat, no duplicar si ya hay uno sin leer para ese chat
   if (payload.meta?.type === 'chat') {
-      const existing = notificationsStore[userId].find(n => 
+      const existingIdx = notificationsStore[userId].findIndex(n => 
           !n.read && 
           n.meta?.type === 'chat' && 
           n.meta?.exchangeId === payload.meta.exchangeId
       );
-      if (existing) {
-          existing.createdAt = new Date().toISOString(); // Lo movemos arriba
-          existing.body = "Tienes mensajes nuevos pendientes."; // Actualizamos cuerpo opcionalmente
+      if (existingIdx > -1) {
+          const existing = notificationsStore[userId].splice(existingIdx, 1)[0];
+          existing.createdAt = new Date().toISOString();
+          existing.body = payload.body || "Tienes nuevos mensajes.";
+          notificationsStore[userId].unshift(existing);
           return;
       }
   }
@@ -131,23 +131,30 @@ const setupInitialData = () => {
     } catch (e) {}
 
     const adminSalt = 'salt123';
-    const createUser = (id, name, email, role = 'USER', locationCity = 'Madrid', avatar = DEFAULT_AVATAR_NEUTRAL) => ({
+    const createUser = (id, name, email, role = 'USER', locationCity = 'Madrid', lat = 40.4168, lng = -3.7038, avatar = DEFAULT_AVATAR_NEUTRAL) => ({
         id, name, email, role, salt: adminSalt,
         hashedPassword: btoa('password123' + adminSalt),
         emailVerified: true, phoneVerified: true, phone: '600000000',
-        location: { country: 'España', city: locationCity, postalCode: '28001', address: 'Calle Principal' },
+        location: { country: 'España', city: locationCity, postalCode: '28001', address: 'Calle Principal', lat, lng },
         preferences: ['Electrónica', 'Hogar y Muebles'],
         avatarUrl: avatar, ratings: [], following: [], notificationSettings: { newItemsFromFavorites: true },
-        isBanned: false, lastActiveAt: new Date().toISOString(), columnLayout: null
+        isBanned: false, lastActiveAt: new Date().toISOString(), columnLayout: null,
+        contactCard: { 
+            enabled: true, name, email, phone: '600000000', 
+            meetingPointAddress: 'Plaza del Sol, Madrid',
+            meetingPointCoords: { lat, lng },
+            meetingPointComment: 'En la estatua del Oso y el Madroño',
+            preferredSchedule: 'Tardes' 
+        }
     });
 
     users = [
-        createUser('admin-1', 'Admin Supremo', 'azzazel69@gmail.com', 'SUPER_ADMIN', 'Valencia', DEFAULT_AVATAR_NEUTRAL),
-        createUser('user-1', 'Carlos Pérez', 'carlos@test.com', 'USER', 'Madrid', DEFAULT_AVATAR_MALE),
-        createUser('user-2', 'Lucía Gómez', 'lucia@test.com', 'USER', 'Barcelona', DEFAULT_AVATAR_FEMALE),
-        createUser('user-3', 'Pedro Troll', 'pedro_troll@test.com', 'USER', 'Sevilla', DEFAULT_AVATAR_MALE),
-        createUser('user-4', 'Ana M.', 'ana@test.com', 'USER', 'Valencia', DEFAULT_AVATAR_FEMALE),
-        createUser('user-7', 'Bot Scammer', 'scammer@test.com', 'USER', 'Madrid', DEFAULT_AVATAR_NEUTRAL),
+        createUser('admin-1', 'Admin Supremo', 'azzazel69@gmail.com', 'SUPER_ADMIN', 'Valencia', 39.4699, -0.3763, DEFAULT_AVATAR_NEUTRAL),
+        createUser('user-1', 'Carlos Pérez', 'carlos@test.com', 'USER', 'Madrid', 40.4168, -3.7038, DEFAULT_AVATAR_MALE),
+        createUser('user-2', 'Lucía Gómez', 'lucia@test.com', 'USER', 'Barcelona', 41.3851, 2.1734, DEFAULT_AVATAR_FEMALE),
+        createUser('user-3', 'Pedro Troll', 'pedro_troll@test.com', 'USER', 'Sevilla', 37.3891, -5.9845, DEFAULT_AVATAR_MALE),
+        createUser('user-4', 'Ana M.', 'ana@test.com', 'USER', 'Valencia', 39.4700, -0.3764, DEFAULT_AVATAR_FEMALE),
+        createUser('user-7', 'Bot Scammer', 'scammer@test.com', 'USER', 'Madrid', 40.4170, -3.7040, DEFAULT_AVATAR_NEUTRAL),
     ];
     users[0].hashedPassword = btoa('AdminPassword123' + adminSalt);
 
@@ -229,7 +236,8 @@ class ApiClient {
           emailVerified: false, phoneVerified: false, phone: '',
           location: null, preferences: [],
           avatarUrl: avatar || DEFAULT_AVATAR_NEUTRAL, ratings: [], following: [], notificationSettings: { newItemsFromFavorites: true },
-          isBanned: false, lastActiveAt: new Date().toISOString(), columnLayout: null
+          isBanned: false, lastActiveAt: new Date().toISOString(), columnLayout: null,
+          contactCard: { enabled: false, name, email, phone: '', meetingPointAddress: '', meetingPointCoords: null, meetingPointComment: '', preferredSchedule: '' }
       };
       users.push(newUser);
       persistData();
@@ -326,13 +334,32 @@ class ApiClient {
       chat.messages.push(msg);
       const recipientId = chat.participantIds.find(id => id !== user.id);
       
-      // Enviamos la notificación agrupada
       addNotificationDev(recipientId, {
           title: `Mensaje de ${user.name}`,
           body: text,
           meta: { exchangeId: chatId, type: 'chat' }
       });
       
+      persistData();
+      return msg;
+  }
+
+  async acceptMeetingLocation(exchangeId, locationName, type) {
+      const user = this._getCurrentUserFromToken();
+      const chat = chats.find(c => c.id === exchangeId);
+      if (!chat) return;
+      
+      const label = type === 'MIDPOINT' ? 'punto medio sugerido' : 'ubicación preferida';
+      const text = `${user.name} ha aceptado encontraros en: ${locationName} (${label})`;
+      
+      const msg = { 
+          id: `m-${Date.now()}`, 
+          senderId: user.id, 
+          text, 
+          timestamp: new Date().toISOString(), 
+          type: 'SYSTEM' 
+      };
+      chat.messages.push(msg);
       persistData();
       return msg;
   }
@@ -643,7 +670,6 @@ class ApiClient {
       }
   }
   
-  // Limpia las notificaciones de chat de un intercambio específico
   async markChatAsRead(exchangeId) {
       const user = this._getCurrentUserFromToken();
       if (user) {

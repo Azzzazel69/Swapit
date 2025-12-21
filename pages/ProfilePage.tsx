@@ -100,7 +100,7 @@ const ProfilePage = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [locationData, setLocationData] = useState(user?.location || { country: '', city: '', postalCode: '', address: '' });
-    const [contactCard, setContactCard] = useState(user?.contactCard || { enabled: false, name: '', email: '', phone: '', meetingPoint: '', preferredSchedule: '' });
+    const [contactCard, setContactCard] = useState(user?.contactCard || { enabled: false, name: '', email: '', phone: '', meetingPointAddress: '', meetingPointCoords: null, meetingPointComment: '', preferredSchedule: '' });
     
     // Notification Settings
     const [notificationSettings, setNotificationSettings] = useState(user?.notificationSettings || { newItemsFromFavorites: true });
@@ -145,9 +145,9 @@ const ProfilePage = () => {
     useEffect(() => {
         if(user) {
             setName(user.name);
-            setLocationData(user.location || { country: 'España', city: '', postalCode: '', address: '' });
+            setLocationData(user.location || { country: 'España', city: '', postalCode: '', address: '', lat: 40.4168, lng: -3.7038 });
             setPhone(user.phone || '');
-            setContactCard(user.contactCard || { enabled: false, name: user.name, email: user.email, phone: user.phone, meetingPoint: '', preferredSchedule: '' });
+            setContactCard(user.contactCard || { enabled: false, name: user.name, email: user.email, phone: user.phone, meetingPointAddress: '', meetingPointCoords: null, meetingPointComment: '', preferredSchedule: '' });
             setNotificationSettings(user.notificationSettings || { newItemsFromFavorites: true });
         }
     }, [user]);
@@ -240,6 +240,16 @@ const ProfilePage = () => {
             setIsLoading(false); 
         }
     };
+
+    const handleMockLocationPick = () => {
+        // En una app real esto abriría un mapa interactivo para seleccionar lat/lng
+        setContactCard(prev => ({
+            ...prev,
+            meetingPointAddress: 'Calle de la Princesa, 2, Madrid',
+            meetingPointCoords: { lat: 40.4242, lng: -3.7123 }
+        }));
+        showToast('Ubicación seleccionada en el mapa.', 'success');
+    };
     
     const handleSendCode = async (e) => {
         e.preventDefault();
@@ -285,7 +295,6 @@ const ProfilePage = () => {
             updateUser(updatedUser);
         } catch (err) {
             showToast('Error al guardar la configuración de notificaciones.', 'error');
-            // Revert state on error
             setNotificationSettings({ ...notificationSettings, [key]: notificationSettings[key] });
         } finally {
             setIsUpdatingNotifications(false);
@@ -440,12 +449,45 @@ const ProfilePage = () => {
                     React.createElement("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
                 )
             ),
-            React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400 mb-4" }, "Activa esta opción para compartir automáticamente tus datos de contacto cuando aceptes un intercambio. Esto facilita que la otra persona se ponga en contacto contigo."),
+            React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400 mb-4" }, "Comparte tus datos de contacto automáticamente al aceptar un intercambio."),
             React.createElement("div", { className: `space-y-4 transition-opacity ${!contactCard.enabled ? 'opacity-50' : 'opacity-100'}` },
                 React.createElement(Input, { label: "Nombre a mostrar", id: "cc-name", value: contactCard.name, onChange: e => setContactCard(c => ({...c, name: e.target.value})), disabled: !contactCard.enabled }),
-                React.createElement(Input, { label: "Email de contacto", id: "cc-email", type: "email", value: contactCard.email, onChange: e => setContactCard(c => ({...c, email: e.target.value})), disabled: !contactCard.enabled }),
                 React.createElement(Input, { label: "Teléfono de contacto", id: "cc-phone", type: "tel", value: contactCard.phone, onChange: e => setContactCard(c => ({...c, phone: e.target.value})), disabled: !contactCard.enabled }),
-                React.createElement(Input, { label: "Punto de encuentro preferido", id: "cc-meeting", value: contactCard.meetingPoint, onChange: e => setContactCard(c => ({...c, meetingPoint: e.target.value})), disabled: !contactCard.enabled, placeholder:"Ej: Estación de metro Sol" }),
+                
+                React.createElement("div", { className: "bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg space-y-4 border border-gray-200 dark:border-gray-700" },
+                    React.createElement("label", { className: "block text-sm font-bold text-gray-700 dark:text-gray-300" }, "📍 Punto de encuentro preferido"),
+                    React.createElement("div", { className: "flex gap-2" },
+                        React.createElement("div", { className: "flex-grow" },
+                            React.createElement(Input, { 
+                                placeholder: "Busca calle o lugar exacto...", 
+                                id: "cc-address", 
+                                value: contactCard.meetingPointAddress, 
+                                onChange: e => setContactCard(c => ({...c, meetingPointAddress: e.target.value})), 
+                                disabled: !contactCard.enabled 
+                            })
+                        ),
+                        React.createElement(Button, { 
+                            type: "button", 
+                            variant: "secondary", 
+                            onClick: handleMockLocationPick,
+                            disabled: !contactCard.enabled,
+                            title: "Seleccionar en mapa"
+                        }, "🗺️")
+                    ),
+                    React.createElement("div", null,
+                        React.createElement("label", { htmlFor: "cc-comment", className: "block text-xs font-medium text-gray-500 mb-1" }, "Instrucciones adicionales (ej: En la puerta principal)"),
+                        React.createElement("textarea", { 
+                            id: "cc-comment",
+                            rows: 2,
+                            className: "w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700",
+                            placeholder: "Ej: Al lado del cajero del banco...",
+                            value: contactCard.meetingPointComment,
+                            onChange: e => setContactCard(c => ({...c, meetingPointComment: e.target.value})),
+                            disabled: !contactCard.enabled
+                        })
+                    )
+                ),
+                
                 React.createElement(Input, { label: "Horario preferido", id: "cc-schedule", value: contactCard.preferredSchedule, onChange: e => setContactCard(c => ({...c, preferredSchedule: e.target.value})), disabled: !contactCard.enabled, placeholder:"Ej: Tardes de L-V, Fines de semana" }),
             ),
              React.createElement("div", { className: "flex justify-end mt-4" },
@@ -472,18 +514,12 @@ const ProfilePage = () => {
                         }),
                         React.createElement("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
                     )
-                ),
-                React.createElement("div", { className: "mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md" },
-                    React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-300" }, 
-                        React.createElement("strong", null, "Nota: "),
-                        "Algunas notificaciones importantes no se pueden desactivar, como las nuevas propuestas de intercambio, los mensajes del chat y las actualizaciones de estado de tus transacciones."
-                    )
                 )
             )
         ),
         
         React.createElement(ProfileSection, {
-            title: "Ubicación",
+            title: "Ubicación Base",
             onEdit: () => setIsEditingLocation(true),
             isEditing: isEditingLocation,
             onSave: handleSaveLocation,
@@ -492,6 +528,7 @@ const ProfilePage = () => {
             isEditable: editability.canEdit,
             disabledReason: editability.reason
         },
+            React.createElement("p", { className: "text-xs text-gray-500 mb-4" }, "Esta ubicación se usa para calcular el punto medio sugerido con otros swappers."),
             error && isEditingLocation && React.createElement("p", { className: "text-red-500 text-sm mb-2" }, error),
             isEditingLocation ? (
                 React.createElement("div", { className: "space-y-4" },
@@ -531,29 +568,12 @@ const ProfilePage = () => {
             React.createElement(EmptyState, {
                 icon: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", strokeWidth: "1.5", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" })),
                 title: "Aún no tienes artículos",
-                message: "¿Por qué no subes algo que ya no uses y le das una segunda vida?",
+                message: "¿Por qué no subes algo que ya no uses?",
                 actionButton: React.createElement(Button, { onClick: () => navigate('/add-item'), children: "Subir mi primer artículo" })
             })
           ) : (
             React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
               items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem, deletingItemId: deletingItemId }))
-            )
-          )
-        ),
-        
-        React.createElement("div", { className: "mt-8" },
-          React.createElement("h2", { className: "text-3xl font-bold text-gray-900 dark:text-white mb-6" }, "Mis Favoritos"),
-          loadingFavorites ? React.createElement(SwapSpinner, null) :
-          favoriteItems.length === 0 ? (
-            React.createElement(EmptyState, {
-                icon: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", strokeWidth: "1.5", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" })),
-                title: "Tu lista de favoritos está vacía",
-                message: "Explora los artículos y pulsa el corazón para guardar los que más te gusten.",
-                actionButton: React.createElement(Button, { onClick: () => navigate('/'), variant:"secondary", children: "Explorar artículos" })
-            })
-          ) : (
-            React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-              favoriteItems.map((item) => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: handleToggleFavorite }))
             )
           )
         )

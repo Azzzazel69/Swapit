@@ -43,6 +43,12 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
     [ItemCondition.Acceptable]: 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200',
   };
 
+  const formattedDate = new Date(item.createdAt).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
   // Fix: Extract props to a variable to bypass excess property checking
   const deleteButtonProps = {
       onClick: (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); },
@@ -118,10 +124,13 @@ const ItemCard = ({ item, isOwnItem = false, onDelete, deletingItemId, onToggleF
             )
         ),
 
-        React.createElement("div", { className: `flex items-center justify-between ${isSmall ? 'mt-2' : 'mt-4'}` },
+        React.createElement("div", { className: `flex flex-col ${isSmall ? 'mt-2' : 'mt-4'}` },
           React.createElement("div", { className: `${isSmall ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 flex items-center gap-2` },
             React.createElement("img", { src: item.ownerAvatarUrl, alt: item.ownerName, className: "w-5 h-5 rounded-full object-cover" }),
             React.createElement("p", null, "Propietario: ", React.createElement("strong", null, isOwnItem ? 'Tú' : item.ownerName))
+          ),
+          React.createElement("p", { className: "text-[10px] text-gray-400 dark:text-gray-500 mt-1 italic" },
+            `Publicado el ${formattedDate}`
           )
         )
       )

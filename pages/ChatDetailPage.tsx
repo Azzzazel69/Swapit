@@ -14,8 +14,13 @@ import ReportModal from '../components/ReportModal.tsx';
 import { useToast } from '../hooks/useToast.tsx';
 import BanUserModal from '../components/BanUserModal.tsx';
 
-const ContactCard = ({ contactCard, avatarUrl, theme }) => {
+const ContactCard = ({ partner, exchangeId, theme }) => {
+    const navigate = useNavigate();
+    const { contactCard, avatarUrl, location, name } = partner;
+    
     if (!contactCard || !contactCard.enabled) return null;
+
+    const hasLocationData = location?.lat && location?.lng;
 
     return (
         React.createElement("div", { className: "mt-2 mb-4 animate-fade-in-up" },
@@ -27,20 +32,40 @@ const ContactCard = ({ contactCard, avatarUrl, theme }) => {
                     React.createElement("img", { src: avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: "w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" }),
                     React.createElement("div", { className: "flex-grow" },
                         React.createElement("p", { className: "text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1" }, "Datos de contacto compartidos"),
-                        React.createElement("h3", { className: "text-lg font-bold text-gray-900 dark:text-white" }, contactCard.name),
-                        React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2" },
-                            contactCard.phone && React.createElement("a", { href: `tel:${contactCard.phone}`, className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500" }, 
+                        React.createElement("h3", { className: "text-lg font-bold text-gray-900 dark:text-white" }, name),
+                        
+                        React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2 border-b dark:border-gray-700 pb-3" },
+                            contactCard.phone && React.createElement("a", { href: `tel:${contactCard.phone}`, className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 font-medium" }, 
                                 ICONS.phone, contactCard.phone
                             ),
-                            contactCard.email && React.createElement("a", { href: `mailto:${contactCard.email}`, className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500" }, 
-                                ICONS.envelope, contactCard.email
-                            ),
-                            contactCard.meetingPoint && React.createElement("div", { className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 col-span-full" }, 
-                                ICONS.meetingPoint, React.createElement("span", null, React.createElement("strong", null, "Punto: "), contactCard.meetingPoint)
-                            ),
-                            contactCard.preferredSchedule && React.createElement("div", { className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 col-span-full" }, 
-                                ICONS.schedule, React.createElement("span", null, React.createElement("strong", null, "Horario: "), contactCard.preferredSchedule)
+                            React.createElement("div", { className: "flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300" }, 
+                                ICONS.location, React.createElement("span", null, React.createElement("strong", null, "Ciudad: "), location?.city || 'No especificada')
                             )
+                        ),
+
+                        React.createElement("div", { className: "mt-3 space-y-2" },
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-xs font-bold text-gray-500 dark:text-gray-400 uppercase" }, "📍 Punto de encuentro sugerido por el usuario"),
+                                contactCard.meetingPointAddress ? (
+                                    React.createElement("div", { className: "mt-1" },
+                                        React.createElement("button", { 
+                                            onClick: () => navigate(`/meeting-map/${exchangeId}?type=preferred&userId=${partner.id}`),
+                                            className: "text-sm text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1"
+                                        }, "🗺️ " + contactCard.meetingPointAddress),
+                                        contactCard.meetingPointComment && React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-400 italic mt-1" }, `"${contactCard.meetingPointComment}"`)
+                                    )
+                                ) : (
+                                    React.createElement("p", { className: "text-sm text-gray-400" }, "No ha especificado un punto exacto.")
+                                )
+                            )
+                        ),
+                        
+                        React.createElement("div", { className: "mt-4 flex flex-wrap gap-2 pt-3 border-t dark:border-gray-700" },
+                            React.createElement("button", { 
+                                onClick: () => navigate(`/meeting-map/${exchangeId}?type=midpoint`),
+                                disabled: !hasLocationData,
+                                className: `flex items-center gap-2 px-3 py-2 ${hasLocationData ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'} rounded-lg text-xs font-bold transition-colors`
+                            }, React.createElement("span", { className: "text-base" }, "🧭"), hasLocationData ? "Ver Punto Medio Sugerido" : "Ubicación base no disponible")
                         )
                     )
                 )
@@ -55,8 +80,10 @@ const Message = ({ message, senderName, isOwnMessage, isAdminView, onCensor }) =
         : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 self-start";
 
     if (message.type === 'SYSTEM') {
-        return React.createElement("div", { className: "text-center text-xs text-gray-500 dark:text-gray-400 py-2" },
-            React.createElement("span", { className: "bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-1" }, message.text)
+        return React.createElement("div", { className: "text-center text-xs text-gray-500 dark:text-gray-400 py-2 px-4" },
+            React.createElement("span", { className: "bg-gray-100 dark:bg-gray-800 border dark:border-gray-700 rounded-full px-4 py-1.5 shadow-sm" }, 
+                message.text
+            )
         );
     }
     
@@ -80,18 +107,18 @@ const Message = ({ message, senderName, isOwnMessage, isAdminView, onCensor }) =
 const ItemBar = ({ exchange }) => {
     const { theme } = useColorTheme();
     const ItemPreview = ({ item, isRequested }) => (
-        React.createElement(Link, { to: `/item/${item.id}`, className: "flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0 w-52" },
+        React.createElement(Link, { to: `/item/${item.id}`, className: "flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0 w-52 shadow-sm" },
             React.createElement("img", { src: item.imageUrls[0], alt: item.title, className: "w-10 h-10 rounded-md object-cover" }),
             React.createElement("div", { className: "flex-grow overflow-hidden" },
-                React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-400" }, isRequested ? `${exchange.owner.name} ofrece:` : `${exchange.requester.name} ofrece:`),
+                React.createElement("p", { className: "text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400" }, isRequested ? `${exchange.owner.name} ofrece:` : `${exchange.requester.name} ofrece:`),
                 React.createElement("p", { className: "text-sm font-semibold truncate" }, item.title)
             )
         )
     );
     const requestedItem = exchange.allItems.find(i => i.id === exchange.requestedItemId);
     const offeredItems = exchange.allItems.filter(i => exchange.offeredItemIds.includes(i.id));
-    return React.createElement("div", { className: "bg-white dark:bg-gray-800 border-b dark:border-gray-700" },
-      React.createElement("div", { className: "flex items-center justify-start md:justify-center gap-4 flex-nowrap overflow-x-auto p-2" },
+    return React.createElement("div", { className: "bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm" },
+      React.createElement("div", { className: "flex items-center justify-start md:justify-center gap-4 flex-nowrap overflow-x-auto p-2 scrollbar-hide" },
         React.createElement("div", { className: "flex flex-col sm:flex-row gap-2" },
             offeredItems.map(item => React.createElement(ItemPreview, { key: item.id, item: item, isRequested: false }))
         ),
@@ -106,8 +133,8 @@ const MessageInput = ({ onSendMessage, isLoading }) => {
     const [text, setText] = useState('');
     const handleSubmit = (e) => { e.preventDefault(); if(text.trim()){ onSendMessage(text); setText(''); } };
     return React.createElement("form", { onSubmit: handleSubmit, className: "p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2" },
-        React.createElement("input", { type: "text", value: text, onChange: e => setText(e.target.value), placeholder: "Escribe tu mensaje...", className: "flex-grow appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white", disabled: isLoading }),
-        React.createElement(Button, { type: "submit", isLoading: isLoading, disabled: !text.trim(), className: "rounded-full !p-3", children: "Enviar" })
+        React.createElement("input", { type: "text", value: text, onChange: e => setText(e.target.value), placeholder: "Escribe tu mensaje...", className: "flex-grow appearance-none block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white", disabled: isLoading }),
+        React.createElement(Button, { type: "submit", isLoading: isLoading, disabled: !text.trim(), className: "rounded-full !p-3 min-w-[80px]", children: "Enviar" })
     );
 };
 
@@ -115,12 +142,12 @@ const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onMod
     const isOwner = currentUser.id === exchange.owner.id;
     const isRequester = currentUser.id === exchange.requester.id;
     
-    if (exchange.status === ExchangeStatus.Rejected) return React.createElement("div", { className: "p-3 bg-red-50 text-center" }, "Propuesta Rechazada");
-    if (exchange.status === ExchangeStatus.Cancelled) return React.createElement("div", { className: "p-3 bg-gray-100 text-center" }, "Cancelado");
+    if (exchange.status === ExchangeStatus.Rejected) return React.createElement("div", { className: "p-3 bg-red-50 dark:bg-red-900/10 text-center font-bold text-red-600" }, "Propuesta Rechazada");
+    if (exchange.status === ExchangeStatus.Cancelled) return React.createElement("div", { className: "p-3 bg-gray-100 dark:bg-gray-800 text-center font-bold" }, "Intercambio Cancelado");
     
     if (exchange.status === ExchangeStatus.Pending) {
-        if (isOwner) return React.createElement("div", { className: "p-3 flex justify-center gap-4" }, React.createElement(Button, { onClick: onAccept, size: "sm", children: "Aceptar" }), React.createElement(Button, { onClick: onReject, variant: "danger", size: "sm", children: "Rechazar" }), React.createElement(Button, { onClick: onCounterOffer, variant: "secondary", size: "sm", children: "Contraoferta" }));
-        if (isRequester) return React.createElement("div", { className: "p-3 text-center" }, React.createElement("p", {className:"mb-2"}, "Esperando respuesta"), React.createElement(Button, { onClick: onModify, variant: "secondary", size: "sm", children: "Modificar" }));
+        if (isOwner) return React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap justify-center gap-4" }, React.createElement(Button, { onClick: onAccept, size: "sm", children: "Aceptar Intercambio" }), React.createElement(Button, { onClick: onReject, variant: "danger", size: "sm", children: "Rechazar" }), React.createElement(Button, { onClick: onCounterOffer, variant: "secondary", size: "sm", children: "Contraoferta" }));
+        if (isRequester) return React.createElement("div", { className: "p-4 text-center bg-gray-50 dark:bg-gray-800/50" }, React.createElement("p", {className:"mb-3 text-sm text-gray-600 dark:text-gray-400 font-medium"}, "Esperando respuesta del propietario..."), React.createElement(Button, { onClick: onModify, variant: "secondary", size: "sm", className: "mx-auto", children: "Modificar Oferta" }));
     }
     
     if (exchange.status === ExchangeStatus.Accepted) {
@@ -131,17 +158,17 @@ const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onMod
 
         if (!isNextDay) {
             return React.createElement("div", { className: "p-4 text-center bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700" },
-                React.createElement("p", { className: "text-sm font-medium text-blue-800 dark:text-blue-200" }, 
-                    "¡Propuesta aceptada! Realizad el intercambio. Podréis votar a partir de mañana."
+                React.createElement("p", { className: "text-sm font-bold text-blue-800 dark:text-blue-200" }, 
+                    "¡Propuesta aceptada! Podréis votar una vez completado el trueque 24 horas después de haberlo aceptado."
                 )
             );
         }
 
-        return React.createElement("div", { className: "p-3 text-center bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700" },
+        return React.createElement("div", { className: "p-4 text-center bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700" },
             React.createElement(Button, { 
                 onClick: onConfirm, 
                 size: "sm", 
-                className: "w-full max-w-md mx-auto",
+                className: "w-full max-w-md mx-auto py-3",
                 children: "Intercambio realizado, proceder a las votaciones" 
             })
         );
@@ -156,23 +183,22 @@ const ChatDetailPage = () => {
     const { showToast } = useToast();
     const { theme } = useColorTheme();
     const navigate = useNavigate();
+    
     const [chat, setChat] = useState(null);
     const [exchange, setExchange] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isSending, setIsSending] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [isModifyModalOpen, setIsModifyModalOpen] = useState(false);
-    const [userItems, setUserItems] = useState([]);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-    
     const [isBanModalOpen, setIsBanModalOpen] = useState(false);
     const [userToBan, setUserToBan] = useState(null);
 
     const messagesEndRef = useRef(null);
     const prevStatusRef = useRef(null);
     const confettiFiredRef = useRef(false);
-    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    
+    const scrollToBottom = (behavior = "smooth") => messagesEndRef.current?.scrollIntoView({ behavior });
     
     const fetchData = useCallback(async (isInitialLoad = false) => {
         if (!exchangeId || !currentUser) return;
@@ -182,9 +208,7 @@ const ChatDetailPage = () => {
             setChat(fetchedChat);
             setExchange(fetchedExchange);
             
-            if (exchangeId) {
-                await api.markChatAsRead(exchangeId);
-            }
+            await api.markChatAsRead(exchangeId);
 
             if (isInitialLoad) setError(null);
         } catch (err) {
@@ -196,14 +220,13 @@ const ChatDetailPage = () => {
 
     useEffect(() => {
         let isMounted = true;
-        fetchData(true).then(() => { if (isMounted) setTimeout(scrollToBottom, 100); });
+        fetchData(true).then(() => { if (isMounted) setTimeout(() => scrollToBottom("auto"), 200); });
         const intervalId = setInterval(() => { if (isMounted) fetchData(false); }, 3000); 
         return () => { isMounted = false; clearInterval(intervalId); };
     }, [fetchData]);
 
-    // Lógica de Confeti al aceptar el trato
     useEffect(() => {
-        if (exchange?.status === ExchangeStatus.Accepted && prevStatusRef.current === ExchangeStatus.Pending) {
+        if (exchange?.status === ExchangeStatus.Accepted) {
             if (!confettiFiredRef.current) {
                 showConfetti();
                 confettiFiredRef.current = true;
@@ -214,131 +237,91 @@ const ChatDetailPage = () => {
         }
     }, [exchange?.status, showConfetti]);
 
-    useEffect(scrollToBottom, [chat?.messages]);
+    useEffect(() => {
+        scrollToBottom();
+    }, [chat?.messages]);
 
     const handleAction = async (actionFn) => {
         setActionLoading(true);
-        try { await actionFn(); await fetchData(true); } catch (err) { setError(err.message); } finally { setActionLoading(false); }
+        try { await actionFn(); await fetchData(false); } catch (err) { setError(err.message); } finally { setActionLoading(false); }
     };
     
     const handleSendMessage = (text) => handleAction(() => api.sendMessage(exchangeId, text));
     const handleAccept = () => handleAction(() => api.respondToExchange(exchangeId, 'ACCEPT'));
     const handleReject = () => handleAction(() => api.respondToExchange(exchangeId, 'REJECT'));
     const handleNavigateToRating = () => navigate(`/rate-exchange/${exchangeId}`);
-    const handleModify = async () => { setIsModifyModalOpen(true); }; 
+    const handleModify = async () => setIsModifyModalOpen(true); 
     const handleSubmitModification = (data) => { setIsModifyModalOpen(false); handleAction(() => api.modifyExchangeProposal(exchangeId, data)); };
     const handleCounterOffer = () => navigate(`/user/${exchange.requester.id}?fromExchange=${exchange.id}`);
 
     const handleBanClick = (user) => {
-        if (user.isBanned) {
-            handleBanConfirm(user.id, null);
-        } else {
-            setUserToBan(user);
-            setIsBanModalOpen(true);
-        }
+        if (user.isBanned) handleBanConfirm(user.id, null);
+        else { setUserToBan(user); setIsBanModalOpen(true); }
     };
 
     const handleBanConfirm = async (reasonOrId, details = null) => {
         const userId = userToBan ? userToBan.id : reasonOrId;
-        const finalReason = userToBan ? reasonOrId : null;
-        
         try {
-            await api.banUser(userId, finalReason, details);
-            showToast('Estado del usuario actualizado.', 'success');
+            await api.banUser(userId, userToBan ? reasonOrId : null, details);
+            showToast('Estado de usuario actualizado.', 'success');
             setIsBanModalOpen(false);
             setUserToBan(null);
-            fetchData(true);
-        } catch(e) {
-            showToast(e.message, 'error');
-        }
+            fetchData(false);
+        } catch(e) { showToast(e.message, 'error'); }
     };
 
     const handleCensorMessage = async (messageId) => {
         if(window.confirm("¿Censurar este mensaje?")) {
-            try {
-                await api.censorMessage(exchangeId, messageId);
-                fetchData(true);
-            } catch(e) { alert(e.message); }
+            try { await api.censorMessage(exchangeId, messageId); fetchData(false); } catch(e) { alert(e.message); }
         }
     };
 
     const handleReport = async (reason) => {
         try {
             await api.reportContent(exchange.id, 'CHAT', reason);
-            showToast('Reporte enviado. Revisaremos la conversación.', 'success');
-        } catch (err) {
-            showToast(err.message || 'Error al enviar el reporte.', 'error');
-        }
+            showToast('Reporte enviado correctamente.', 'success');
+        } catch (err) { showToast(err.message || 'Error al enviar reporte.', 'error'); }
     };
 
     if (loading) return React.createElement("div", { className: "flex justify-center items-center h-64" }, React.createElement(SwapSpinner, null));
-    if (error) return React.createElement("div", { className: "text-center text-red-500" }, error);
-    if (!chat || !exchange || !currentUser) return React.createElement("div", { className: "text-center" }, "Chat no encontrado.");
+    if (error) return React.createElement("div", { className: "text-center text-red-500 py-10" }, error);
+    if (!chat || !exchange || !currentUser) return React.createElement("div", { className: "text-center py-10" }, "Chat no disponible.");
 
     const isViewingAsAdmin = currentUser.role === 'SUPER_ADMIN';
-    const otherUser = exchange.ownerId === currentUser.id ? exchange.requester : exchange.owner;
-    const isOtherUserBanned = otherUser?.isBanned;
+    const partner = exchange.ownerId === currentUser.id ? exchange.requester : exchange.owner;
+    const isOtherUserBanned = partner?.isBanned;
     const isAccepted = exchange.status === ExchangeStatus.Accepted || exchange.status === ExchangeStatus.Completed;
 
     return (
-        React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_4rem_-_2.5rem_-_env(safe-area-inset-bottom,0))] md:h-[calc(100vh_-_4.5rem_-_3rem_-_env(safe-area-inset-bottom,0))] bg-gray-50 dark:bg-gray-900 max-w-4xl mx-auto rounded-lg shadow-lg border dark:border-gray-700" },
-            React.createElement(BanUserModal, {
-                isOpen: isBanModalOpen,
-                onClose: () => setIsBanModalOpen(false),
-                onConfirm: handleBanConfirm,
-                userName: userToBan?.name || ''
-            }),
-            React.createElement(ReportModal, {
-                isOpen: isReportModalOpen,
-                onClose: () => setIsReportModalOpen(false),
-                title: "Reportar Chat",
-                onSubmit: handleReport
-            }),
-            React.createElement("div", { className: "p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg flex flex-col justify-center relative" },
-                React.createElement("div", { className: "flex items-center justify-center gap-3 relative" },
-                    React.createElement("img", { src: exchange.requester?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: `w-8 h-8 rounded-full ${exchange.requester?.isBanned ? 'grayscale opacity-50' : ''}` }),
-                    React.createElement("h1", { className: "text-lg font-bold" }, `${exchange.requester?.name || 'Usuario'} ⇄ ${exchange.owner?.name || 'Usuario'}`),
-                    React.createElement("img", { src: exchange.owner?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: `w-8 h-8 rounded-full ${exchange.owner?.isBanned ? 'grayscale opacity-50' : ''}` }),
-                    
-                    !isViewingAsAdmin && !isOtherUserBanned && (
-                        React.createElement("button", { 
-                            onClick: () => setIsReportModalOpen(true),
-                            className: "absolute right-0 text-gray-400 hover:text-red-500 transition-colors p-2",
-                            title: "Reportar conversación"
-                        }, ICONS.flag)
+        React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_8rem)] bg-white dark:bg-gray-900 max-w-4xl mx-auto rounded-xl shadow-2xl border dark:border-gray-700 overflow-hidden" },
+            React.createElement(BanUserModal, { isOpen: isBanModalOpen, onClose: () => setIsBanModalOpen(false), onConfirm: handleBanConfirm, userName: userToBan?.name || '' }),
+            React.createElement(ReportModal, { isOpen: isReportModalOpen, onClose: () => setIsReportModalOpen(false), title: "Reportar Chat", onSubmit: handleReport }),
+            
+            React.createElement("div", { className: "p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center" },
+                React.createElement("div", { className: "flex items-center gap-3" },
+                    React.createElement(Link, { to: `/user/${partner.id}` },
+                        React.createElement("img", { src: partner?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: `w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm ${partner?.isBanned ? 'grayscale opacity-50' : ''}` })
+                    ),
+                    React.createElement("div", null,
+                        React.createElement("h1", { className: "text-base font-bold leading-tight" }, partner?.name),
+                        React.createElement("p", { className: "text-[10px] text-gray-500 font-bold uppercase" }, isViewingAsAdmin ? "VISTA DE ADMINISTRADOR" : "Socio de trueque")
                     )
                 ),
-                isViewingAsAdmin && (
-                    React.createElement("div", { className: "flex justify-center gap-2 mt-2" },
-                        React.createElement("span", { className: "text-xs font-bold bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full mr-2" }, "ADMIN MODE"),
-                        React.createElement(Button, { 
-                            size: "sm", 
-                            variant: exchange.requester?.isBanned ? "primary" : "danger", 
-                            className: "!py-0 !px-2 !text-xs", 
-                            onClick: (e) => { e.preventDefault(); e.stopPropagation(); handleBanClick(exchange.requester); } 
-                        }, exchange.requester?.isBanned ? `Unban ${exchange.requester?.name}` : `Ban ${exchange.requester?.name}`),
-                        React.createElement(Button, { 
-                            size: "sm", 
-                            variant: exchange.owner?.isBanned ? "primary" : "danger", 
-                            className: "!py-0 !px-2 !text-xs", 
-                            onClick: (e) => { e.preventDefault(); e.stopPropagation(); handleBanClick(exchange.owner); } 
-                        }, exchange.owner?.isBanned ? `Unban ${exchange.owner?.name}` : `Ban ${exchange.owner?.name}`)
-                    )
+                !isViewingAsAdmin && !isOtherUserBanned && (
+                    React.createElement("button", { onClick: () => setIsReportModalOpen(true), className: "text-gray-400 hover:text-red-500 p-2 transition-colors" }, ICONS.flag)
                 )
             ),
             
             !isViewingAsAdmin && isOtherUserBanned && (
-                React.createElement("div", { className: "bg-red-500 text-white p-2 text-center text-sm font-bold" },
-                    "🚫 Chat congelado: El usuario ha sido suspendido."
-                )
+                React.createElement("div", { className: "bg-red-600 text-white p-2 text-center text-xs font-bold" }, "USUARIO SUSPENDIDO - CHAT CONGELADO")
             ),
             
             React.createElement(MemoizedItemBar, { exchange: exchange }),
             
-            React.createElement("div", { className: "flex-grow overflow-y-auto p-4 flex flex-col" },
+            React.createElement("div", { className: "flex-grow overflow-y-auto p-4 flex flex-col bg-gray-50 dark:bg-gray-900/50" },
                 isAccepted && !isOtherUserBanned && React.createElement(ContactCard, { 
-                    contactCard: otherUser.contactCard, 
-                    avatarUrl: otherUser.avatarUrl,
+                    partner: partner,
+                    exchangeId: exchangeId,
                     theme: theme
                 }),
                 React.createElement("div", { className: "space-y-4 flex flex-col" },
@@ -368,15 +351,19 @@ const ChatDetailPage = () => {
                 isLoading: actionLoading
             }),
             
-            !isViewingAsAdmin && !isOtherUserBanned && exchange.status !== ExchangeStatus.Completed && exchange.status !== ExchangeStatus.Rejected && exchange.status !== ExchangeStatus.Cancelled && (
-                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: isSending || actionLoading })
+            !isViewingAsAdmin && !isOtherUserBanned && !isAccepted && exchange.status === ExchangeStatus.Pending && (
+                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: actionLoading })
+            ),
+            
+            isAccepted && !isOtherUserBanned && (
+                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: actionLoading })
             ),
             
             isModifyModalOpen && (
                 React.createElement(ExchangeProposalModal, {
                     isOpen: isModifyModalOpen,
                     onClose: () => setIsModifyModalOpen(false),
-                    userItems: userItems,
+                    userItems: [], 
                     targetItem: exchange.allItems.find(i => i.id === exchange.requestedItemId),
                     onSubmit: handleSubmitModification,
                     isLoading: actionLoading,
