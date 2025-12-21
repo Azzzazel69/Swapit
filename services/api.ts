@@ -302,7 +302,8 @@ class ApiClient {
           id: exId, requesterId: user.id, requesterName: user.name,
           ownerId: target.userId, ownerName: target.ownerName,
           status: 'PENDING', requestedItemId: p.requestedItemId, offeredItemIds: p.offeredItemIds,
-          offeredOtherItems: p.otherItems || [], createdAt: new Date().toISOString()
+          offeredOtherItems: p.otherItems || [], createdAt: new Date().toISOString(),
+          acceptedMeetingPoint: null
       };
       exchanges.push(newEx);
       chats.push({
@@ -347,7 +348,11 @@ class ApiClient {
   async acceptMeetingLocation(exchangeId, locationName, type) {
       const user = this._getCurrentUserFromToken();
       const chat = chats.find(c => c.id === exchangeId);
-      if (!chat) return;
+      const ex = exchanges.find(e => e.id === exchangeId);
+      if (!chat || !ex) return;
+      
+      // Mark as accepted to prevent duplicates
+      ex.acceptedMeetingPoint = locationName;
       
       const label = type === 'MIDPOINT' ? 'punto medio sugerido' : 'ubicación preferida';
       const text = `${user.name} ha aceptado encontraros en: ${locationName} (${label})`;
@@ -379,8 +384,16 @@ class ApiClient {
       if (action === 'ACCEPT') {
           ex.status = 'ACCEPTED';
           ex.acceptedAt = new Date().toISOString(); 
+          // Al aceptar, los artículos involucrados se marcan como RESERVADOS
+          const reqItem = items.find(i => i.id === ex.requestedItemId);
+          if (reqItem) reqItem.status = 'RESERVED';
+          ex.offeredItemIds.forEach(id => {
+              const offItem = items.find(i => i.id === id);
+              if (offItem) offItem.status = 'RESERVED';
+          });
+
           addNotificationDev(ex.requesterId, {
-              title: '¡Propuesta Aceptada!',
+              title: '¡Propuesta AceptADA!',
               body: `${user.name} ha aceptado tu propuesta de trueque.`,
               meta: { exchangeId: exId, type: 'status' }
           });
@@ -395,23 +408,19 @@ class ApiClient {
       persistData();
   }
 
-  async addCounterOffer(exId, itemIds) {
-      const ex = exchanges.find(e => e.id === exId);
-      const user = this._getCurrentUserFromToken();
-      ex.offeredItemIds = [...new Set([...ex.offeredItemIds, ...itemIds])];
-      const recipientId = (user.id === ex.ownerId) ? ex.requesterId : ex.ownerId;
-      addNotificationDev(recipientId, {
-          title: 'Nueva contraoferta',
-          body: `${user.name} ha añadido artículos a la propuesta.`,
-          meta: { exchangeId: exId, type: 'proposal' }
-      });
-      persistData();
-  }
-
   async rateUserAndCompleteExchange(exId, ratingData) {
       const ex = exchanges.find(e => e.id === exId);
       const user = this._getCurrentUserFromToken();
       ex.status = 'COMPLETED';
+      
+      // Al completar, los artículos pasan a estado EXCHANGED (Ya no disponibles)
+      const reqItem = items.find(i => i.id === ex.requestedItemId);
+      if (reqItem) reqItem.status = 'EXCHANGED';
+      ex.offeredItemIds.forEach(id => {
+          const offItem = items.find(i => i.id === id);
+          if (offItem) offItem.status = 'EXCHANGED';
+      });
+
       const targetUserId = (user.id === ex.ownerId) ? ex.requesterId : ex.ownerId;
       const targetUser = users.find(u => u.id === targetUserId);
       targetUser.ratings.push({ ...ratingData, from: user.name, date: new Date().toISOString() });
@@ -440,7 +449,7 @@ class ApiClient {
       if (!user) return [];
       return exchanges.filter(ex => ex.ownerId === user.id || ex.requesterId === user.id).map(ex => ({
           ...ex,
-          requestedItem: items.find(i => i.id === ex.requestedItemId) || { title: 'Eliminado' },
+          requestedItem: items.find(i => i.id === ex.requestedItemId) || { title: 'Eliminado', status: 'DELETED' },
           offeredItems: ex.offeredItemIds.map(id => items.find(i => i.id === id)).filter(Boolean)
       }));
   }

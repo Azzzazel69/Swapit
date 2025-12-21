@@ -129,24 +129,25 @@ const ItemBar = ({ exchange }) => {
 };
 const MemoizedItemBar = React.memo(ItemBar);
 
-const MessageInput = ({ onSendMessage, isLoading }) => {
+const MessageInput = ({ onSendMessage, isLoading, disabled }) => {
     const [text, setText] = useState('');
-    const handleSubmit = (e) => { e.preventDefault(); if(text.trim()){ onSendMessage(text); setText(''); } };
-    return React.createElement("form", { onSubmit: handleSubmit, className: "p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2" },
-        React.createElement("input", { type: "text", value: text, onChange: e => setText(e.target.value), placeholder: "Escribe tu mensaje...", className: "flex-grow appearance-none block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white", disabled: isLoading }),
-        React.createElement(Button, { type: "submit", isLoading: isLoading, disabled: !text.trim(), className: "rounded-full !p-3 min-w-[80px]", children: "Enviar" })
+    const handleSubmit = (e) => { e.preventDefault(); if(text.trim() && !disabled){ onSendMessage(text); setText(''); } };
+    return React.createElement("form", { onSubmit: handleSubmit, className: `p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2 ${disabled ? 'opacity-50 pointer-events-none' : ''}` },
+        React.createElement("input", { type: "text", value: text, onChange: e => setText(e.target.value), placeholder: disabled ? "Chat inactivo" : "Escribe tu mensaje...", className: "flex-grow appearance-none block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white", disabled: isLoading || disabled }),
+        React.createElement(Button, { type: "submit", isLoading: isLoading, disabled: !text.trim() || disabled, className: "rounded-full !p-3 min-w-[80px]", children: "Enviar" })
     );
 };
 
-const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onModify, onCounterOffer, isLoading }) => {
+const ActionBar = ({ exchange, currentUser, onAccept, onReject, onConfirm, onModify, isLoading, itemUnavailable }) => {
     const isOwner = currentUser.id === exchange.owner.id;
     const isRequester = currentUser.id === exchange.requester.id;
     
+    if (itemUnavailable) return null;
     if (exchange.status === ExchangeStatus.Rejected) return React.createElement("div", { className: "p-3 bg-red-50 dark:bg-red-900/10 text-center font-bold text-red-600" }, "Propuesta Rechazada");
     if (exchange.status === ExchangeStatus.Cancelled) return React.createElement("div", { className: "p-3 bg-gray-100 dark:bg-gray-800 text-center font-bold" }, "Intercambio Cancelado");
     
     if (exchange.status === ExchangeStatus.Pending) {
-        if (isOwner) return React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap justify-center gap-4" }, React.createElement(Button, { onClick: onAccept, size: "sm", children: "Aceptar Intercambio" }), React.createElement(Button, { onClick: onReject, variant: "danger", size: "sm", children: "Rechazar" }), React.createElement(Button, { onClick: onCounterOffer, variant: "secondary", size: "sm", children: "Contraoferta" }));
+        if (isOwner) return React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-wrap justify-center gap-4" }, React.createElement(Button, { onClick: onAccept, size: "sm", children: "Aceptar Intercambio" }), React.createElement(Button, { onClick: onReject, variant: "danger", size: "sm", children: "Rechazar" }));
         if (isRequester) return React.createElement("div", { className: "p-4 text-center bg-gray-50 dark:bg-gray-800/50" }, React.createElement("p", {className:"mb-3 text-sm text-gray-600 dark:text-gray-400 font-medium"}, "Esperando respuesta del propietario..."), React.createElement(Button, { onClick: onModify, variant: "secondary", size: "sm", className: "mx-auto", children: "Modificar Oferta" }));
     }
     
@@ -252,7 +253,6 @@ const ChatDetailPage = () => {
     const handleNavigateToRating = () => navigate(`/rate-exchange/${exchangeId}`);
     const handleModify = async () => setIsModifyModalOpen(true); 
     const handleSubmitModification = (data) => { setIsModifyModalOpen(false); handleAction(() => api.modifyExchangeProposal(exchangeId, data)); };
-    const handleCounterOffer = () => navigate(`/user/${exchange.requester.id}?fromExchange=${exchange.id}`);
 
     const handleBanClick = (user) => {
         if (user.isBanned) handleBanConfirm(user.id, null);
@@ -291,6 +291,10 @@ const ChatDetailPage = () => {
     const partner = exchange.ownerId === currentUser.id ? exchange.requester : exchange.owner;
     const isOtherUserBanned = partner?.isBanned;
     const isAccepted = exchange.status === ExchangeStatus.Accepted || exchange.status === ExchangeStatus.Completed;
+    
+    // Verificamos si el objeto solicitado sigue disponible
+    const requestedItem = exchange.allItems.find(i => i.id === exchange.requestedItemId);
+    const itemUnavailable = requestedItem && requestedItem.status !== 'AVAILABLE' && exchange.status === 'PENDING';
 
     return (
         React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_8rem)] bg-white dark:bg-gray-900 max-w-4xl mx-auto rounded-xl shadow-2xl border dark:border-gray-700 overflow-hidden" },
@@ -314,6 +318,12 @@ const ChatDetailPage = () => {
             
             !isViewingAsAdmin && isOtherUserBanned && (
                 React.createElement("div", { className: "bg-red-600 text-white p-2 text-center text-xs font-bold" }, "USUARIO SUSPENDIDO - CHAT CONGELADO")
+            ),
+
+            !isViewingAsAdmin && itemUnavailable && (
+                React.createElement("div", { className: "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 p-3 text-center text-sm font-bold border-b border-amber-200" }, 
+                    "⚠️ Lo sentimos, alguien se te ha adelantado o el artículo ya no está disponible."
+                )
             ),
             
             React.createElement(MemoizedItemBar, { exchange: exchange }),
@@ -347,16 +357,16 @@ const ChatDetailPage = () => {
                 onReject: handleReject,
                 onConfirm: handleNavigateToRating,
                 onModify: handleModify,
-                onCounterOffer: handleCounterOffer,
-                isLoading: actionLoading
+                isLoading: actionLoading,
+                itemUnavailable: itemUnavailable
             }),
             
             !isViewingAsAdmin && !isOtherUserBanned && !isAccepted && exchange.status === ExchangeStatus.Pending && (
-                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: actionLoading })
+                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: actionLoading, disabled: itemUnavailable })
             ),
             
             isAccepted && !isOtherUserBanned && (
-                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: actionLoading })
+                React.createElement(MessageInput, { onSendMessage: handleSendMessage, isLoading: actionLoading, disabled: false })
             ),
             
             isModifyModalOpen && (
@@ -364,7 +374,7 @@ const ChatDetailPage = () => {
                     isOpen: isModifyModalOpen,
                     onClose: () => setIsModifyModalOpen(false),
                     userItems: [], 
-                    targetItem: exchange.allItems.find(i => i.id === exchange.requestedItemId),
+                    targetItem: requestedItem,
                     onSubmit: handleSubmitModification,
                     isLoading: actionLoading,
                     isModification: true,

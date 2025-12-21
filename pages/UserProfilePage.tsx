@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
@@ -46,13 +45,9 @@ const UserProfilePage = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
     const [isFollowingLoading, setIsFollowingLoading] = useState(false);
 
-    const queryParams = new URLSearchParams(location.search);
-    const fromExchangeId = queryParams.get('fromExchange');
-    
     useEffect(() => {
         const fetchProfile = async () => {
             if (!userId) return;
@@ -71,19 +66,6 @@ const UserProfilePage = () => {
         fetchProfile();
     }, [userId]);
 
-    const handleCounterOffer = async (itemId) => {
-        if (!fromExchangeId) return;
-        setIsSubmitting(true);
-        try {
-            await api.addCounterOffer(fromExchangeId, [itemId]);
-            navigate(`/chat/${fromExchangeId}`);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
     const handleToggleFavorite = async (itemId) => {
         try {
             const updatedItem = await api.toggleFavorite(itemId);
@@ -103,7 +85,6 @@ const UserProfilePage = () => {
         try {
             const response = await api.toggleFollowUser(userId);
             setIsFollowing(response.isFollowing);
-            // Refresh user to update 'following' list in context
             await refreshUser(); 
             showToast(response.isFollowing ? "Ahora sigues a este usuario" : "Has dejado de seguir a este usuario", "success");
         } catch (err) {
@@ -178,17 +159,7 @@ const UserProfilePage = () => {
                 React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
                   items.map((item) => (
                       React.createElement("div", { key: item.id, className: "relative" },
-                          // Fix: Pass missing 'onDelete' and 'deletingItemId' props to ItemCard
-                          React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite, onDelete: undefined, deletingItemId: undefined }),
-                          fromExchangeId && item.userId !== currentUser.id && (
-                              React.createElement(Button, {
-                                  onClick: () => handleCounterOffer(item.id),
-                                  isLoading: isSubmitting,
-                                  className: "w-full mt-2",
-                                  size: "sm",
-                                  children: "Contraoferta"
-                              })
-                          )
+                          React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite, onDelete: undefined, deletingItemId: undefined })
                       )
                   ))
                 )

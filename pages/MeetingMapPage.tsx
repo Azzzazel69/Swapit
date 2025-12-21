@@ -40,7 +40,6 @@ const MeetingMapPage = () => {
         
         const userA = exchange.owner;
         const userB = exchange.requester;
-        const partner = currentUser.id === userA.id ? userB : userA;
 
         let centerLat, centerLng, zoom = 14, title = "", address = "";
 
@@ -60,10 +59,10 @@ const MeetingMapPage = () => {
         }
 
         return { centerLat, centerLng, zoom, title, address };
-    }, [exchange, type, targetUserId, currentUser.id]);
+    }, [exchange, type, targetUserId]);
 
     const handleAccept = async () => {
-        if (!mapData || isAccepting) return;
+        if (!mapData || isAccepting || exchange?.acceptedMeetingPoint) return;
         setIsAccepting(true);
         try {
             await api.acceptMeetingLocation(exchangeId, mapData.address, type.toUpperCase());
@@ -80,6 +79,7 @@ const MeetingMapPage = () => {
     if (!mapData) return React.createElement("div", { className: "p-10 text-center" }, "Error al cargar datos del mapa.");
 
     const mapUrl = `https://www.google.com/maps?q=${mapData.centerLat},${mapData.centerLng}&z=${mapData.zoom}&output=embed`;
+    const isAlreadyAccepted = !!exchange?.acceptedMeetingPoint;
 
     return (
         React.createElement("div", { className: "fixed inset-0 bg-gray-900 z-[200] flex flex-col overflow-hidden" },
@@ -117,17 +117,25 @@ const MeetingMapPage = () => {
                 React.createElement("div", { className: "absolute bottom-10 left-4 right-4 md:left-auto md:right-10 md:w-96 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 animate-fade-in-up" },
                     React.createElement("h3", { className: "text-lg font-bold mb-1" }, mapData.title),
                     React.createElement("p", { className: "text-sm text-gray-500 mb-6" }, 
-                        type === 'midpoint' 
-                            ? "Hemos calculado un punto intermedio equitativo basado en vuestras ciudades registradas." 
-                            : "Esta es la ubicación preferida indicada por el otro usuario."
+                        isAlreadyAccepted 
+                            ? `Ya habéis acordado encontraros en: ${exchange.acceptedMeetingPoint}.`
+                            : type === 'midpoint' 
+                                ? "Hemos calculado un punto intermedio equitativo basado en vuestras ciudades registradas." 
+                                : "Esta es la ubicación preferida indicada por el otro usuario."
                     ),
                     React.createElement("div", { className: "flex gap-3" },
-                        React.createElement(Button, { 
-                            onClick: handleAccept, 
-                            isLoading: isAccepting,
-                            className: "flex-grow",
-                            children: "Aceptar esta Ubicación" 
-                        })
+                        isAlreadyAccepted ? (
+                            React.createElement("div", { className: "w-full p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-center font-bold text-sm" }, 
+                                "✓ Ubicación acordada"
+                            )
+                        ) : (
+                            React.createElement(Button, { 
+                                onClick: handleAccept, 
+                                isLoading: isAccepting,
+                                className: "flex-grow",
+                                children: "Aceptar esta Ubicación" 
+                            })
+                        )
                     )
                 )
             )
