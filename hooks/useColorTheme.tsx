@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { createContext, useContext, useMemo } from 'react';
 
 const themes = [
@@ -17,7 +12,8 @@ const themes = [
     hoverTextColor: 'hover:text-orange-600',
     lightBg: 'bg-orange-100 dark:bg-orange-900/50',
     darkText: 'text-orange-800 dark:text-orange-200',
-    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600'
+    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-600',
+    logoAccent: 'text-yellow-400'
   },
   {
     name: 'Ocean',
@@ -29,7 +25,8 @@ const themes = [
     hoverTextColor: 'hover:text-green-600',
     lightBg: 'bg-green-100 dark:bg-green-900/50',
     darkText: 'text-green-800 dark:text-green-200',
-    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500'
+    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500',
+    logoAccent: 'text-yellow-300'
   },
   {
     name: 'Grape',
@@ -41,7 +38,8 @@ const themes = [
     hoverTextColor: 'hover:text-purple-600',
     lightBg: 'bg-purple-100 dark:bg-purple-900/50',
     darkText: 'text-purple-800 dark:text-purple-200',
-    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500'
+    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500',
+    logoAccent: 'text-cyan-300'
   },
   {
     name: 'Lime',
@@ -53,7 +51,8 @@ const themes = [
     hoverTextColor: 'hover:text-lime-600',
     lightBg: 'bg-lime-100 dark:bg-lime-900/50',
     darkText: 'text-lime-800 dark:text-lime-200',
-    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-green-500'
+    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-green-500',
+    logoAccent: 'text-orange-400'
   },
    {
     name: 'Sky',
@@ -65,7 +64,8 @@ const themes = [
     hoverTextColor: 'hover:text-sky-600',
     lightBg: 'bg-sky-100 dark:bg-sky-900/50',
     darkText: 'text-sky-800 dark:text-sky-200',
-    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-cyan-400'
+    textGradient: 'text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-cyan-400',
+    logoAccent: 'text-orange-500'
   },
 ];
 

@@ -51,16 +51,16 @@ const Header = () => {
             )
           ),
 
-          // Center: Logo (Refactored to match provided design)
+          // Center: Logo (Dynamic colors based on theme)
           React.createElement("div", { className: "flex-shrink-0 flex items-center" },
             React.createElement(Link, { 
               to: "/", 
               className: "flex items-center group",
               title: "Volver al Inicio"
             },
-               React.createElement("div", { className: "bg-[#0070CE] px-4 py-1.5 rounded-lg flex items-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-[1.02] border-b-4 border-[#005ba8]" },
+               React.createElement("div", { className: `bg-gradient-to-r ${theme.bg} px-4 py-1.5 rounded-lg flex items-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-[1.02] border-b-4 border-black/20` },
                     React.createElement("span", { className: "text-white font-black text-2xl tracking-tighter leading-none" }, "SWAP"),
-                    React.createElement("span", { className: "text-[#FF8A00] font-black text-2xl tracking-tighter leading-none ml-0.5" }, "IT")
+                    React.createElement("span", { className: `${theme.logoAccent} font-black text-2xl tracking-tighter leading-none ml-0.5` }, "IT")
                )
             )
           ),
@@ -95,7 +95,7 @@ const Header = () => {
               showAuthButtons && (
                 React.createElement("div", { className: "flex items-center gap-2" },
                   React.createElement(Link, { to: "/login", className: "px-3 py-2 rounded-md text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" }, "Entrar"),
-                  React.createElement(Link, { to: "/register", className: `bg-[#0070CE] hover:bg-[#0060b0] text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm` }, "Registro")
+                  React.createElement(Link, { to: "/register", className: `bg-gradient-to-r ${theme.bg} hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm` }, "Registro")
                 )
               )
             )
