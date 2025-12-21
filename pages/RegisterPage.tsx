@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { api } from '../services/api.ts';
 import { Link, useNavigate } from 'react-router-dom';
 import Input from '../components/Input.tsx';
@@ -7,6 +7,7 @@ import Button from '../components/Button.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { ICONS } from '../constants.tsx';
+import LocationSelector from '../components/LocationSelector.tsx';
 
 const PasswordStrengthIndicator = ({ password }) => {
     const checks = useMemo(() => {
@@ -18,36 +19,36 @@ const PasswordStrengthIndicator = ({ password }) => {
     }, [password]);
 
     const Check = ({ valid, text }) => (
-        React.createElement("li", { className: `flex items-center gap-2 text-sm ${valid ? 'text-green-500' : 'text-gray-400'}` },
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
-                valid 
-                    ? React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" }) 
-                    : React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" })
-            ),
-            text
-        )
+        <li className={`flex items-center gap-2 text-sm ${valid ? 'text-green-500' : 'text-gray-400'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {valid 
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /> 
+                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                }
+            </svg>
+            {text}
+        </li>
     );
 
     return (
-        React.createElement("ul", { className: "space-y-1 mt-2" },
-            React.createElement(Check, { valid: checks.hasLength, text: "Al menos 8 caracteres" }),
-            React.createElement(Check, { valid: checks.hasUpper, text: "Contiene una letra mayúscula" }),
-            React.createElement(Check, { valid: checks.hasLower, text: "Contiene una letra minúscula" }),
-            React.createElement(Check, { valid: checks.hasNumber, text: "Contiene un número" })
-        )
+        <ul className="space-y-1 mt-2">
+            <Check valid={checks.hasLength} text="Al menos 8 caracteres" />
+            <Check valid={checks.hasUpper} text="Contiene una letra mayúscula" />
+            <Check valid={checks.hasLower} text="Contiene una letra minúscula" />
+            <Check valid={checks.hasNumber} text="Contiene un número" />
+        </ul>
     );
 };
 
 const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [gender, setGender] = useState('');
+  const [locationData, setLocationData] = useState<any>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
   const { theme } = useColorTheme();
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -57,14 +58,19 @@ const RegisterPage = () => {
     return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password);
   }, [password]);
 
+  const handleLocationChange = useCallback((data) => {
+    setLocationData(data);
+    setError(null);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!agreedToTerms) {
         setError("Debes aceptar los Términos de Servicio para registrarte.");
         return;
     }
-    if (!gender) {
-        setError("Por favor, selecciona tu género.");
+    if (!locationData) {
+        setError("Por favor, indica tu ubicación.");
         return;
     }
     if (!isPasswordValid) {
@@ -78,21 +84,27 @@ const RegisterPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.register(name, email, password, gender, '');
+      await api.register(name, email, password, '', { 
+        province: locationData.province, 
+        city: locationData.city,
+        community: locationData.community,
+        lat: locationData.lat,
+        lng: locationData.lng,
+        locationId: locationData.cityId
+      });
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('cookie_consent', 'accepted');
       }
       navigate('/verify-email', { state: { email } });
-    } catch (err) {
+    } catch (err: any) {
       if (err.message.includes('Ya existe un usuario con este correo')) {
           setError(
-              React.createElement("span", null,
-                  "Ya existe un usuario con este correo. ¿Has",
-                  ' ',
-                  React.createElement(Link, { to: "/forgot-password", state: {email}, className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
-                      "olvidado tu contraseña?"
-                  )
-              )
+              <span>
+                  Ya existe un usuario con este correo. ¿Has{' '}
+                  <Link to="/forgot-password" state={{email}} className={`font-medium ${theme.textColor} ${theme.hoverTextColor}`}>
+                      olvidado tu contraseña?
+                  </Link>
+              </span>
           );
       } else {
           setError(err.message);
@@ -102,103 +114,103 @@ const RegisterPage = () => {
     }
   };
 
-  // Fix: Extracted props for select to fix TS error
-  const selectProps = {
-      id: "gender",
-      name: "gender",
-      value: gender,
-      onChange: (e) => setGender(e.target.value),
-      required: true,
-      className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`
-  };
+  return (
+    <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 p-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+            Crea tu cuenta
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-500">Empieza a intercambiar hoy mismo</p>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && <div className="text-red-500 text-sm text-center p-3 bg-red-100 dark:bg-red-900/50 rounded-lg">{error}</div>}
+          
+          <div className="flex flex-col gap-y-5">
+            <Input id="name" label="Nombre completo" name="name" type="text" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" />
+            
+            {/* z-index crucial: z-30 es mayor que el z-index por defecto de los campos de abajo */}
+            <div className="relative z-30 bg-gray-50 dark:bg-gray-900/30 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-inner">
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Ubicación para intercambios</h3>
+                <LocationSelector onChange={handleLocationChange} onError={setError} />
+            </div>
 
-  return React.createElement("div", { className: "flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" },
-    React.createElement("div", { className: "max-w-md w-full space-y-8 p-10 bg-white dark:bg-gray-800 rounded-xl shadow-lg" },
-      React.createElement("div", null,
-        React.createElement("h2", { className: "mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white" },
-          "Crea tu cuenta"
-        )
-      ),
-      React.createElement("form", { className: "mt-8 space-y-6", onSubmit: handleSubmit },
-        error && React.createElement("div", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
-        React.createElement("div", { className: "rounded-md shadow-sm -space-y-px flex flex-col gap-y-4" },
-          React.createElement(Input, { id: "name", label: "Nombre Completo", name: "name", type: "text", autoComplete: "name", required: true, value: name, onChange: (e) => setName(e.target.value), placeholder: "Tu Nombre" }),
-          React.createElement("div", null,
-            React.createElement("label", { htmlFor: "gender", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Género"),
-            React.createElement("select", selectProps,
-                React.createElement("option", { value: "", disabled: true }, "-- Selecciona una opción --"),
-                React.createElement("option", { value: "female" }, "Femenino"),
-                React.createElement("option", { value: "male" }, "Masculino"),
-                React.createElement("option", { value: "neutral" }, "Prefiero no decirlo / Otro")
-            )
-          ),
-          React.createElement(Input, { id: "email-address", label: "Correo electrónico", name: "email", type: "email", autoComplete: "email", required: true, value: email, onChange: (e) => setEmail(e.target.value), placeholder: "Correo electrónico" }),
-          React.createElement("div", null,
-              React.createElement(Input, { 
-                  id: "password", 
-                  label: "Contraseña", 
-                  name: "password", 
-                  type: passwordVisible ? 'text' : 'password', 
-                  autoComplete: "new-password", 
-                  required: true, 
-                  value: password, 
-                  onChange: (e) => setPassword(e.target.value), 
-                  placeholder: "Contraseña",
-                  icon: passwordVisible ? ICONS.eyeOff : ICONS.eye,
-                  onIconClick: () => setPasswordVisible(!passwordVisible)
-              }),
-              React.createElement(PasswordStrengthIndicator, { password: password })
-          ),
-          React.createElement(Input, { 
-              id: "confirm-password", 
-              label: "Confirmar Contraseña", 
-              name: "confirm-password", 
-              type: confirmPasswordVisible ? 'text' : 'password', 
-              autoComplete: "new-password", 
-              required: true, 
-              value: confirmPassword, 
-              onChange: (e) => setConfirmPassword(e.target.value), 
-              placeholder: "Confirmar Contraseña",
-              icon: confirmPasswordVisible ? ICONS.eyeOff : ICONS.eye,
-              onIconClick: () => setConfirmPasswordVisible(!confirmPasswordVisible)
-          })
-        ),
-        React.createElement("div", { className: "flex items-start" },
-            React.createElement("div", { className: "flex items-center h-5" },
-                React.createElement("input", {
-                    id: "terms",
-                    name: "terms",
-                    type: "checkbox",
-                    checked: agreedToTerms,
-                    onChange: (e) => setAgreedToTerms(e.target.checked),
-                    className: `h-4 w-4 rounded border-gray-300 ${theme.textColor} ${theme.focus}`
-                })
-            ),
-            React.createElement("div", { className: "ml-3 text-sm" },
-                React.createElement("label", { htmlFor: "terms", className: "font-medium text-gray-700 dark:text-gray-300" },
-                    "He leído y acepto los ",
-                    React.createElement(Link, {
-                        to: "/terms-of-service",
-                        target: "_blank",
-                        rel: "noopener noreferrer",
-                        className: `font-medium ${theme.textColor} ${theme.hoverTextColor} underline`
-                    }, "Términos de Servicio"),
-                    " y la Política de Cookies."
-                )
-            )
-        ),
-        React.createElement("div", null,
-          React.createElement(Button, { type: "submit", isLoading: isLoading, className: "w-full", disabled: !isPasswordValid || password !== confirmPassword || !agreedToTerms || !gender, children: "Crear Cuenta" })
-        )
-      ),
-      React.createElement("p", { className: "mt-2 text-center text-sm text-gray-600 dark:text-gray-400" },
-        "¿Ya tienes una cuenta?",
-        ' ',
-        React.createElement(Link, { to: "/login", className: `font-medium ${theme.textColor} ${theme.hoverTextColor}` },
-          "Inicia sesión"
-        )
-      )
-    )
+            <div className="relative z-20 space-y-5">
+                <Input id="email-address" label="Correo electrónico" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@ejemplo.com" />
+                
+                <div>
+                    <Input 
+                        id="password" 
+                        label="Contraseña" 
+                        name="password" 
+                        type={passwordVisible ? 'text' : 'password'} 
+                        autoComplete="new-password" 
+                        required 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        placeholder="Crea una contraseña"
+                        icon={passwordVisible ? ICONS.eyeOff : ICONS.eye}
+                        onIconClick={() => setPasswordVisible(!passwordVisible)}
+                    />
+                    <PasswordStrengthIndicator password={password} />
+                </div>
+                
+                <Input 
+                    id="confirm-password" 
+                    label="Confirmar contraseña" 
+                    name="confirm-password" 
+                    type={confirmPasswordVisible ? 'text' : 'password'} 
+                    autoComplete="new-password" 
+                    required 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    placeholder="Repite la contraseña"
+                    icon={confirmPasswordVisible ? ICONS.eyeOff : ICONS.eye}
+                    onIconClick={() => setConfirmPasswordVisible(!confirmPasswordVisible)}
+                />
+            </div>
+          </div>
+          
+          <div className="flex items-start bg-gray-50 dark:bg-gray-900/20 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+              <div className="flex items-center h-5">
+                  <input
+                      id="terms"
+                      name="terms"
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className={`h-4 w-4 rounded border-gray-300 ${theme.textColor} ${theme.focus}`}
+                  />
+              </div>
+              <div className="ml-3 text-xs leading-tight">
+                  <label htmlFor="terms" className="font-medium text-gray-700 dark:text-gray-300">
+                      Acepto los{" "}
+                      <Link to="/terms-of-service" target="_blank" className={`font-bold ${theme.textColor} underline`}>
+                          Términos de Servicio
+                      </Link>{" "}
+                      y la Política de Cookies de Swapit.
+                  </label>
+              </div>
+          </div>
+
+          <div className="pt-2">
+            <Button 
+                type="submit" 
+                isLoading={isLoading} 
+                className="w-full shadow-lg transform active:scale-95 transition-transform" 
+                disabled={!isPasswordValid || password !== confirmPassword || !agreedToTerms} 
+                children="Finalizar Registro" 
+            />
+          </div>
+        </form>
+        <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+          ¿Ya eres Swapper?{' '}
+          <Link to="/login" className={`font-bold ${theme.textColor} ${theme.hoverTextColor}`}>
+            Inicia sesión
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 };
 

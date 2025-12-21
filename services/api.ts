@@ -47,66 +47,6 @@ const generatePlaceholderImage = (text: string): string => {
     return canvas.toDataURL('image/png');
 };
 
-// --- DEV PATCH: notifications (dev-only) ---
-const notificationsStore: Record<string, Array<any>> = {};
-
-function addNotificationDev(userId: string, payload: { title: string; body?: string; meta?: any }) {
-  if (!userId) return;
-  if (!notificationsStore[userId]) notificationsStore[userId] = [];
-  
-  if (payload.meta?.type === 'chat') {
-      const existingIdx = notificationsStore[userId].findIndex(n => 
-          !n.read && 
-          n.meta?.type === 'chat' && 
-          n.meta?.exchangeId === payload.meta.exchangeId
-      );
-      if (existingIdx > -1) {
-          const existing = notificationsStore[userId].splice(existingIdx, 1)[0];
-          existing.createdAt = new Date().toISOString();
-          existing.body = payload.body || "Tienes nuevos mensajes.";
-          notificationsStore[userId].unshift(existing);
-          return;
-      }
-  }
-
-  notificationsStore[userId].unshift({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
-    title: payload.title,
-    body: payload.body || '',
-    read: false,
-    createdAt: new Date().toISOString(),
-    meta: payload.meta || null
-  });
-  if (notificationsStore[userId].length > 100) notificationsStore[userId].length = 100;
-}
-
-async function getNotificationsForUserDev(userId: string) {
-  await new Promise(r => setTimeout(r, 40));
-  return (notificationsStore[userId] || []).slice(0, 50);
-}
-
-async function markAllNotificationsReadDev(userId: string) {
-  if (!notificationsStore[userId]) return;
-  notificationsStore[userId] = notificationsStore[userId].map(n => ({ ...n, read: true }));
-}
-
-async function markChatNotificationsAsReadDev(userId: string, exchangeId: string) {
-    if (!notificationsStore[userId]) return;
-    notificationsStore[userId] = notificationsStore[userId].map(n => 
-        (n.meta?.type === 'chat' && n.meta?.exchangeId === exchangeId) ? { ...n, read: true } : n
-    );
-}
-
-async function loginWithGoogleMock() {
-  await new Promise(r => setTimeout(r, 120));
-  const mockUser = users.find(u => u.id === 'user-1') || users[1];
-  const token = `fake-jwt-for-${mockUser.id}`;
-  if (typeof window !== 'undefined' && window.localStorage) {
-    window.localStorage.setItem('jwt_token', token);
-  }
-  return { user: mockUser, token };
-}
-
 // --- DATA ---
 let users = [];
 let items = [];
@@ -114,6 +54,12 @@ let exchanges = [];
 let chats = [];
 let itemLogs = [];
 let reportedContent = [];
+
+const persistData = () => {
+    if (typeof window !== 'undefined') {
+        window.localStorage.setItem('swapit_data', JSON.stringify({ users, items, exchanges, chats, itemLogs, reportedContent }));
+    }
+};
 
 const setupInitialData = () => {
     try {
@@ -135,7 +81,7 @@ const setupInitialData = () => {
         id, name, email, role, salt: adminSalt,
         hashedPassword: btoa('password123' + adminSalt),
         emailVerified: true, phoneVerified: true, phone: '600000000',
-        location: { country: 'España', city: locationCity, postalCode: '28001', address: 'Calle Principal', lat, lng },
+        location: { country: 'España', city: locationCity, province: 'Madrid', postalCode: '28001', address: 'Calle Principal', lat, lng },
         preferences: ['Electrónica', 'Hogar y Muebles'],
         avatarUrl: avatar, ratings: [], following: [], notificationSettings: { newItemsFromFavorites: true },
         isBanned: false, lastActiveAt: new Date().toISOString(), columnLayout: null,
@@ -180,12 +126,6 @@ const setupInitialData = () => {
     persistData();
 };
 
-const persistData = () => {
-    if (typeof window !== 'undefined') {
-        window.localStorage.setItem('swapit_data', JSON.stringify({ users, items, exchanges, chats, itemLogs, reportedContent }));
-    }
-};
-
 setupInitialData();
 
 class ApiClient {
@@ -197,21 +137,7 @@ class ApiClient {
     return users.find(u => u.id === userId);
   }
 
-  _enrichItem(item, currentUser, userItemsCache = null) {
-      if (!item) return null;
-      const owner = users.find(u => u.id === item.userId);
-      if (!owner || owner.isBanned) return null; // Si no hay dueño o está baneado, el item no existe para la app
-      
-      const isFavorited = currentUser ? (item.favoritedBy || []).includes(currentUser.id) : false;
-      const myItems = userItemsCache || (currentUser ? items.filter(i => i.userId === currentUser.id) : []);
-      const isMatch = myItems.some(myI => 
-        (myI.wishedItem && item.title.toLowerCase().includes(myI.wishedItem.toLowerCase())) &&
-        (item.wishedItem && myI.title.toLowerCase().includes(item.wishedItem.toLowerCase()))
-      );
-      return { ...item, isFavorited, isMatch, ownerAvatarUrl: owner?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, ownerLocation: owner?.location };
-  }
-
-  async simulateDelay(ms = 300) { return new Promise(r => setTimeout(r, ms)); }
+  async simulateDelay(ms = 100) { return new Promise(r => setTimeout(r, ms)); }
   setToken(t) { this.token = t; }
 
   async login(email, password) {
@@ -224,10 +150,12 @@ class ApiClient {
 
   async loginWithGoogle(credential) {
       await this.simulateDelay();
-      return await loginWithGoogleMock();
+      const mockUser = users[1];
+      this.token = `fake-jwt-for-${mockUser.id}`;
+      return { token: this.token };
   }
 
-  async register(name, email, password, gender, avatar) {
+  async register(name, email, password, avatar, locationData = null) {
       await this.simulateDelay();
       const id = `user-${Date.now()}`;
       const salt = 'salt' + Math.random().toString(36).slice(2, 5);
@@ -235,14 +163,16 @@ class ApiClient {
           id, name, email, role: 'USER', salt,
           hashedPassword: btoa(password + salt),
           emailVerified: false, phoneVerified: false, phone: '',
-          location: null, preferences: [],
+          location: locationData ? { ...locationData } : null,
+          preferences: [],
           avatarUrl: avatar || DEFAULT_AVATAR_NEUTRAL, ratings: [], following: [], notificationSettings: { newItemsFromFavorites: true },
           isBanned: false, lastActiveAt: new Date().toISOString(), columnLayout: null,
           contactCard: { enabled: false, name, email, phone: '', meetingPointAddress: '', meetingPointCoords: null, meetingPointComment: '', preferredSchedule: '' }
       };
       users.push(newUser);
       persistData();
-      return { user: newUser, token: `fake-jwt-for-${id}` };
+      this.token = `fake-jwt-for-${id}`;
+      return { user: newUser, token: this.token };
   }
 
   async getCurrentUser() {
@@ -251,245 +181,40 @@ class ApiClient {
       return { ...u, hashedPassword: null, salt: null };
   }
 
-  async getHomePageData({ page = 1, limit = 12 }) {
+  async updateUserLocation(location) {
       const user = this._getCurrentUserFromToken();
-      const myItems = user ? items.filter(i => i.userId === user.id) : [];
-      
-      // Obtenemos todos los items válidos (No míos, no reportados, disponibles, dueño no baneado)
-      const allValid = items.filter(i => !i.flagged && i.status === 'AVAILABLE' && i.userId !== user?.id)
-                          .map(i => this._enrichItem(i, user, myItems))
-                          .filter(Boolean); // Limpiamos nulls
-      
-      // Matches: coincidencia de deseos
-      const matches = allValid.filter(i => i.isMatch);
-      
-      // Recomendados: Por preferencias del usuario
-      const recommended = user && user.preferences?.length > 0 
-          ? allValid.filter(i => user.preferences.includes(i.category)).slice(0, 4)
-          : []; // Si no hay preferencias o no coinciden, no mandamos nada para no "ensuciar"
-
-      // Seguidores
-      const followedUsersItems = user 
-          ? allValid.filter(i => user.following.includes(i.userId))
-          : [];
-
-      return { 
-          exploreItems: allValid.slice((page-1)*limit, page*limit),
-          totalExploreItems: allValid.length,
-          directMatches: matches.slice(0, 4),
-          recommended: recommended,
-          followedUsersItems: followedUsersItems.slice(0, 8)
-      };
-  }
-
-  async getItemById(id) {
-      const user = this._getCurrentUserFromToken();
-      return this._enrichItem(items.find(i => i.id === id), user);
-  }
-
-  async toggleFavorite(id) {
-      const user = this._getCurrentUserFromToken();
-      const item = items.find(i => i.id === id);
-      if (!item || !user) return;
-      if (!item.favoritedBy) item.favoritedBy = [];
-      const idx = item.favoritedBy.indexOf(user.id);
-      if (idx > -1) {
-          item.favoritedBy.splice(idx, 1);
-          item.likes = Math.max(0, (item.likes || 0) - 1);
-      } else {
-          item.favoritedBy.push(user.id);
-          item.likes = (item.likes || 0) + 1;
-          addNotificationDev(item.userId, {
-              title: '¡Le gusta tu artículo!',
-              body: `${user.name} guardó "${item.title}" en favoritos.`,
-              meta: { type: 'favorite', userId: user.id }
-          });
-      }
-      persistData();
-      return this._enrichItem(item, user);
-  }
-
-  async createExchangeProposal(p) {
-      const user = this._getCurrentUserFromToken();
-      const target = items.find(i => i.id === p.requestedItemId);
-      const exId = `ex-${Date.now()}`;
-      const newEx = {
-          id: exId, requesterId: user.id, requesterName: user.name,
-          ownerId: target.userId, ownerName: target.ownerName,
-          status: 'PENDING', requestedItemId: p.requestedItemId, offeredItemIds: p.offeredItemIds,
-          offeredOtherItems: p.otherItems || [], createdAt: new Date().toISOString(),
-          acceptedMeetingPoint: null
-      };
-      exchanges.push(newEx);
-      chats.push({
-          id: exId, participantIds: [user.id, target.userId],
-          messages: p.message ? [{ id: 'm1', senderId: user.id, text: p.message, timestamp: new Date().toISOString() }] : []
-      });
-      addNotificationDev(target.userId, {
-          title: '¡Nueva propuesta de cambio!',
-          body: `${user.name} quiere tu ${target.title}.`,
-          meta: { exchangeId: exId, type: 'proposal' }
-      });
-      persistData();
-      return newEx;
-  }
-
-  async modifyExchangeProposal(exId, data) {
-      const ex = exchanges.find(e => e.id === exId);
-      if (!ex) throw new Error('Intercambio no encontrado');
-      ex.offeredItemIds = data.offeredItemIds;
-      ex.offeredOtherItems = data.otherItems || [];
-      persistData();
-      return ex;
-  }
-
-  async sendMessage(chatId, text) {
-      const user = this._getCurrentUserFromToken();
-      const chat = chats.find(c => c.id === chatId);
-      const msg = { id: `m-${Date.now()}`, senderId: user.id, text, timestamp: new Date().toISOString(), type: 'TEXT' };
-      chat.messages.push(msg);
-      const recipientId = chat.participantIds.find(id => id !== user.id);
-      
-      addNotificationDev(recipientId, {
-          title: `Mensaje de ${user.name}`,
-          body: text,
-          meta: { exchangeId: chatId, type: 'chat' }
-      });
-      
-      persistData();
-      return msg;
-  }
-
-  async acceptMeetingLocation(exchangeId, locationName, type) {
-      const user = this._getCurrentUserFromToken();
-      const chat = chats.find(c => c.id === exchangeId); // Fixed typo here (c instead of i)
-      const ex = exchanges.find(e => e.id === exchangeId);
-      if (!chat || !ex) return;
-      
-      // Mark as accepted to prevent duplicates
-      ex.acceptedMeetingPoint = locationName;
-      
-      const label = type === 'MIDPOINT' ? 'punto medio sugerido' : 'ubicación preferida';
-      const text = `${user.name} ha aceptado encontraros en: ${locationName} (${label})`;
-      
-      const msg = { 
-          id: `m-${Date.now()}`, 
-          senderId: user.id, 
-          text, 
-          timestamp: new Date().toISOString(), 
-          type: 'SYSTEM' 
-      };
-      chat.messages.push(msg);
-      persistData();
-      return msg;
-  }
-
-  async censorMessage(exId, msgId) {
-      const chat = chats.find(c => c.id === exId);
-      const msg = chat.messages.find(m => m.id === msgId);
-      if (msg) {
-          msg.text = "[CONTENIDO ELIMINADO POR MODERACIÓN]";
+      if (user) {
+          user.location = { ...user.location, ...location };
           persistData();
       }
   }
 
-  async respondToExchange(exId, action) {
-      const ex = exchanges.find(e => e.id === exId);
+  async getHomePageData({ page = 1, limit = 12 }) {
       const user = this._getCurrentUserFromToken();
-      if (action === 'ACCEPT') {
-          ex.status = 'ACCEPTED';
-          ex.acceptedAt = new Date().toISOString(); 
-          // Al aceptar, los artículos involucrados se marcan como RESERVADOS
-          const reqItem = items.find(i => i.id === ex.requestedItemId);
-          if (reqItem) reqItem.status = 'RESERVED';
-          ex.offeredItemIds.forEach(id => {
-              const offItem = items.find(i => i.id === id);
-              if (offItem) offItem.status = 'RESERVED';
-          });
-
-          addNotificationDev(ex.requesterId, {
-              title: '¡Propuesta AceptADA!',
-              body: `${user.name} ha aceptado tu propuesta de trueque.`,
-              meta: { exchangeId: exId, type: 'status' }
-          });
-      } else if (action === 'REJECT') {
-          ex.status = 'REJECTED';
-          addNotificationDev(ex.requesterId, {
-              title: 'Propuesta rechazada',
-              body: `${user.name} no está interesado en el cambio.`,
-              meta: { exchangeId: exId, type: 'status' }
-          });
-      }
-      persistData();
+      const allValid = items.filter(i => !i.flagged && i.status === 'AVAILABLE' && i.userId !== user?.id);
+      return { 
+          exploreItems: allValid.slice((page-1)*limit, page*limit),
+          totalExploreItems: allValid.length,
+          directMatches: [],
+          recommended: [],
+          followedUsersItems: []
+      };
   }
 
-  async rateUserAndCompleteExchange(exId, ratingData) {
-      const ex = exchanges.find(e => e.id === exId);
-      const user = this._getCurrentUserFromToken();
-      ex.status = 'COMPLETED';
-      
-      // Al completar, los artículos pasan a estado EXCHANGED (Ya no disponibles)
-      const reqItem = items.find(i => i.id === ex.requestedItemId);
-      if (reqItem) reqItem.status = 'EXCHANGED';
-      ex.offeredItemIds.forEach(id => {
-          const offItem = items.find(i => i.id === id);
-          if (offItem) offItem.status = 'EXCHANGED';
-      });
-
-      const targetUserId = (user.id === ex.ownerId) ? ex.requesterId : ex.ownerId;
-      const targetUser = users.find(u => u.id === targetUserId);
-      targetUser.ratings.push({ ...ratingData, from: user.name, date: new Date().toISOString() });
-      addNotificationDev(targetUserId, {
-          title: '¡Intercambio Completado!',
-          body: `${user.name} te ha valorado con ${ratingData.rating} estrellas.`,
-          meta: { type: 'rating' }
-      });
-      persistData();
+  async getItemById(id) {
+      return items.find(i => i.id === id);
   }
 
-  async getChatAndExchangeDetails(id) {
-      const user = this._getCurrentUserFromToken();
-      const chat = chats.find(c => c.id === id);
-      const ex = exchanges.find(e => e.id === id);
-      if (!ex) return { chat: null, exchange: null };
-      const owner = users.find(u => u.id === ex.ownerId);
-      const req = users.find(u => u.id === ex.requesterId);
-      const allItemIds = [ex.requestedItemId, ...ex.offeredItemIds];
-      const detailedEx = { ...ex, allItems: items.filter(i => allItemIds.includes(i.id)), owner, requester: req };
-      return { chat, exchange: detailedEx };
+  async getUserItems(uid) { 
+      return items.filter(i => i.userId === uid); 
   }
 
-  async getExchanges() {
-      const user = this._getCurrentUserFromToken();
-      if (!user) return [];
-      return exchanges.filter(ex => ex.ownerId === user.id || ex.requesterId === user.id).map(ex => ({
-          ...ex,
-          requestedItem: items.find(i => i.id === ex.requestedItemId) || { title: 'Eliminado', status: 'DELETED' },
-          offeredItems: ex.offeredItemIds.map(id => items.find(i => i.id === id)).filter(Boolean)
-      }));
-  }
-
-  async getUserItems(uid) { return items.filter(i => i.userId === uid).map(i => this._enrichItem(i, this._getCurrentUserFromToken())); }
-  async getFavoriteItems() {
-      const user = this._getCurrentUserFromToken();
-      return items.filter(i => (i.favoritedBy || []).includes(user?.id)).map(i => this._enrichItem(i, user));
-  }
   async createItem(data) {
       const user = this._getCurrentUserFromToken();
       const newItem = { id: `item-${Date.now()}`, userId: user.id, ownerName: user.name, ...data, status: 'AVAILABLE', createdAt: new Date().toISOString(), likes: 0, favoritedBy: [], modificationCount: 0, lastModifiedAt: new Date().toISOString(), flagged: false };
       items.unshift(newItem);
       persistData();
       return newItem;
-  }
-  
-  async updateItem(itemId, data) {
-      const item = items.find(i => i.id === itemId);
-      if (!item) throw new Error('Item no encontrado');
-      Object.assign(item, data);
-      item.modificationCount = (item.modificationCount || 0) + 1;
-      item.lastModifiedAt = new Date().toISOString();
-      persistData();
-      return this._enrichItem(item, this._getCurrentUserFromToken());
   }
 
   async deleteItem(itemId) {
@@ -500,218 +225,195 @@ class ApiClient {
       }
   }
 
-  async getUserProfile(userId) {
-      const user = users.find(u => u.id === userId);
-      if (!user) throw new Error('Usuario no encontrado');
-      const userItems = items.filter(i => i.userId === userId);
-      const enrichedItems = userItems.map(i => this._enrichItem(i, this._getCurrentUserFromToken()));
-      return { ...user, items: enrichedItems, hashedPassword: null, salt: null };
-  }
+  // --- Missing methods implementation ---
 
-  async banUser(id, r, d) {
-      const u = users.find(u => u.id === id);
-      u.isBanned = !u.isBanned;
-      persistData();
-      return { success: true };
-  }
-  async getAdminDashboardStats() {
-      return { totalUsers: users.length, totalItems: items.length, activeExchanges: exchanges.length, flaggedItems: reportedContent.filter(r => r.contentType === 'ITEM').length, flaggedChats: reportedContent.filter(r => r.contentType === 'CHAT').length, activeUsers: users.length };
-  }
-  async getAllUsersForAdmin() { return users; }
-  
-  async getModerationQueue() {
-      return reportedContent.map(r => ({
-          ...r,
-          preview: r.contentType === 'ITEM' ? (items.find(i => i.id === r.contentId)?.title || 'Item eliminado') : 'Conversación reportada',
-          date: r.createdAt
-      }));
-  }
-
-  async resolveModeration(id, type, action) {
-      const index = reportedContent.findIndex(r => r.id === id);
-      if (index > -1) {
-          if (action === 'DELETE') {
-              const contentId = reportedContent[index].contentId;
-              if (type === 'ITEM') await this.deleteItem(contentId);
-          }
-          reportedContent.splice(index, 1);
-          persistData();
-      }
-  }
-
-  async getAdminAuditLogs({ query = '', page = 1, limit = 20 } = {}) {
-      return { logs: [], totalPages: 0 };
-  }
-
-  async getAllItemsForAdmin() { return items; }
-  
-  async deleteItemByAdmin(itemId) {
-      await this.deleteItem(itemId);
-  }
-
-  async adminAdvancedSearchExchanges({ query = '', status = 'ALL', page = 1, limit = 10 } = {}) {
-      return { exchanges: [], totalPages: 0 };
-  }
-
-  async toggleFollowUser(id) {
-      const user = this._getCurrentUserFromToken();
-      if (!user) throw new Error('No autorizado');
-      if (!user.following) user.following = [];
-      const idx = user.following.indexOf(id);
-      let isFollowing = false;
-      if (idx > -1) {
-          user.following.splice(idx, 1);
-      } else {
-          user.following.push(id);
-          isFollowing = true;
-      }
-      persistData();
-      return { isFollowing };
-  }
-
-  // Fix: Added reason property to the return object to satisfy ProfilePage's expectations and fix the TS error.
-  async canEditProfile(): Promise<{ canEdit: boolean; reason: string | null }> {
-    return { canEdit: true, reason: null };
-  }
-  
-  async resizeImageBeforeUpload(f) { return URL.createObjectURL(f); }
-  async deleteExchanges(ids) { exchanges = exchanges.filter(e => !ids.includes(e.id)); persistData(); }
-
-  async updateUserAvatar(avatarUrl) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.avatarUrl = avatarUrl;
-          persistData();
-      }
-  }
-
-  async updateUserProfileData(data) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          Object.assign(user, data);
-          persistData();
-          return user;
-      }
-      throw new Error('No autorizado');
+  async deleteExchanges(ids) {
+    exchanges = exchanges.filter(ex => !ids.includes(ex.id));
+    persistData();
   }
 
   async updateUserPassword(current, newP) {
-      const user = this._getCurrentUserFromToken();
-      if (user && user.hashedPassword === btoa(current + user.salt)) {
-          user.hashedPassword = btoa(newP + user.salt);
-          persistData();
-          return;
-      }
-      throw new Error('Contraseña actual incorrecta');
+    const user = this._getCurrentUserFromToken();
+    if (!user) throw new Error('No autorizado');
+    if (user.hashedPassword !== btoa(current + user.salt)) throw new Error('Contraseña actual incorrecta');
+    user.hashedPassword = btoa(newP + user.salt);
+    persistData();
   }
 
-  async changeUserPhone(phone) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.phone = phone;
-          persistData();
-      }
+  async createExchangeProposal(data) {
+    const user = this._getCurrentUserFromToken();
+    if (!user) throw new Error('No autorizado');
+    const targetItem = items.find(i => i.id === data.requestedItemId);
+    if (!targetItem) throw new Error('Artículo no encontrado');
+    const id = `ex-${Date.now()}`;
+    const newEx = {
+        id, 
+        requesterId: user.id, 
+        requesterName: user.name,
+        ownerId: targetItem.userId,
+        ownerName: targetItem.ownerName,
+        requestedItemId: data.requestedItemId,
+        requestedItem: targetItem,
+        offeredItemIds: data.offeredItemIds,
+        offeredItems: items.filter(i => data.offeredItemIds.includes(i.id)),
+        offeredOtherItems: data.otherItems || [],
+        message: data.message || '',
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+    };
+    exchanges.push(newEx);
+    persistData();
+    return newEx;
   }
 
-  async verifyPhoneCode(code) {
-      if (code === '123456') {
-          const user = this._getCurrentUserFromToken();
-          if (user) {
-              user.phoneVerified = true;
-              persistData();
-              return true;
-          }
-      }
-      return false;
+  async sendMessage(exchangeId, text) {
+    const user = this._getCurrentUserFromToken();
+    if (!user) throw new Error('No autorizado');
+    let chat = chats.find(c => c.exchangeId === exchangeId);
+    if (!chat) {
+        chat = { exchangeId, messages: [] };
+        chats.push(chat);
+    }
+    chat.messages.push({
+        id: `msg-${Date.now()}`,
+        senderId: user.id,
+        text,
+        timestamp: new Date().toISOString()
+    });
+    persistData();
   }
 
-  async sendPhoneVerificationCode(phone) {
-      await this.simulateDelay();
+  async respondToExchange(exchangeId, action) {
+    const ex = exchanges.find(e => e.id === exchangeId);
+    if (ex) {
+        ex.status = action === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED';
+        if (action === 'ACCEPT') ex.acceptedAt = new Date().toISOString();
+        persistData();
+    }
   }
 
-  async updateUserPreferences(prefs) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.preferences = prefs;
-          persistData();
-          return user;
-      }
-      throw new Error('No autorizado');
+  async modifyExchangeProposal(exchangeId, data) {
+    const ex = exchanges.find(e => e.id === exchangeId);
+    if (ex) {
+        ex.offeredItemIds = data.offeredItemIds;
+        ex.offeredItems = items.filter(i => data.offeredItemIds.includes(i.id));
+        ex.offeredOtherItems = data.otherItems || [];
+        ex.message = data.message || ex.message;
+        persistData();
+    }
   }
 
-  async updateNotificationSettings(settings) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.notificationSettings = settings;
-          persistData();
-          return user;
-      }
-      throw new Error('No autorizado');
+  async censorMessage(exchangeId, messageId) {
+    const chat = chats.find(c => c.exchangeId === exchangeId);
+    if (chat) {
+        const msg = chat.messages.find(m => m.id === messageId);
+        if (msg) msg.text = "[CONTENIDO ELIMINADO POR MODERACIÓN]";
+        persistData();
+    }
   }
 
-  async reportContent(id, type, reason) {
-      reportedContent.push({
-          id: `rep-${Date.now()}`,
-          contentId: id,
-          contentType: type,
-          reason,
-          createdAt: new Date().toISOString()
-      });
-      persistData();
+  async resolveModeration(id, type, action) {
+    if (type === 'ITEM') {
+        if (action === 'DELETE') {
+            await this.deleteItem(id);
+        } else if (action === 'APPROVE') {
+            const item = items.find(i => i.id === id);
+            if (item) item.flagged = false;
+        }
+    } else if (type === 'CHAT') {
+        if (action === 'DELETE_CHAT') {
+            exchanges = exchanges.filter(ex => ex.id !== id);
+            chats = chats.filter(c => c.exchangeId !== id);
+        }
+    }
+    persistData();
   }
 
-  async requestPasswordReset(email) {
-      await this.simulateDelay();
-      return { message: 'Se ha enviado un enlace a tu correo.' };
+  async deleteItemByAdmin(itemId) {
+    await this.deleteItem(itemId);
   }
 
-  async verifyEmail() {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.emailVerified = true;
-          persistData();
-      }
-  }
-
-  async verifyEmailWithToken(token) {
-      await this.simulateDelay();
-      return { email: 'user@test.com' };
-  }
-
-  async updateUserLocation(location) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.location = location;
-          persistData();
-      }
-  }
-
-  async saveFcmToken(token) {
-      await this.simulateDelay();
-  }
-
-  async updateUserColumnLayout(newLayout) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          user.columnLayout = newLayout;
-          persistData();
-      }
+  async acceptMeetingLocation(exchangeId, address, type) {
+    const ex = exchanges.find(e => e.id === exchangeId);
+    if (ex) {
+        ex.acceptedMeetingPoint = address;
+        persistData();
+    }
   }
   
-  async markChatAsRead(exchangeId) {
-      const user = this._getCurrentUserFromToken();
-      if (user) {
-          await markChatNotificationsAsReadDev(user.id, exchangeId);
-          persistData();
-      }
+  // Stubs for required methods from UI
+  async loginWithGoogleMock() { return this.loginWithGoogle(""); }
+  async getNotificationsForUserDev(id) { return []; }
+  async markAllNotificationsReadDev(id) { return; }
+  async markChatAsRead(id) { return; }
+  async resizeImageBeforeUpload(f) { return URL.createObjectURL(f); }
+  async toggleFavorite(id) { return items.find(i => i.id === id); }
+  async updateUserColumnLayout(l) { return; }
+  async updateItem(id, d) { 
+    const item = items.find(i => i.id === id);
+    if(item) Object.assign(item, d);
+    persistData();
+    return item;
   }
+  async reportContent(id, t, r) { return; }
+  async verifyEmail() { const u = this._getCurrentUserFromToken(); if(u) u.emailVerified = true; persistData(); }
+  async verifyEmailWithToken(t) { return { email: 'user@test.com' }; }
+  async sendPhoneVerificationCode(p) { return; }
+  async verifyPhoneCode(c) { const u = this._getCurrentUserFromToken(); if(u) u.phoneVerified = true; persistData(); return true; }
+  async updateUserPreferences(p) { const u = this._getCurrentUserFromToken(); if(u) u.preferences = p; persistData(); return u; }
+  async requestPasswordReset(e) { return { message: 'Enviado' }; }
+  async getExchanges() { return exchanges; }
+  
+  async getChatAndExchangeDetails(id) { 
+    const ex = exchanges.find(e => e.id === id);
+    const chat = chats.find(c => c.exchangeId === id) || { messages: [] };
+    if (ex) {
+        return { 
+            chat, 
+            exchange: { 
+                ...ex,
+                owner: users.find(u => u.id === ex.ownerId),
+                requester: users.find(u => u.id === ex.requesterId),
+                allItems: items
+            } 
+        };
+    }
+    return { chat: { messages: [] }, exchange: null };
+  }
+
+  async banUser(userId, reason = null, details = null) {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+        user.isBanned = !user.isBanned;
+        persistData();
+    }
+  }
+
+  async getAdminDashboardStats() { return { totalUsers: users.length, totalItems: items.length, activeExchanges: exchanges.length, flaggedItems: 0, flaggedChats: 0, activeUsers: users.length }; }
+  async getAllUsersForAdmin() { return users; }
+  async getModerationQueue() { return []; }
+  
+  async getAdminAuditLogs(params = {}) { 
+    return { logs: [], totalPages: 0 }; 
+  }
+  
+  async getAllItemsForAdmin() { return items; }
+  
+  async adminAdvancedSearchExchanges(params = {}) { 
+    return { exchanges: [], totalPages: 0 }; 
+  }
+  
+  async getUserProfile(id) { 
+    const u = users.find(u => u.id === id);
+    if(u) return { ...u, items: items.filter(i => i.userId === id) };
+    return null;
+  }
+  
+  async toggleFollowUser(id) { return { isFollowing: true }; }
+  async canEditProfile() { return { canEdit: true, reason: null }; }
+  async updateUserProfileData(d) { const u = this._getCurrentUserFromToken(); if(u) Object.assign(u, d); persistData(); return u; }
+  async saveFcmToken(t) { return; }
 }
 
 export const viewHistoryService = { getHistory: () => [], addItem: (item) => {} };
 export const api = new ApiClient();
-// @ts-ignore
-api.getNotificationsForUserDev = getNotificationsForUserDev;
-// @ts-ignore
-api.markAllNotificationsReadDev = markAllNotificationsReadDev;
-// @ts-ignore
-api.loginWithGoogleMock = loginWithGoogleMock;
