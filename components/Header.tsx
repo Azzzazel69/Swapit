@@ -10,7 +10,7 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
-  const APP_VERSION = "1.2 (Test Mode)";
+  const APP_VERSION = "1.2";
 
   const activeLinkClass = `bg-gray-200 dark:bg-gray-700`;
   const inactiveLinkClass = 'hover:bg-gray-200 dark:hover:bg-gray-700';
@@ -23,7 +23,7 @@ const Header = () => {
   };
 
   return (
-    React.createElement("header", { className: "bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50" },
+    React.createElement("header", { className: "bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700" },
       React.createElement("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8" },
         React.createElement("div", { className: "flex items-center justify-between h-16" },
           
@@ -35,8 +35,8 @@ const Header = () => {
                   to: "/profile", 
                   className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2` 
                 }, 
-                  React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 rounded-full object-cover" }),
-                  React.createElement("span", { className: "hidden sm:inline-block" }, user.name)
+                  React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-gray-600" }),
+                  React.createElement("span", { className: "hidden sm:inline-block font-bold text-gray-700 dark:text-gray-200" }, user.name)
                 ),
                 user.role === 'SUPER_ADMIN' && (
                   React.createElement(Link, {
@@ -51,56 +51,28 @@ const Header = () => {
             )
           ),
 
-          // Center: Logo
-          React.createElement("div", { className: "flex-shrink-0 px-4 flex items-center gap-1" },
+          // Center: Logo (Refactored to match provided design)
+          React.createElement("div", { className: "flex-shrink-0 flex items-center" },
             React.createElement(Link, { 
               to: "/", 
-              className: "block transition-transform hover:scale-105 relative",
-              title: "Página de inicio"
+              className: "flex items-center group",
+              title: "Volver al Inicio"
             },
-              React.createElement("div", { className: "relative h-10 w-32" },
-                  React.createElement("div", {
-                    className: `absolute inset-0 bg-gradient-to-r ${theme.bg}`,
-                    style: {
-                        maskImage: 'url(/logo_dynamic.png)',
-                        WebkitMaskImage: 'url(/logo_dynamic.png)',
-                        maskSize: 'contain',
-                        WebkitMaskSize: 'contain',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskPosition: 'center',
-                        WebkitMaskPosition: 'center'
-                    }
-                  }),
-                  React.createElement("div", {
-                    className: `absolute inset-0 bg-gray-800 dark:bg-white`,
-                    style: {
-                        maskImage: 'url(/logo_static.png)',
-                        WebkitMaskImage: 'url(/logo_static.png)',
-                        maskSize: 'contain',
-                        WebkitMaskSize: 'contain',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskPosition: 'center',
-                        WebkitMaskPosition: 'center'
-                    }
-                  })
-              )
-            ),
-            React.createElement("div", { className: "flex flex-col items-start self-end mb-2" },
-              React.createElement("span", { className: "text-[10px] font-bold text-gray-400 dark:text-gray-500 leading-none" }, `${APP_VERSION}`)
+               React.createElement("div", { className: "bg-[#0070CE] px-4 py-1.5 rounded-lg flex items-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-[1.02] border-b-4 border-[#005ba8]" },
+                    React.createElement("span", { className: "text-white font-black text-2xl tracking-tighter leading-none" }, "SWAP"),
+                    React.createElement("span", { className: "text-[#FF8A00] font-black text-2xl tracking-tighter leading-none ml-0.5" }, "IT")
+               )
             )
           ),
 
           // Right side: Icons or Auth buttons
-          React.createElement("div", { className: "flex-1 flex items-center justify-end gap-2 sm:gap-4" },
+          React.createElement("div", { className: "flex-1 flex items-center justify-end gap-1 sm:gap-3" },
             user ? (
               React.createElement(React.Fragment, null,
-                // Inbox Icon (Badge visible on both Desktop and Mobile)
                 React.createElement(Link, { 
                     to: "/exchanges", 
-                    title: "Buzón",
-                    className: "relative p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" 
+                    title: "Buzón de Mensajes",
+                    className: "relative p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" 
                   },
                     ICONS.envelope,
                     React.createElement(NotificationBadge, null)
@@ -114,7 +86,7 @@ const Header = () => {
                 React.createElement("button", { 
                   onClick: logout, 
                   title: "Cerrar Sesión",
-                  className: "p-3 rounded-full text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-800 hover:text-red-500 dark:hover:text-red-400 transition-colors" 
+                  className: "p-3 rounded-full text-gray-400 dark:text-gray-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" 
                 },
                   ICONS.logout
                 )
@@ -122,8 +94,8 @@ const Header = () => {
             ) : (
               showAuthButtons && (
                 React.createElement("div", { className: "flex items-center gap-2" },
-                  React.createElement(Link, { to: "/login", className: "px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700" }, "Iniciar Sesión"),
-                  React.createElement(Link, { to: "/register", className: `bg-gradient-to-r ${theme.bg} ${theme.hoverBg} text-white font-bold py-2 px-4 rounded-lg transition-colors` }, "Registrarse")
+                  React.createElement(Link, { to: "/login", className: "px-3 py-2 rounded-md text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" }, "Entrar"),
+                  React.createElement(Link, { to: "/register", className: `bg-[#0070CE] hover:bg-[#0060b0] text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-sm` }, "Registro")
                 )
               )
             )

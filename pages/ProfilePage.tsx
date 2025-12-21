@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
@@ -13,7 +13,9 @@ import AutocompleteInput from '../components/AutocompleteInput.tsx';
 import EmptyState from '../components/EmptyState.tsx';
 import { useToast } from '../hooks/useToast.tsx';
 import { locations } from '../data/locations.ts';
+import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
+// ProfileSection component for organizing profile fields
 const ProfileSection = ({ title, children, onEdit, isEditing, onSave, onCancel, isLoading, isEditable, disabledReason }) => {
     const renderDisabledReason = () => {
         switch (disabledReason) {
@@ -52,6 +54,7 @@ const ProfileSection = ({ title, children, onEdit, isEditing, onSave, onCancel, 
     );
 };
 
+// UserRating component for displaying user stars
 const UserRating = ({ ratings = [] }) => {
     const averageRating = useMemo(() => {
         if (!ratings || ratings.length === 0) return 0;
@@ -60,7 +63,7 @@ const UserRating = ({ ratings = [] }) => {
     }, [ratings]);
 
     if (ratings.length === 0) {
-        return React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "Aún no tiene valoraciones");
+        return React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "Aún no tienes valoraciones.");
     }
 
     return (
@@ -78,504 +81,277 @@ const UserRating = ({ ratings = [] }) => {
     );
 };
 
+// Main ProfilePage component
 const ProfilePage = () => {
-    const { user, updateUser, refreshUser } = useAuth();
+    const { user, updateUser, logout } = useAuth();
+    const { theme } = useColorTheme();
     const { showToast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Editability state
-    const [editability, setEditability] = useState({ canEdit: false, reason: 'loading' });
-
-    // Editing states
     const [isEditingInfo, setIsEditingInfo] = useState(false);
-    const [isEditingSecurity, setIsEditingSecurity] = useState(false);
-    const [isEditingLocation, setIsEditingLocation] = useState(false);
-    const [isPrefsModalOpen, setIsPrefsModalOpen] = useState(false);
-    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
-
-    // Form data states
-    const [name, setName] = useState(user?.name || '');
+    const [isEditingPassword, setIsEditingPassword] = useState(false);
+    const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
+    
+    const [editName, setEditName] = useState('');
+    const [editCountry, setEditCountry] = useState('');
+    const [editCity, setEditCity] = useState('');
+    const [editPostalCode, setEditPostalCode] = useState('');
+    const [editAddress, setEditAddress] = useState('');
+    
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [locationData, setLocationData] = useState(user?.location || { country: '', city: '', postalCode: '', address: '' });
-    const [contactCard, setContactCard] = useState(user?.contactCard || { enabled: false, name: '', email: '', phone: '', meetingPointAddress: '', meetingPointCoords: null, meetingPointComment: '', preferredSchedule: '' });
     
-    // Notification Settings
-    const [notificationSettings, setNotificationSettings] = useState(user?.notificationSettings || { newItemsFromFavorites: true });
-    const [isUpdatingNotifications, setIsUpdatingNotifications] = useState(false);
-
-    // Phone verification state
-    const [phone, setPhone] = useState(user?.phone || '');
-    const [code, setCode] = useState('');
-    const [codeSent, setCodeSent] = useState(false);
-
-    // General states
     const [isLoading, setIsLoading] = useState(false);
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-    const [error, setError] = useState('');
+    const [userItems, setUserItems] = useState([]);
+    const [isItemsLoading, setIsItemsLoading] = useState(true);
+    const [isEditable, setIsEditable] = useState(true);
+    const [disabledReason, setDisabledReason] = useState(null);
 
-    // My Items/Favorites states
-    const [items, setItems] = useState([]);
-    const [loadingItems, setLoadingItems] = useState(true);
-    const [favoriteItems, setFavoriteItems] = useState([]);
-    const [loadingFavorites, setLoadingFavorites] = useState(true);
-    const [deletingItemId, setDeletingItemId] = useState(null);
+    useEffect(() => {
+        if (user) {
+            setEditName(user.name);
+            setEditCountry(user.location?.country || '');
+            setEditCity(user.location?.city || '');
+            setEditPostalCode(user.location?.postalCode || '');
+            setEditAddress(user.location?.address || '');
+            fetchUserItems();
+            checkEditableStatus();
+        }
+    }, [user]);
 
     useEffect(() => {
         if (location.state?.message) {
             showToast(location.state.message, 'success');
-            navigate(location.pathname, { replace: true, state: {} });
+            // Clear location state to prevent repeat toasts
+            window.history.replaceState({}, document.title);
         }
-    }, [location.state, showToast, navigate]);
-
-    useEffect(() => {
-        const checkEditability = async () => {
-            try {
-                const status = await api.canEditProfile();
-                setEditability(status);
-            } catch (err) {
-                setEditability({ canEdit: false, reason: 'error' });
-            }
-        };
-        checkEditability();
-    }, [user]);
-    
-    useEffect(() => {
-        if(user) {
-            setName(user.name);
-            setLocationData(user.location || { country: 'España', city: '', postalCode: '', address: '', lat: 40.4168, lng: -3.7038 });
-            setPhone(user.phone || '');
-            setContactCard(user.contactCard || { enabled: false, name: user.name, email: user.email, phone: user.phone, meetingPointAddress: '', meetingPointCoords: null, meetingPointComment: '', preferredSchedule: '' });
-            setNotificationSettings(user.notificationSettings || { newItemsFromFavorites: true });
-        }
-    }, [user]);
+    }, [location.state, showToast]);
 
     const fetchUserItems = async () => {
         if (!user) return;
-        setLoadingItems(true);
         try {
-            const userItems = await api.getUserItems(user.id);
-            setItems(userItems);
-        } catch (err) { console.error(err); } finally { setLoadingItems(false); }
-    };
-
-    const fetchFavoriteItems = async () => {
-        if (!user) return;
-        setLoadingFavorites(true);
-        try {
-            const favs = await api.getFavoriteItems();
-            setFavoriteItems(favs);
-        } catch (err) { console.error(err); } finally { setLoadingFavorites(false); }
-    };
-
-    useEffect(() => {
-        fetchUserItems();
-        fetchFavoriteItems();
-    }, [user]);
-
-    const handleAvatarChange = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setIsUploadingAvatar(true);
-        try {
-            const resizedImage = await api.resizeImageBeforeUpload(file);
-            await api.updateUserAvatar(resizedImage);
-            await refreshUser();
-            showToast('Avatar actualizado con éxito.', 'success');
-        } catch (err) {
-            showToast(err.message || 'Error al subir el avatar.', 'error');
+            setIsItemsLoading(true);
+            const items = await api.getUserItems(user.id);
+            setUserItems(items);
+        } catch (error) {
+            showToast("Error al cargar tus artículos.", "error");
         } finally {
-            setIsUploadingAvatar(false);
+            setIsItemsLoading(false);
+        }
+    };
+
+    const checkEditableStatus = async () => {
+        try {
+            const status = await api.canEditProfile();
+            setIsEditable(status.canEdit);
+            setDisabledReason(status.reason);
+        } catch (error) {
+            console.error("Error checking editable status", error);
         }
     };
 
     const handleSaveInfo = async () => {
-        setIsLoading(true); setError('');
+        setIsLoading(true);
         try {
-            const updatedUser = await api.updateUserProfileData({ name });
+            const updatedUser = await api.updateUserProfileData({
+                name: editName,
+                location: {
+                    country: editCountry,
+                    city: editCity,
+                    postalCode: editPostalCode,
+                    address: editAddress,
+                    lat: user.location?.lat,
+                    lng: user.location?.lng
+                }
+            });
             updateUser(updatedUser);
             setIsEditingInfo(false);
-            showToast('Información actualizada.', 'success');
-        } catch (err) { setError(err.message); } finally { setIsLoading(false); }
+            showToast("Perfil actualizado correctamente.", "success");
+        } catch (error) {
+            showToast(error.message || "Error al actualizar perfil.", "error");
+        } finally {
+            setIsLoading(false);
+        }
     };
-    
-    const handleSaveSecurity = async () => {
+
+    const handleSavePassword = async () => {
         if (newPassword !== confirmPassword) {
-            setError('Las nuevas contraseñas no coinciden.');
+            showToast("Las contraseñas no coinciden.", "error");
             return;
         }
-        setIsLoading(true); setError('');
+        setIsLoading(true);
         try {
             await api.updateUserPassword(currentPassword, newPassword);
-            setIsEditingSecurity(false);
+            setIsEditingPassword(false);
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-            showToast('Contraseña actualizada.', 'success');
-        } catch (err) { setError(err.message); } finally { setIsLoading(false); }
-    };
-    
-    const handleSaveLocation = async () => {
-        setIsLoading(true); setError('');
-        try {
-            const updatedUser = await api.updateUserProfileData({ location: locationData });
-            updateUser(updatedUser);
-            setIsEditingLocation(false);
-            showToast('Ubicación actualizada.', 'success');
-        } catch (err) { setError(err.message); } finally { setIsLoading(false); }
-    };
-
-    const handleSaveContactCard = async () => {
-        setIsLoading(true); setError('');
-        try {
-            const updatedUser = await api.updateUserProfileData({ contactCard });
-            updateUser(updatedUser);
-            showToast('Tarjeta de Presentación guardada.', 'success');
-        } catch (err) { 
-            showToast(err.message, 'error');
-        } finally { 
-            setIsLoading(false); 
+            showToast("Contraseña actualizada correctamente.", "success");
+        } catch (error) {
+            showToast(error.message || "Error al actualizar contraseña.", "error");
+        } finally {
+            setIsLoading(false);
         }
-    };
-
-    const handleMockLocationPick = () => {
-        // En una app real esto abriría un mapa interactivo para seleccionar lat/lng
-        setContactCard(prev => ({
-            ...prev,
-            meetingPointAddress: 'Calle de la Princesa, 2, Madrid',
-            meetingPointCoords: { lat: 40.4242, lng: -3.7123 }
-        }));
-        showToast('Ubicación seleccionada en el mapa.', 'success');
-    };
-    
-    const handleSendCode = async (e) => {
-        e.preventDefault();
-        setIsLoading(true); setError('');
-        try {
-            await api.changeUserPhone(phone);
-            setCodeSent(true);
-        } catch (err) { setError(err.message); } finally { setIsLoading(false); }
-    };
-    
-    const handleVerifyCode = async (e) => {
-        e.preventDefault();
-        setIsLoading(true); setError('');
-        try {
-            const success = await api.verifyPhoneCode(code);
-            if (success) {
-                await refreshUser();
-                setIsPhoneModalOpen(false);
-                setCodeSent(false);
-                showToast('Teléfono verificado.', 'success');
-            } else {
-                setError('Código incorrecto.');
-            }
-        } catch (err) { setError(err.message); } finally { setIsLoading(false); }
     };
 
     const handleSavePreferences = async (newPreferences) => {
         try {
             const updatedUser = await api.updateUserPreferences(newPreferences);
             updateUser(updatedUser);
-            showToast('Intereses guardados.', 'success');
+            showToast("Intereses actualizados.", "success");
         } catch (error) {
-            showToast('Error al guardar las preferencias.', 'error');
+            showToast(error.message || "Error al actualizar intereses.", "error");
         }
     };
-    
-    const handleToggleNotification = async (key) => {
-        const newSettings = { ...notificationSettings, [key]: !notificationSettings[key] };
-        setNotificationSettings(newSettings);
-        setIsUpdatingNotifications(true);
-        try {
-            const updatedUser = await api.updateNotificationSettings(newSettings);
-            updateUser(updatedUser);
-        } catch (err) {
-            showToast('Error al guardar la configuración de notificaciones.', 'error');
-            setNotificationSettings({ ...notificationSettings, [key]: notificationSettings[key] });
-        } finally {
-            setIsUpdatingNotifications(false);
-        }
-    };
-    
+
     const handleDeleteItem = async (itemId) => {
-        if (window.confirm('¿Estás seguro de que quieres eliminar este artículo?')) {
-            setDeletingItemId(itemId);
+        if (window.confirm("¿Estás seguro de eliminar este artículo?")) {
             try {
                 await api.deleteItem(itemId);
-                setItems(prev => prev.filter(i => i.id !== itemId));
-                showToast('Artículo eliminado.', 'success');
-            } catch (err) {
-                showToast(err.message, 'error');
-            } finally {
-                setDeletingItemId(null);
+                setUserItems(prev => prev.filter(i => i.id !== itemId));
+                showToast("Artículo eliminado.", "success");
+            } catch (error) {
+                showToast("Error al eliminar artículo.", "error");
             }
         }
     };
 
-    const handleToggleFavorite = async (itemId) => {
-        try {
-            await api.toggleFavorite(itemId);
-            setFavoriteItems(prev => prev.filter(i => i.id !== itemId));
-        } catch (err) { console.error(err); }
-    };
-    
     const countries = useMemo(() => Object.keys(locations), []);
     const citiesForSelectedCountry = useMemo(() => {
-        return locationData.country && locations[locationData.country] ? locations[locationData.country] : [];
-    }, [locationData.country]);
+        return editCountry && locations[editCountry] ? locations[editCountry] : [];
+    }, [editCountry]);
 
-    if (!user) return React.createElement(SwapSpinner, null);
+    if (!user) return null;
 
-    const PhoneVerificationModal = () => (
-        React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4", onClick: () => setIsPhoneModalOpen(false) },
-            React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md", onClick: e => e.stopPropagation() },
-                React.createElement("div", { className: "p-4 border-b dark:border-gray-700" }, React.createElement("h3", { className: "text-xl font-bold" }, "Cambiar Teléfono")),
-                React.createElement("div", { className: "p-6" },
-                    error && React.createElement("p", { className: "text-red-500 text-sm mb-4" }, error),
-                    !codeSent ? (
-                        React.createElement("form", { onSubmit: handleSendCode, className: "space-y-4" },
-                            React.createElement(Input, { id: "phone-reverify", label: "Nuevo número de teléfono", type: "tel", value: phone, onChange: e => setPhone(e.target.value), required: true }),
-                            React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Enviar Código" })
-                        )
-                    ) : (
-                        React.createElement("form", { onSubmit: handleVerifyCode, className: "space-y-4" },
-                            React.createElement("p", { className: "text-sm text-green-600" }, "Código enviado a ", phone, " (Pista: 123456)"),
-                            React.createElement("div", { className: "flex items-center gap-2" },
-                                React.createElement(Input, { id: "code-reverify", label: "Código de Verificación", type: "text", value: code, onChange: e => setCode(e.target.value), required: true }),
-                                React.createElement(Button, { type: "submit", isLoading: isLoading, children: "Verificar" })
+    return (
+        React.createElement("div", { className: "max-w-4xl mx-auto py-8" },
+            React.createElement("div", { className: "flex items-center justify-between mb-8" },
+                React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Mi Perfil"),
+                React.createElement(Button, { variant: "danger", size: "sm", onClick: logout }, "Cerrar Sesión")
+            ),
+
+            React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-8" },
+                // Avatar Column
+                React.createElement("div", { className: "md:col-span-1" },
+                    React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md text-center" },
+                        React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "w-32 h-32 rounded-full mx-auto object-cover mb-4 shadow-lg border-4 border-white dark:border-gray-700" }),
+                        React.createElement("h2", { className: "text-xl font-bold text-gray-900 dark:text-white mb-2" }, user.name),
+                        React.createElement(UserRating, { ratings: user.ratings })
+                    )
+                ),
+
+                // Info Column
+                React.createElement("div", { className: "md:col-span-2" },
+                    React.createElement(ProfileSection, {
+                        title: "Información Personal",
+                        isEditing: isEditingInfo,
+                        onEdit: () => setIsEditingInfo(true),
+                        onSave: handleSaveInfo,
+                        onCancel: () => setIsEditingInfo(false),
+                        isLoading: isLoading,
+                        isEditable: isEditable,
+                        disabledReason: disabledReason
+                    },
+                        !isEditingInfo ? (
+                            React.createElement("div", { className: "space-y-2" },
+                                React.createElement("p", null, React.createElement("strong", null, "Nombre: "), user.name),
+                                React.createElement("p", null, React.createElement("strong", null, "Email: "), user.email),
+                                React.createElement("p", null, React.createElement("strong", null, "Ubicación: "), `${user.location?.city || 'N/A'}, ${user.location?.country || 'N/A'}`)
+                            )
+                        ) : (
+                            React.createElement("div", { className: "space-y-4" },
+                                React.createElement(Input, { id: "p-name", label: "Nombre", value: editName, onChange: e => setEditName(e.target.value) }),
+                                React.createElement(AutocompleteInput, { 
+                                    id: "p-country", 
+                                    label: "País", 
+                                    value: editCountry, 
+                                    onChange: setEditCountry, 
+                                    suggestions: countries 
+                                }),
+                                React.createElement(AutocompleteInput, { 
+                                    id: "p-city", 
+                                    label: "Ciudad", 
+                                    value: editCity, 
+                                    onChange: setEditCity, 
+                                    suggestions: citiesForSelectedCountry,
+                                    disabled: !editCountry
+                                }),
+                                React.createElement(Input, { id: "p-address", label: "Dirección", value: editAddress, onChange: e => setEditAddress(e.target.value) }),
+                                React.createElement(Input, { id: "p-zip", label: "Código Postal", value: editPostalCode, onChange: e => setEditPostalCode(e.target.value) })
                             )
                         )
-                    )
-                )
-            )
-        )
-    );
-
-    return React.createElement("div", { className: "max-w-4xl mx-auto" },
-        isPrefsModalOpen && React.createElement(PreferencesModal, { 
-            isOpen: isPrefsModalOpen,
-            onClose: () => setIsPrefsModalOpen(false),
-            initialPreferences: user.preferences || [],
-            onSave: handleSavePreferences
-        }),
-        isPhoneModalOpen && React.createElement(PhoneVerificationModal, null),
-        
-        React.createElement("div", { className: "flex flex-col sm:flex-row items-center gap-6 mb-8" },
-            React.createElement("div", { className: "relative group" },
-                isUploadingAvatar ? (
-                    React.createElement("div", { className: "w-32 h-32 rounded-full flex items-center justify-center bg-gray-200 dark:bg-gray-700" },
-                        React.createElement(SwapSpinner, null)
-                    )
-                ) : (
-                    React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "w-32 h-32 rounded-full object-cover shadow-lg" })
-                ),
-                React.createElement("label", { 
-                    htmlFor: "avatar-upload", 
-                    className: "absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center text-white cursor-pointer transition-all duration-300" 
-                },
-                    React.createElement("span", { className: "opacity-0 group-hover:opacity-100" }, "Cambiar")
-                ),
-                React.createElement("input", { type: "file", id: "avatar-upload", className: "hidden", accept: "image/*", onChange: handleAvatarChange, disabled: isUploadingAvatar })
-            ),
-            React.createElement("div", { className: "flex flex-col gap-2" },
-                React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, user.name),
-                React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, user.email),
-                React.createElement(UserRating, { ratings: user.ratings })
-            )
-        ),
-
-        React.createElement(ProfileSection, {
-            title: "Información Personal",
-            onEdit: () => setIsEditingInfo(true),
-            isEditing: isEditingInfo,
-            onSave: handleSaveInfo,
-            onCancel: () => { setIsEditingInfo(false); setError(''); setName(user.name); },
-            isLoading: isLoading,
-            isEditable: editability.canEdit,
-            disabledReason: editability.reason
-        },
-            error && isEditingInfo && React.createElement("p", { className: "text-red-500 text-sm mb-2" }, error),
-            isEditingInfo ? (
-                React.createElement(Input, { id: "name", label: "Nombre", value: name, onChange: e => setName(e.target.value) })
-            ) : (
-                React.createElement("p", null, user.name)
-            )
-        ),
-        
-        React.createElement(ProfileSection, {
-            title: "Seguridad",
-            onEdit: () => setIsEditingSecurity(true),
-            isEditing: isEditingSecurity,
-            onSave: handleSaveSecurity,
-            onCancel: () => { setIsEditingSecurity(false); setError(''); },
-            isLoading: isLoading,
-            isEditable: editability.canEdit,
-            disabledReason: editability.reason
-        },
-            error && isEditingSecurity && React.createElement("p", { className: "text-red-500 text-sm mb-2" }, error),
-            isEditingSecurity ? (
-                React.createElement("div", { className: "space-y-4" },
-                    React.createElement(Input, { id: "currentPassword", label: "Contraseña Actual", type: "password", value: currentPassword, onChange: e => setCurrentPassword(e.target.value) }),
-                    React.createElement(Input, { id: "newPassword", label: "Nueva Contraseña", type: "password", value: newPassword, onChange: e => setNewPassword(e.target.value) }),
-                    React.createElement(Input, { id: "confirmPassword", label: "Confirmar Nueva Contraseña", type: "password", value: confirmPassword, onChange: e => setConfirmPassword(e.target.value) })
-                )
-            ) : (
-                React.createElement("div", { className: "space-y-2" },
-                    React.createElement("p", null, React.createElement("strong", null, "Correo: "), user.email),
-                    React.createElement("p", null, React.createElement("strong", null, "Contraseña: "), "********"),
-                    React.createElement("div", { className: "flex justify-between items-center" },
-                       React.createElement("p", null, React.createElement("strong", null, "Teléfono (2FA): "), user.phone),
-                       React.createElement(Button, {
-                           size: "sm",
-                           variant: "secondary",
-                           onClick: () => setIsPhoneModalOpen(true),
-                           disabled: !editability.canEdit,
-                           title: !editability.canEdit ? "Edición deshabilitada" : "Cambiar teléfono"
-                       }, "Cambiar")
-                    )
-                )
-            )
-        ),
-        
-        React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
-            React.createElement("div", { className: "flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-3" },
-                React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2" }, ICONS.card, "Tarjeta de Presentación"),
-                React.createElement("label", { htmlFor: "enable-card", className: "relative inline-flex items-center cursor-pointer" },
-                    React.createElement("input", { type: "checkbox", id: "enable-card", className: "sr-only peer", checked: contactCard.enabled, onChange: e => setContactCard(c => ({ ...c, enabled: e.target.checked })) }),
-                    React.createElement("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
-                )
-            ),
-            React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400 mb-4" }, "Comparte tus datos de contacto automáticamente al aceptar un intercambio."),
-            React.createElement("div", { className: `space-y-4 transition-opacity ${!contactCard.enabled ? 'opacity-50' : 'opacity-100'}` },
-                React.createElement(Input, { label: "Nombre a mostrar", id: "cc-name", value: contactCard.name, onChange: e => setContactCard(c => ({...c, name: e.target.value})), disabled: !contactCard.enabled }),
-                React.createElement(Input, { label: "Teléfono de contacto", id: "cc-phone", type: "tel", value: contactCard.phone, onChange: e => setContactCard(c => ({...c, phone: e.target.value})), disabled: !contactCard.enabled }),
-                
-                React.createElement("div", { className: "bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg space-y-4 border border-gray-200 dark:border-gray-700" },
-                    React.createElement("label", { className: "block text-sm font-bold text-gray-700 dark:text-gray-300" }, "📍 Punto de encuentro preferido"),
-                    React.createElement("div", { className: "flex gap-2" },
-                        React.createElement("div", { className: "flex-grow" },
-                            React.createElement(Input, { 
-                                placeholder: "Busca calle o lugar exacto...", 
-                                id: "cc-address", 
-                                value: contactCard.meetingPointAddress, 
-                                onChange: e => setContactCard(c => ({...c, meetingPointAddress: e.target.value})), 
-                                disabled: !contactCard.enabled 
-                            })
-                        ),
-                        React.createElement(Button, { 
-                            type: "button", 
-                            variant: "secondary", 
-                            onClick: handleMockLocationPick,
-                            disabled: !contactCard.enabled,
-                            title: "Seleccionar en mapa"
-                        }, "🗺️")
                     ),
-                    React.createElement("div", null,
-                        React.createElement("label", { htmlFor: "cc-comment", className: "block text-xs font-medium text-gray-500 mb-1" }, "Instrucciones adicionales (ej: En la puerta principal)"),
-                        React.createElement("textarea", { 
-                            id: "cc-comment",
-                            rows: 2,
-                            className: "w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700",
-                            placeholder: "Ej: Al lado del cajero del banco...",
-                            value: contactCard.meetingPointComment,
-                            onChange: e => setContactCard(c => ({...c, meetingPointComment: e.target.value})),
-                            disabled: !contactCard.enabled
+
+                    React.createElement(ProfileSection, {
+                        title: "Seguridad",
+                        isEditing: isEditingPassword,
+                        onEdit: () => setIsEditingPassword(true),
+                        onSave: handleSavePassword,
+                        onCancel: () => setIsEditingPassword(false),
+                        isLoading: isLoading,
+                        isEditable: isEditable,
+                        disabledReason: disabledReason
+                    },
+                        isEditingPassword && (
+                            React.createElement("div", { className: "space-y-4" },
+                                React.createElement(Input, { id: "old-pass", label: "Contraseña Actual", type: "password", value: currentPassword, onChange: e => setCurrentPassword(e.target.value) }),
+                                React.createElement(Input, { id: "new-pass", label: "Nueva Contraseña", type: "password", value: newPassword, onChange: e => setNewPassword(e.target.value) }),
+                                React.createElement(Input, { id: "conf-pass", label: "Confirmar Nueva Contraseña", type: "password", value: confirmPassword, onChange: e => setConfirmPassword(e.target.value) })
+                            )
+                        ) || React.createElement("p", { className: "text-sm text-gray-500" }, "Actualiza tu contraseña para mantener tu cuenta segura.")
+                    ),
+
+                    React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
+                        React.createElement("div", { className: "flex justify-between items-center mb-4" },
+                            React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white" }, "Mis Intereses"),
+                            React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => setIsPreferencesModalOpen(true) }, "Editar")
+                        ),
+                        React.createElement("div", { className: "flex flex-wrap gap-2" },
+                            user.preferences?.length > 0 ? user.preferences.map(pref => (
+                                React.createElement("span", { key: pref, className: `px-3 py-1 rounded-full text-xs font-semibold ${theme.lightBg} ${theme.darkText}` }, pref)
+                            )) : React.createElement("p", { className: "text-sm text-gray-500" }, "No has seleccionado intereses.")
+                        ),
+                        React.createElement(PreferencesModal, {
+                            isOpen: isPreferencesModalOpen,
+                            onClose: () => setIsPreferencesModalOpen(false),
+                            initialPreferences: user.preferences,
+                            onSave: handleSavePreferences
                         })
                     )
-                ),
-                
-                React.createElement(Input, { label: "Horario preferido", id: "cc-schedule", value: contactCard.preferredSchedule, onChange: e => setContactCard(c => ({...c, preferredSchedule: e.target.value})), disabled: !contactCard.enabled, placeholder:"Ej: Tardes de L-V, Fines de semana" }),
+                )
             ),
-             React.createElement("div", { className: "flex justify-end mt-4" },
-                React.createElement(Button, { onClick: handleSaveContactCard, isLoading: isLoading, children: "Guardar Tarjeta" })
-            )
-        ),
-        
-        React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
-            React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white mb-4 border-b dark:border-gray-700 pb-3" }, "Configuración de Notificaciones"),
-            React.createElement("div", { className: "space-y-4" },
-                React.createElement("div", { className: "flex items-center justify-between" },
-                    React.createElement("div", null,
-                        React.createElement("p", { className: "font-medium text-gray-900 dark:text-white" }, "Avisarme cuando mis Swappers favoritos publiquen un nuevo artículo"),
-                        React.createElement("p", { className: "text-sm text-gray-500 dark:text-gray-400" }, "Recibe una alerta instantánea cuando un usuario que sigues suba algo.")
-                    ),
-                    React.createElement("label", { htmlFor: "toggle-favorites-notif", className: "relative inline-flex items-center cursor-pointer" },
-                        React.createElement("input", { 
-                            type: "checkbox", 
-                            id: "toggle-favorites-notif", 
-                            className: "sr-only peer", 
-                            checked: notificationSettings.newItemsFromFavorites, 
-                            onChange: () => handleToggleNotification('newItemsFromFavorites'),
-                            disabled: isUpdatingNotifications
-                        }),
-                        React.createElement("div", { className: "w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600" })
+
+            React.createElement("div", { className: "mt-12" },
+                React.createElement("div", { className: "flex justify-between items-center mb-6" },
+                    React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-white" }, "Mis Artículos"),
+                    React.createElement(Link, { to: "/add-item" },
+                        React.createElement(Button, { size: "sm", children: "Añadir Artículo" })
+                    )
+                ),
+                isItemsLoading ? (
+                    React.createElement("div", { className: "flex justify-center" }, React.createElement(SwapSpinner, null))
+                ) : userItems.length === 0 ? (
+                    React.createElement(EmptyState, {
+                        icon: ICONS.swap,
+                        title: "No tienes artículos",
+                        message: "Añade artículos a tu perfil para que otros swappers puedan proponerte intercambios.",
+                        actionButton: React.createElement(Link, { to: "/add-item" }, React.createElement(Button, { children: "Subir mi primer artículo" }))
+                    })
+                ) : (
+                    React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-6" },
+                        userItems.map(item => (
+                            React.createElement(ItemCard, {
+                                key: item.id,
+                                item: item,
+                                isOwnItem: true,
+                                onDelete: handleDeleteItem
+                            })
+                        ))
                     )
                 )
             )
-        ),
-        
-        React.createElement(ProfileSection, {
-            title: "Ubicación Base",
-            onEdit: () => setIsEditingLocation(true),
-            isEditing: isEditingLocation,
-            onSave: handleSaveLocation,
-            onCancel: () => { setIsEditingLocation(false); setError(''); setLocationData(user.location); },
-            isLoading: isLoading,
-            isEditable: editability.canEdit,
-            disabledReason: editability.reason
-        },
-            React.createElement("p", { className: "text-xs text-gray-500 mb-4" }, "Esta ubicación se usa para calcular el punto medio sugerido con otros swappers."),
-            error && isEditingLocation && React.createElement("p", { className: "text-red-500 text-sm mb-2" }, error),
-            isEditingLocation ? (
-                React.createElement("div", { className: "space-y-4" },
-                    React.createElement(AutocompleteInput, { id: "country", label: "País", value: locationData.country, onChange: val => setLocationData(l => ({...l, country: val, city: ''})), required: true, suggestions: countries }),
-                    React.createElement(AutocompleteInput, { id: "city", label: "Ciudad", value: locationData.city, onChange: val => setLocationData(l => ({...l, city: val})), required: true, suggestions: citiesForSelectedCountry, disabled: !locationData.country }),
-                    React.createElement(Input, { id: "address", label: "Dirección", value: locationData.address, onChange: e => setLocationData(l => ({...l, address: e.target.value})) }),
-                    React.createElement(Input, { id: "postalCode", label: "Código Postal", value: locationData.postalCode, onChange: e => setLocationData(l => ({...l, postalCode: e.target.value})) })
-                )
-            ) : (
-                React.createElement("p", null, `${user.location?.address}, ${user.location?.postalCode}, ${user.location?.city}, ${user.location?.country}`)
-            )
-        ),
-
-        React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
-            React.createElement("div", { className: "flex justify-between items-center" },
-                React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white" }, "Mis Intereses"),
-                React.createElement(Button, { variant: "secondary", size: "sm", onClick: () => setIsPrefsModalOpen(true) }, "Editar Intereses")
-            ),
-            React.createElement("div", { className: "flex flex-wrap gap-2 mt-4" },
-                (user.preferences || []).map(p => React.createElement("span", { key: p, className: "bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300" }, p))
-            )
-        ),
-        
-        React.createElement("div", { className: "mt-8" },
-          React.createElement("div", { className: "flex justify-between items-center mb-6" },
-            React.createElement("h2", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Mis Artículos"),
-            React.createElement(Button, { 
-              onClick: () => navigate('/add-item'),
-              children: React.createElement("div", { className: "flex items-center gap-2" },
-                ICONS.plus,
-                'Añadir Artículo'
-              )
-            })
-          ),
-          loadingItems ? React.createElement(SwapSpinner, null) :
-          items.length === 0 ? (
-            React.createElement(EmptyState, {
-                icon: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", strokeWidth: "1.5", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" })),
-                title: "Aún no tienes artículos",
-                message: "¿Por qué no subes algo que ya no uses?",
-                actionButton: React.createElement(Button, { onClick: () => navigate('/add-item'), children: "Subir mi primer artículo" })
-            })
-          ) : (
-            React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-              items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem, deletingItemId: deletingItemId }))
-            )
-          )
         )
     );
 };

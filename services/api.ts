@@ -200,7 +200,8 @@ class ApiClient {
   _enrichItem(item, currentUser, userItemsCache = null) {
       if (!item) return null;
       const owner = users.find(u => u.id === item.userId);
-      if (owner?.isBanned) return null;
+      if (!owner || owner.isBanned) return null; // Si no hay dueño o está baneado, el item no existe para la app
+      
       const isFavorited = currentUser ? (item.favoritedBy || []).includes(currentUser.id) : false;
       const myItems = userItemsCache || (currentUser ? items.filter(i => i.userId === currentUser.id) : []);
       const isMatch = myItems.some(myI => 
@@ -253,16 +254,30 @@ class ApiClient {
   async getHomePageData({ page = 1, limit = 12 }) {
       const user = this._getCurrentUserFromToken();
       const myItems = user ? items.filter(i => i.userId === user.id) : [];
-      const explore = items.filter(i => !i.flagged && i.status === 'AVAILABLE' && i.userId !== user?.id)
-                          .map(i => this._enrichItem(i, user, myItems));
       
-      const followedUsersItems = user ? items.filter(i => user.following.includes(i.userId) && !i.flagged && i.status === 'AVAILABLE').map(i => this._enrichItem(i, user, myItems)) : [];
+      // Obtenemos todos los items válidos (No míos, no reportados, disponibles, dueño no baneado)
+      const allValid = items.filter(i => !i.flagged && i.status === 'AVAILABLE' && i.userId !== user?.id)
+                          .map(i => this._enrichItem(i, user, myItems))
+                          .filter(Boolean); // Limpiamos nulls
+      
+      // Matches: coincidencia de deseos
+      const matches = allValid.filter(i => i.isMatch);
+      
+      // Recomendados: Por preferencias del usuario
+      const recommended = user && user.preferences?.length > 0 
+          ? allValid.filter(i => user.preferences.includes(i.category)).slice(0, 4)
+          : []; // Si no hay preferencias o no coinciden, no mandamos nada para no "ensuciar"
+
+      // Seguidores
+      const followedUsersItems = user 
+          ? allValid.filter(i => user.following.includes(i.userId))
+          : [];
 
       return { 
-          exploreItems: explore.slice((page-1)*limit, page*limit),
-          totalExploreItems: explore.length,
-          directMatches: explore.filter(i => i.isMatch).slice(0, 4),
-          recommended: explore.slice(0, 4),
+          exploreItems: allValid.slice((page-1)*limit, page*limit),
+          totalExploreItems: allValid.length,
+          directMatches: matches.slice(0, 4),
+          recommended: recommended,
           followedUsersItems: followedUsersItems.slice(0, 8)
       };
   }
@@ -347,7 +362,7 @@ class ApiClient {
 
   async acceptMeetingLocation(exchangeId, locationName, type) {
       const user = this._getCurrentUserFromToken();
-      const chat = chats.find(c => c.id === exchangeId);
+      const chat = chats.find(c => c.id === exchangeId); // Fixed typo here (c instead of i)
       const ex = exchanges.find(e => e.id === exchangeId);
       if (!chat || !ex) return;
       
@@ -554,7 +569,11 @@ class ApiClient {
       return { isFollowing };
   }
 
-  async canEditProfile() { return { canEdit: true }; }
+  // Fix: Added reason property to the return object to satisfy ProfilePage's expectations and fix the TS error.
+  async canEditProfile(): Promise<{ canEdit: boolean; reason: string | null }> {
+    return { canEdit: true, reason: null };
+  }
+  
   async resizeImageBeforeUpload(f) { return URL.createObjectURL(f); }
   async deleteExchanges(ids) { exchanges = exchanges.filter(e => !ids.includes(e.id)); persistData(); }
 

@@ -56,16 +56,17 @@ const App = () => {
 
 const AppContent = () => {
     const location = useLocation();
-    const isMapPage = location.pathname.startsWith('/meeting-map');
+    // Determinamos si es una página de "flujo ininterrumpido" (Mapa o Chat) para quitar paddings y footer
+    const isFullScreenPage = location.pathname.startsWith('/meeting-map') || location.pathname.startsWith('/chat');
 
     return React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
-        !isMapPage && React.createElement(OfflineBanner, null),
-        !isMapPage && React.createElement(Header, null),
-        React.createElement("main", { className: `${isMapPage ? 'flex-grow h-screen' : 'flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]'}` },
+        !isFullScreenPage && React.createElement(OfflineBanner, null),
+        !isFullScreenPage && React.createElement(Header, null),
+        React.createElement("main", { className: `${isFullScreenPage ? 'flex-grow h-screen' : 'flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]'}` },
             React.createElement(AppRoutes, null)
         ),
-        !isMapPage && React.createElement(AppFooter, null),
-        !isMapPage && React.createElement(CookieBanner, null)
+        !isFullScreenPage && React.createElement(AppFooter, null),
+        !isFullScreenPage && React.createElement(CookieBanner, null)
     );
 };
 

@@ -132,7 +132,7 @@ const MemoizedItemBar = React.memo(ItemBar);
 const MessageInput = ({ onSendMessage, isLoading, disabled }) => {
     const [text, setText] = useState('');
     const handleSubmit = (e) => { e.preventDefault(); if(text.trim() && !disabled){ onSendMessage(text); setText(''); } };
-    return React.createElement("form", { onSubmit: handleSubmit, className: `p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2 ${disabled ? 'opacity-50 pointer-events-none' : ''}` },
+    return React.createElement("form", { onSubmit: handleSubmit, className: `p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700 flex items-center gap-2 pb-safe ${disabled ? 'opacity-50 pointer-events-none' : ''}` },
         React.createElement("input", { type: "text", value: text, onChange: e => setText(e.target.value), placeholder: disabled ? "Chat inactivo" : "Escribe tu mensaje...", className: "flex-grow appearance-none block w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white", disabled: isLoading || disabled }),
         React.createElement(Button, { type: "submit", isLoading: isLoading, disabled: !text.trim() || disabled, className: "rounded-full !p-3 min-w-[80px]", children: "Enviar" })
     );
@@ -292,17 +292,21 @@ const ChatDetailPage = () => {
     const isOtherUserBanned = partner?.isBanned;
     const isAccepted = exchange.status === ExchangeStatus.Accepted || exchange.status === ExchangeStatus.Completed;
     
-    // Verificamos si el objeto solicitado sigue disponible
     const requestedItem = exchange.allItems.find(i => i.id === exchange.requestedItemId);
     const itemUnavailable = requestedItem && requestedItem.status !== 'AVAILABLE' && exchange.status === 'PENDING';
 
     return (
-        React.createElement("div", { className: "flex flex-col h-[calc(100vh_-_8rem)] bg-white dark:bg-gray-900 max-w-4xl mx-auto rounded-xl shadow-2xl border dark:border-gray-700 overflow-hidden" },
+        React.createElement("div", { className: "flex flex-col flex-grow h-full bg-white dark:bg-gray-900 md:max-w-4xl md:mx-auto md:rounded-xl md:shadow-2xl md:border md:my-4 dark:border-gray-700 overflow-hidden w-full" },
             React.createElement(BanUserModal, { isOpen: isBanModalOpen, onClose: () => setIsBanModalOpen(false), onConfirm: handleBanConfirm, userName: userToBan?.name || '' }),
             React.createElement(ReportModal, { isOpen: isReportModalOpen, onClose: () => setIsReportModalOpen(false), title: "Reportar Chat", onSubmit: handleReport }),
             
             React.createElement("div", { className: "p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center" },
                 React.createElement("div", { className: "flex items-center gap-3" },
+                    React.createElement("button", { onClick: () => navigate(-1), className: "md:hidden p-2 -ml-2 text-gray-500 hover:text-blue-500" }, 
+                        React.createElement("svg", { xmlns:"http://www.w3.org/2000/svg", className:"h-6 w-6", fill:"none", viewBox:"0 0 24 24", stroke:"currentColor" }, 
+                            React.createElement("path", { strokeLinecap:"round", strokeLinejoin:"round", strokeWidth:"2", d:"M15 19l-7-7 7-7" })
+                        )
+                    ),
                     React.createElement(Link, { to: `/user/${partner.id}` },
                         React.createElement("img", { src: partner?.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: `w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm ${partner?.isBanned ? 'grayscale opacity-50' : ''}` })
                     ),

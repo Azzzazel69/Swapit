@@ -10,23 +10,17 @@ import ItemCardSkeleton from '../components/ItemCardSkeleton.tsx';
 
 const PAGE_SIZE = 12;
 
-const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns = 2 }) => {
+const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2 }) => {
     const { theme } = useColorTheme();
 
     if (!items || items.length === 0) {
-        if (title === "¡Matches Directos!") return null; 
-        if (title === "De tus Swappers Favoritos") return null; 
-
-        return (
-            React.createElement("div", { className: "mb-12" },
-                React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
-                React.createElement("div", { className: "text-center py-8 px-4 bg-gray-50 dark:bg-gray-800 rounded-lg" },
-                    React.createElement("p", { className: "text-gray-500 dark:text-gray-400" }, emptyMessage)
-                )
-            )
-        );
+        return null;
     }
     
+    // Lógica adaptativa: El número real de columnas será el mínimo entre el deseado y el número de items
+    // Por ejemplo, si pides 4 columnas pero solo hay 2 items, se mostrarán 2 columnas grandes.
+    const effectiveColumns = Math.min(items.length, columns);
+
     const gridLayoutClasses = {
         1: 'grid-cols-1',
         2: 'grid-cols-2',
@@ -35,10 +29,10 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, emptyMessage, columns
     };
 
     return (
-        React.createElement("div", { className: "mb-12" },
+        React.createElement("div", { className: "mb-12 animate-fade-in-up" },
             React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
-            React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4 md:gap-6` },
-                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns, onDelete: undefined, deletingItemId: undefined }))
+            React.createElement("div", { className: `grid ${gridLayoutClasses[effectiveColumns] || 'grid-cols-2'} gap-4 md:gap-6 transition-all duration-500` },
+                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: effectiveColumns, onDelete: undefined, deletingItemId: undefined }))
             )
         )
     );
@@ -126,7 +120,6 @@ const HomePage = () => {
     return 2;
   });
 
-  // Efecto para detectar cambios de tamaño de pantalla si no hay preferencia fija
   useEffect(() => {
     const handleResize = () => {
         const saved = window.localStorage.getItem('swapit_column_layout');
@@ -264,10 +257,10 @@ const HomePage = () => {
       )
     ),
 
-    React.createElement(ItemGroup, { title: "De tus Swappers Favoritos", icon: "⭐", items: filteredFollowed, onToggleFavorite: handleToggleFavorite, emptyMessage: "No hay novedades.", columns: columnLayout }),
-    React.createElement(ItemGroup, { title: "¡Matches Directos!", icon: "⚡️", items: filteredMatches, onToggleFavorite: handleToggleFavorite, emptyMessage: "Sin matches por ahora.", columns: columnLayout }),
-    React.createElement(ItemGroup, { title: "Recomendado para Ti", icon: "❤️", items: filteredRecommended, onToggleFavorite: handleToggleFavorite, emptyMessage: "Nada que recomendar hoy.", columns: columnLayout }),
-    React.createElement(ItemGroup, { title: "Explorar", icon: "🌍", items: filteredExplore, onToggleFavorite: handleToggleFavorite, emptyMessage: "No hay artículos.", columns: columnLayout }),
+    React.createElement(ItemGroup, { title: "De tus Swappers Favoritos", icon: "⭐", items: filteredFollowed, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+    React.createElement(ItemGroup, { title: "¡Matches Directos!", icon: "⚡️", items: filteredMatches, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+    React.createElement(ItemGroup, { title: "Recomendado para Ti", icon: "❤️", items: filteredRecommended, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+    React.createElement(ItemGroup, { title: "Explorar", icon: "🌍", items: filteredExplore, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
     
     React.createElement("div", { ref: loaderRef }),
     loadingMore && React.createElement("div", { className: "flex justify-center py-8" }, React.createElement(SwapSpinner, null)),
