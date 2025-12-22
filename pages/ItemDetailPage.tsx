@@ -13,29 +13,6 @@ import EditItemModal from '../components/EditItemModal.tsx';
 import ItemDetailSkeleton from '../components/ItemDetailSkeleton.tsx';
 import ReportModal from '../components/ReportModal.tsx';
 
-const ImageLightbox = (props) => {
-  return React.createElement("div", 
-    { 
-      className: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50",
-      onClick: props.onClose
-    },
-    React.createElement("div", 
-      { 
-        className: "relative max-w-4xl max-h-4/5 p-4", 
-        onClick: (e) => e.stopPropagation()
-      },
-      React.createElement("img", { src: props.imageUrl, alt: "Full screen view", className: "max-w-full max-h-[80vh] object-contain" }),
-      React.createElement("button", 
-        { 
-          onClick: props.onClose, 
-          className: "absolute top-4 right-4 text-white hover:text-gray-300"
-        },
-        ICONS.close
-      )
-    )
-  );
-};
-
 const ItemDetailPage = () => {
   const { itemId } = useParams();
   const { user } = useAuth();
@@ -44,331 +21,110 @@ const ItemDetailPage = () => {
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userItems, setUserItems] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [noItemsError, setNoItemsError] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  
+
   useEffect(() => {
     const fetchItem = async () => {
-      if (!itemId) {
-        setError("ID de artículo no proporcionado.");
-        setLoading(false);
-        return;
-      }
       try {
         setLoading(true);
-        const fetchedItem = await api.getItemById(itemId);
-        if (fetchedItem) {
-          setItem(fetchedItem);
-          setSelectedImage(fetchedItem.imageUrls[0]);
-          viewHistoryService.addItem(fetchedItem);
-        } else {
-          setError("Artículo no encontrado.");
+        const fetched = await api.getItemById(itemId);
+        if (fetched) {
+          setItem(fetched);
+          setSelectedImage(fetched.imageUrls[0]);
+          viewHistoryService.addItem(fetched);
         }
-      } catch (err) {
-        setError("Error al cargar los detalles del artículo.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { showToast("Error al cargar detalles", "error"); }
+      finally { setLoading(false); }
     };
     fetchItem();
   }, [itemId]);
   
-  const handleSaveItem = async (updatedData) => {
-    if (!item) return;
-    try {
-        const updatedItem = await api.updateItem(item.id, updatedData);
-        setItem(updatedItem);
-        showToast('Artículo actualizado con éxito.', 'success');
-    } catch (err) {
-        showToast(err.message || 'Error al actualizar el artículo.', 'error');
-    }
-  };
-  
-  const handleDeleteItem = async () => {
-    if (!item) return;
-    if (typeof window !== 'undefined' && window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
-        setIsDeleting(true);
-        try {
-            await api.deleteItem(item.id);
-            navigate('/profile', { state: { message: 'Artículo eliminado con éxito.' } });
-        } catch (err) {
-            showToast(err.message || 'Error al eliminar el artículo.', 'error');
-        } finally {
-            setIsDeleting(false);
-        }
-    }
-  };
-  
   const handleSwapClick = async () => {
     if (!user) return;
-    const currentUserItems = await api.getUserItems(user.id);
-    const availableItems = currentUserItems.filter(i => i.status === 'AVAILABLE');
-    if (availableItems.length === 0) {
-      setNoItemsError(true);
+    const items = await api.getUserItems(user.id);
+    const available = items.filter(i => i.status === 'AVAILABLE');
+    if (available.length === 0) {
+      showToast("Primero debes subir un artículo para poder intercambiar.", "error");
       return;
     }
-    setUserItems(availableItems);
+    setUserItems(available);
     setIsModalOpen(true);
   };
 
-  const handleSubmitProposal = async ({ offeredItemIds, otherItems, message }) => {
-      if (!itemId) return;
+  const handleSubmitProposal = async ({ offeredItemIds, message }) => {
       setIsSubmitting(true);
       try {
-          const newExchange = await api.createExchangeProposal({
-              requestedItemId: itemId,
-              offeredItemIds,
-              otherItems,
-              message,
-          });
-          setIsModalOpen(false);
-          navigate(`/chat/${newExchange.id}`);
-      } catch (err) {
-          showToast(err.message || 'Error al crear la propuesta.', 'error');
-      } finally {
-          setIsSubmitting(false);
-      }
+          const res = await api.createExchangeProposal({ requestedItemId: item.id, offeredItemIds, message });
+          navigate(`/chat/${res.id}`);
+      } catch (err) { showToast(err.message, "error"); }
+      finally { setIsSubmitting(false); }
   };
 
-  const handleToggleFavorite = async () => {
-    if (!item) return;
-    try {
-        const updatedItem = await api.toggleFavorite(item.id);
-        setItem(prevItem => ({ ...prevItem, ...updatedItem }));
-    } catch (err) {
-        showToast(err.message || "No se pudo actualizar el estado de favorito.", 'error');
-    }
-  };
+  if (loading) return React.createElement(ItemDetailSkeleton, null);
+  if (!item) return React.createElement("div", { className: "text-center p-10" }, "Artículo no encontrado.");
 
-  const handleShare = async () => {
-      if (navigator.share) {
-          try {
-              await navigator.share({
-                  title: `Swapit: ${item.title}`,
-                  text: `¡Mira este artículo que encontré en Swapit! ${item.title}`,
-                  url: window.location.href,
-              });
-          } catch (error) {
-              console.log('Error sharing', error);
-          }
-      } else {
-          navigator.clipboard.writeText(window.location.href);
-          showToast('Enlace copiado al portapapeles', 'success');
-      }
-  };
-
-  const handleReport = async (reason) => {
-      try {
-          await api.reportContent(item.id, 'ITEM', reason);
-          showToast('Reporte enviado. Gracias por ayudar a la comunidad.', 'success');
-      } catch (err) {
-          showToast(err.message || 'Error al enviar el reporte.', 'error');
-      }
-  };
-
-  if (loading) {
-    return React.createElement(ItemDetailSkeleton, null);
-  }
-
-  if (error) {
-    return React.createElement("div", { className: "text-center text-red-500" }, error);
-  }
-
-  if (!item) {
-    return React.createElement("div", { className: "text-center text-gray-500" }, "No se pudo cargar el artículo.");
-  }
-  
   const isOwnItem = user?.id === item.userId;
-  const isSwapped = item.status === 'EXCHANGED';
-  const isReserved = item.status === 'RESERVED';
 
-  const conditionClasses = {
-    [ItemCondition.New]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    [ItemCondition.LikeNew]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    [ItemCondition.Good]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    [ItemCondition.Acceptable]: 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200',
-  };
-
-  return React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl mx-auto p-4 sm:p-6 lg:p-8" },
-    lightboxOpen && selectedImage && React.createElement(ImageLightbox, { imageUrl: selectedImage, onClose: () => setLightboxOpen(false) }),
-    React.createElement(EditItemModal, {
-        isOpen: isEditModalOpen,
-        onClose: () => setIsEditModalOpen(false),
-        item: item,
-        onSave: handleSaveItem,
-    }),
-    React.createElement(ReportModal, {
-        isOpen: isReportModalOpen,
-        onClose: () => setIsReportModalOpen(false),
-        title: "Reportar Artículo",
-        onSubmit: handleReport
-    }),
-    isModalOpen && React.createElement(ExchangeProposalModal, {
-        isOpen: isModalOpen,
-        onClose: () => setIsModalOpen(false),
-        userItems: userItems,
-        targetItem: item,
-        onSubmit: handleSubmitProposal,
-        isLoading: isSubmitting,
-    }),
-    noItemsError && React.createElement("div", {
-      className: "fixed bottom-5 right-5 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 dark:bg-yellow-900/50 dark:border-yellow-500 dark:text-yellow-200 p-4 rounded-r-lg shadow-lg flex items-start gap-3 z-50 max-w-sm transition-opacity duration-300",
-      role: "alert"
-    },
-      React.createElement("div", { className: "flex-shrink-0 pt-0.5" },
-        React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
-          React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" })
-        )
-      ),
-      React.createElement("div", { className: "flex-grow" },
-        React.createElement("p", { className: "font-bold" }, "Necesitas un artículo para intercambiar"),
-        React.createElement("p", { className: "text-sm mt-1" }, "Para proponer un intercambio, primero debes añadir un artículo a tu perfil."),
-        React.createElement(Link, {
-          to: "/add-item",
-          onClick: () => setNoItemsError(false),
-          className: `block mt-2 text-sm font-semibold ${theme.textColor} ${theme.hoverTextColor} underline`
-        }, "Añadir un artículo ahora →")
-      ),
-      React.createElement("div", { className: "ml-auto pl-3" },
-        React.createElement("button", { 
-          onClick: () => setNoItemsError(false), 
-          className: "-mx-1.5 -my-1.5 bg-yellow-100 dark:bg-yellow-900/0 text-yellow-500 rounded-lg focus:ring-2 focus:ring-yellow-400 p-1.5 hover:bg-yellow-200 dark:hover:bg-yellow-800/50 inline-flex h-8 w-8",
-          "aria-label":"Cerrar"
-        },
-          React.createElement("span", { className: "sr-only" }, "Cerrar"),
-          React.createElement("svg", { className: "h-5 w-5", xmlns: "http://www.w3.org/2000/svg", fill: "currentColor", viewBox: "0 0 20 20" },
-            React.createElement("path", { fillRule:"evenodd", d:"M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z", clipRule:"evenodd" })
-          )
-        )
-      )
-    ),
-    React.createElement("div", { className: "flex justify-between items-center mb-4" },
-        React.createElement("button", { onClick: () => navigate(-1), className: `flex items-center gap-2 ${theme.textColor} ${theme.hoverTextColor} hover:underline` },
-          "← Volver a los artículos"
-        ),
-        React.createElement("div", { className: "flex gap-2" },
-            React.createElement("button", { 
-                onClick: handleShare, 
-                className: "p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors",
-                title: "Compartir"
-            }, ICONS.share),
-            !isOwnItem && React.createElement("button", { 
-                onClick: () => setIsReportModalOpen(true),
-                className: "p-2 text-gray-400 hover:text-red-500 transition-colors",
-                title: "Reportar artículo"
-            }, ICONS.flag)
-        )
-    ),
-    React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-8" },
-      React.createElement("div", null,
-        React.createElement("div", { className: "mb-4" },
-          React.createElement("img", { 
-            src: selectedImage || '', 
-            alt: item.title, 
-            className: "w-full h-auto object-cover rounded-lg shadow-md cursor-pointer",
-            onClick: () => setLightboxOpen(true)
-          })
-        ),
-        React.createElement("div", { className: "flex space-x-2 overflow-x-auto" },
-          item.imageUrls.map((url, index) => React.createElement("img", {
-              key: index,
-              src: url,
-              alt: `${item.title} thumbnail ${index + 1}`,
-              className: `w-20 h-20 object-cover rounded-md cursor-pointer border-2 ${selectedImage === url ? theme.border : 'border-transparent hover:border-gray-400'}`,
-              onClick: () => setSelectedImage(url)
-            })
-          )
-        )
-      ),
-      React.createElement("div", { className: "flex flex-col" },
-        React.createElement("div", { className: "flex items-center gap-3 mb-2" },
-            React.createElement("span", { className: `${theme.lightBg} ${theme.darkText} text-sm font-medium px-2.5 py-0.5 rounded-full self-start` },
-                item.category
+  return React.createElement("div", { className: "max-w-4xl mx-auto px-4 py-6" },
+    React.createElement(EditItemModal, { isOpen: isEditModalOpen, onClose: () => setIsEditModalOpen(false), item: item, onSave: (d) => api.updateItem(item.id, d).then(setItem) }),
+    React.createElement(ReportModal, { isOpen: isReportModalOpen, onClose: () => setIsReportModalOpen(false), title: "Reportar Artículo", onSubmit: (r) => api.reportContent(item.id, 'ITEM', r).then(() => showToast("Reporte enviado", "success")) }),
+    React.createElement(ExchangeProposalModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), userItems: userItems, targetItem: item, onSubmit: handleSubmitProposal, isLoading: isSubmitting }),
+    
+    React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700" },
+        React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2" },
+            // Galería
+            React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-900/50" },
+                React.createElement("img", { src: selectedImage, className: "w-full aspect-square object-cover rounded-2xl shadow-lg mb-4" }),
+                React.createElement("div", { className: "flex gap-2 overflow-x-auto pb-2 scrollbar-hide" },
+                    item.imageUrls.map((u, i) => React.createElement("img", { key: i, src: u, onClick: () => setSelectedImage(u), className: `w-20 h-20 rounded-xl object-cover cursor-pointer border-4 transition-all ${selectedImage === u ? theme.border : 'border-transparent opacity-60 hover:opacity-100'}` }))
+                )
             ),
-            item.condition && React.createElement("span", { className: `text-sm font-medium px-2.5 py-0.5 rounded-full self-start ${conditionClasses[item.condition]}` },
-                item.condition
-            )
-        ),
-        React.createElement("div", { className: "flex justify-between items-start gap-4 mb-4" },
-            React.createElement("h1", { className: "text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white flex-grow" }, item.title),
-            !isOwnItem && !isSwapped && !isReserved && (
-                React.createElement("button", {
-                    onClick: handleToggleFavorite,
-                    className: "flex-shrink-0 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 p-3 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors",
-                    title: "Añadir a favoritos"
-                },
-                    item.isFavorited 
-                        ? React.createElement("span", { className: "text-red-500" }, React.cloneElement(ICONS.heartSolid, { className: "h-6 w-6" }))
-                        : React.cloneElement(ICONS.heart, { className: "h-6 w-6" }),
-                    React.createElement("span", { className: "font-bold text-sm" }, item.likes || 0)
+            // Info
+            React.createElement("div", { className: "p-8 flex flex-col" },
+                React.createElement("div", { className: "flex justify-between items-start mb-4" },
+                    React.createElement("div", null,
+                        React.createElement("span", { className: "text-[10px] font-black uppercase text-blue-500 tracking-widest" }, item.category),
+                        React.createElement("h1", { className: "text-3xl font-black text-gray-900 dark:text-white leading-tight" }, item.title)
+                    ),
+                    !isOwnItem && React.createElement("button", { onClick: () => api.toggleFavorite(item.id).then(setItem), className: "p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 hover:scale-110 transition-transform shadow-sm" }, item.isFavorited ? "❤️" : "🤍")
+                ),
+                
+                React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-8 text-lg" }, item.description),
+                
+                // INDICADOR DE UBICACIÓN (CRÍTICO)
+                React.createElement("div", { className: "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-2xl border-2 border-blue-100 dark:border-blue-800 mb-8 flex items-center gap-5 relative overflow-hidden" },
+                    React.createElement("div", { className: "absolute top-0 right-0 p-2 opacity-10" }, React.createElement("span", { className: "text-6xl" }, "📍")),
+                    React.createElement("div", { className: "w-12 h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md flex-shrink-0" },
+                        React.createElement("span", { className: "text-2xl" }, "📍")
+                    ),
+                    React.createElement("div", null,
+                        React.createElement("h4", { className: "text-[11px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-tighter" }, "Disponible para intercambio en"),
+                        React.createElement("p", { className: "text-xl font-black text-gray-800 dark:text-gray-100" }, `${item.ownerLocation.city}`),
+                        React.createElement("p", { className: "text-sm font-bold text-blue-500/70" }, `${item.ownerLocation.province}, España`)
+                    )
+                ),
+
+                React.createElement("div", { className: "mt-auto pt-8 border-t-2 border-gray-100 dark:border-gray-700" },
+                    React.createElement("div", { className: "flex items-center justify-between" },
+                        React.createElement(Link, { to: `/user/${item.userId}`, className: "flex items-center gap-3 group" },
+                            React.createElement("img", { src: item.ownerAvatarUrl, className: "w-12 h-12 rounded-full border-2 border-white dark:border-gray-600 shadow-md group-hover:scale-105 transition-transform" }),
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-[10px] font-bold text-gray-400 uppercase" }, "Propietario"),
+                                React.createElement("p", { className: "font-black group-hover:text-blue-500 transition-colors" }, item.ownerName)
+                            )
+                        ),
+                        isOwnItem ? 
+                        React.createElement(Button, { onClick: () => setIsEditModalOpen(true), variant: "secondary", className: "rounded-xl px-8", children: "Gestionar" }) :
+                        React.createElement(Button, { onClick: handleSwapClick, className: "rounded-xl px-10 shadow-lg", children: "¡Hacer Trueque!" })
+                    )
                 )
             )
-        ),
-        React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-6 flex-grow" }, item.description),
-        
-        React.createElement("div", { className: "mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-l-4 border-orange-400" },
-            React.createElement("h4", { className: "text-md font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2" }, 
-                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor"}, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13 10V3L4 14h7v7l9-11h-7z" })),
-                "Lo cambiaría por..."
-            ),
-            React.createElement("p", { className: "text-gray-800 dark:text-gray-100 mt-2 text-lg italic" },
-                item.wishedItem || 'Abierto a escuchar propuestas'
-            )
-        ),
-        
-        isOwnItem && !isSwapped && !isReserved && (
-          React.createElement("div", { className: "mb-6 flex gap-4" },
-            React.createElement(Button, { 
-              onClick: () => setIsEditModalOpen(true),
-              variant: "secondary",
-              className: "w-full",
-              children: "Editar"
-            }),
-            React.createElement(Button, {
-              onClick: handleDeleteItem,
-              variant: "danger",
-              className: "w-full",
-              isLoading: isDeleting,
-              children: "Eliminar"
-            })
-          )
-        ),
-        
-        React.createElement("div", { className: "border-t border-gray-200 dark:border-gray-700 pt-4" },
-          React.createElement("div", { className: "text-sm text-gray-500 dark:text-gray-400" },
-            React.createElement("p", null, "Propietario: ", React.createElement(Link, { to: `/user/${item.userId}`, className: `font-bold ${theme.textColor} hover:underline` }, item.ownerName)),
-            React.createElement("p", null, "Publicado: ", new Date(item.createdAt).toLocaleDateString())
-          )
-        ),
-        !isOwnItem && (
-          isSwapped ? (
-            React.createElement("div", { className: "mt-6 text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg" },
-              React.createElement("p", { className: "font-semibold text-gray-700 dark:text-gray-200" }, "Este artículo ya ha sido intercambiado.")
-            )
-          ) : isReserved ? (
-             React.createElement("div", { className: "mt-6 text-center p-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg" },
-              React.createElement("p", { className: "font-semibold text-yellow-800 dark:text-yellow-200" }, "Este artículo está reservado en un intercambio.")
-            )
-          ) : (
-            React.createElement("div", { className: "mt-6" },
-              React.createElement(Button, { size: "lg", onClick: handleSwapClick, className: "w-full", children: React.createElement("div", { className: "flex items-center justify-center gap-2" },
-                  ICONS.swap,
-                  "!te lo cambio!"
-                )
-              })
-            )
-          )
         )
-      )
     )
   );
 };

@@ -7,6 +7,7 @@ import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useToast } from '../hooks/useToast.tsx';
+import BanUserModal from '../components/BanUserModal.tsx';
 
 const UserRating = ({ ratings = [] }) => {
     const averageRating = useMemo(() => {
@@ -39,7 +40,6 @@ const UserProfilePage = () => {
     const { user: currentUser, refreshUser } = useAuth();
     const { showToast } = useToast();
     const navigate = useNavigate();
-    const location = useLocation();
     
     const [profile, setProfile] = useState(null);
     const [items, setItems] = useState([]);
@@ -47,120 +47,148 @@ const UserProfilePage = () => {
     const [error, setError] = useState('');
     const [isFollowing, setIsFollowing] = useState(false);
     const [isFollowingLoading, setIsFollowingLoading] = useState(false);
+    const [isBanModalOpen, setIsBanModalOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchProfile = async () => {
-            if (!userId) return;
-            try {
-                setLoading(true);
-                const userProfile = await api.getUserProfile(userId);
-                setProfile(userProfile);
-                setItems(userProfile.items || []);
-                setIsFollowing(userProfile.isFollowed || false);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchProfile();
-    }, [userId]);
+    const isStaff = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'MODERATOR';
+
+    const fetchProfile = async () => {
+        if (!userId) return;
+        try {
+            setLoading(true);
+            const userProfile = await api.getUserProfile(userId);
+            setProfile(userProfile);
+            setItems(userProfile.items || []);
+            setIsFollowing(currentUser?.following?.includes(userId) || false);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchProfile(); }, [userId, currentUser]);
 
     const handleToggleFavorite = async (itemId) => {
         try {
             const updatedItem = await api.toggleFavorite(itemId);
             setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item));
         } catch (error) {
-            console.error("Error toggling favorite", error);
-            setError("No se pudo actualizar el estado de favorito.");
+            showToast("No se pudo actualizar favoritos.", "error");
         }
     };
     
     const handleToggleFollow = async () => {
-        if (!currentUser) {
-            showToast("Inicia sesión para seguir usuarios", "error");
-            return;
-        }
+        if (!currentUser) return;
         setIsFollowingLoading(true);
         try {
             const response = await api.toggleFollowUser(userId);
             setIsFollowing(response.isFollowing);
             await refreshUser(); 
             showToast(response.isFollowing ? "Ahora sigues a este usuario" : "Has dejado de seguir a este usuario", "success");
-        } catch (err) {
-            showToast(err.message || "Error al actualizar seguimiento", "error");
         } finally {
             setIsFollowingLoading(false);
         }
     };
 
-    if (loading) {
-        return React.createElement(SwapSpinner, null);
-    }
+    const handleBan = async (reason, details) => {
+        try {
+            await api.banUser(userId, `${reason}: ${details}`);
+            showToast("Usuario suspendido", "success");
+            fetchProfile();
+        } catch (e) { showToast(e.message, "error"); }
+    };
 
-    if (error) {
-        return React.createElement("p", { className: "text-red-500" }, "Error: ", error);
-    }
-    
-    if (!profile) {
-        return React.createElement("p", null, "Perfil no encontrado.");
-    }
+    const handleUnban = async () => {
+        try {
+            await api.unbanUser(userId);
+            showToast("Usuario reactivado", "success");
+            fetchProfile();
+        } catch (e) { showToast(e.message, "error"); }
+    };
+
+    const handleAdminChat = async () => {
+        try {
+            const chatId = await api.openDirectAdminChat(userId);
+            navigate(`/chat/${chatId}`);
+        } catch (e) { showToast(e.message, "error"); }
+    };
+
+    if (loading) return React.createElement(SwapSpinner, { size: "lg" });
+    if (error) return React.createElement("p", { className: "text-red-500 p-10 text-center" }, "Error: ", error);
+    if (!profile) return React.createElement("p", { className: "p-10 text-center" }, "Perfil no encontrado.");
     
     const isOwnProfile = currentUser?.id === userId;
     const isBanned = profile.isBanned;
 
-    return React.createElement("div", null,
+    return React.createElement("div", { className: "max-w-4xl mx-auto" },
+        React.createElement(BanUserModal, { 
+            isOpen: isBanModalOpen, 
+            onClose: () => setIsBanModalOpen(false), 
+            onConfirm: handleBan, 
+            userName: profile.name 
+        }),
+        
         isBanned && (
-            React.createElement("div", { className: "bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6", role: "alert" },
-                React.createElement("p", { className: "font-bold" }, "Cuenta Suspendida"),
-                React.createElement("p", null, "Este usuario ha sido suspendido por violar las normas de la comunidad. Sus artículos y perfil no están disponibles.")
+            React.createElement("div", { className: "bg-red-100 dark:bg-red-900/30 border-l-8 border-red-600 text-red-700 dark:text-red-300 p-6 mb-8 rounded-xl animate-shake" },
+                React.createElement("h3", { className: "font-black text-xl mb-1 uppercase" }, "Cuenta Suspendida"),
+                React.createElement("p", null, "Este usuario está baneado por: ", React.createElement("span", { className: "font-bold italic" }, profile.banReason)),
+                isStaff && React.createElement(Button, { size: "sm", variant: "secondary", className: "mt-4", onClick: handleUnban }, "Reactivar Cuenta Ahora")
             )
         ),
-        React.createElement("div", { className: "mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col sm:flex-row items-center gap-6" },
-            React.createElement("img", { src: profile.avatarUrl, alt: "Avatar", className: `w-24 h-24 rounded-full object-cover shadow-lg ${isBanned ? 'grayscale opacity-50' : ''}` }),
-            React.createElement("div", { className: "flex flex-col gap-2 flex-grow text-center sm:text-left" },
-                React.createElement("div", { className: "flex flex-col sm:flex-row items-center gap-3" },
-                    React.createElement("h1", { className: `text-3xl font-bold ${isBanned ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}` }, profile.name),
+
+        React.createElement("div", { className: "mb-10 p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex flex-col md:flex-row items-center gap-8 relative overflow-hidden" },
+            isStaff && React.createElement("div", { className: "absolute top-4 right-4 flex gap-2" },
+                React.createElement("button", { 
+                    onClick: handleAdminChat,
+                    className: "p-2 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors",
+                    title: "Chat Directo Moderación"
+                }, "💬 STAFF"),
+                !isBanned && React.createElement("button", { 
+                    onClick: () => setIsBanModalOpen(true),
+                    className: "p-2 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors",
+                    title: "Suspender Usuario"
+                }, "🚫 BAN")
+            ),
+
+            React.createElement("img", { src: profile.avatarUrl, alt: "Avatar", className: `w-32 h-32 rounded-full object-cover shadow-2xl border-4 border-white dark:border-gray-700 ${isBanned ? 'grayscale opacity-50' : ''}` }),
+            
+            React.createElement("div", { className: "flex flex-col gap-3 flex-grow text-center md:text-left" },
+                React.createElement("div", { className: "flex flex-col md:flex-row items-center gap-4" },
+                    React.createElement("h1", { className: `text-4xl font-black ${isBanned ? 'text-gray-400' : 'text-gray-900 dark:text-white'}` }, profile.name),
                     !isOwnProfile && currentUser && !isBanned && (
                         React.createElement(Button, {
                             onClick: handleToggleFollow,
                             isLoading: isFollowingLoading,
                             variant: isFollowing ? "secondary" : "primary",
                             size: "sm",
-                            className: isFollowing ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-200" : "",
-                            title: isFollowing ? "Dejar de seguir" : "Seguir usuario",
-                            children: React.createElement("div", { className: "flex items-center gap-1" },
-                                isFollowing ? (
-                                    React.createElement(React.Fragment, null,
-                                        React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" })),
-                                        React.createElement("span", null, "Siguiendo")
-                                    )
-                                ) : (
-                                    React.createElement(React.Fragment, null,
-                                        React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" })),
-                                        React.createElement("span", null, "Seguir")
-                                    )
-                                )
-                            )
+                            className: isFollowing ? "bg-yellow-100 text-yellow-800" : "px-6",
+                            children: isFollowing ? "Siguiendo" : "Seguir"
                         })
                     )
                 ),
-                React.createElement(UserRating, { ratings: profile.ratings })
+                React.createElement(UserRating, { ratings: profile.ratings }),
+                React.createElement("p", { className: "text-gray-500 text-sm" }, "Miembro desde: ", new Date(profile.createdAt || Date.now()).toLocaleDateString())
             )
         ),
         
-        !isBanned && React.createElement(React.Fragment, null, 
-            React.createElement("h2", { className: "text-2xl font-bold text-gray-900 dark:text-white mb-4" }, "Artículos disponibles de ", profile.name),
+        (!isBanned || isStaff) && React.createElement(React.Fragment, null, 
+            React.createElement("h2", { className: "text-2xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-2" }, 
+                React.createElement("span", { className: "p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" }, "📦"),
+                "Artículos de ", profile.name
+            ),
             items.length === 0 ? (
-                React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400 mt-10" },
-                  `${profile.name} no tiene artículos disponibles en este momento.`
+                React.createElement("div", { className: "text-center py-20 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700" },
+                  React.createElement("p", { className: "text-gray-500" }, "No hay artículos disponibles.")
                 )
             ) : (
-                React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+                React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
                   items.map((item) => (
-                      React.createElement("div", { key: item.id, className: "relative" },
-                          React.createElement(ItemCard, { item: item, onToggleFavorite: handleToggleFavorite, onDelete: undefined, deletingItemId: undefined })
-                      )
+                      React.createElement(ItemCard, { 
+                          key: item.id, 
+                          item: item, 
+                          onToggleFavorite: handleToggleFavorite,
+                          onDelete: isStaff ? (id) => api.deleteItem(id).then(fetchProfile) : undefined
+                      })
                   ))
                 )
             )

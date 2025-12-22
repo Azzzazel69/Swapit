@@ -27,7 +27,7 @@ import RateExchangePage from './pages/RateExchangePage.tsx';
 import AdminPage from './pages/AdminPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
 import MeetingMapPage from './pages/MeetingMapPage.tsx';
-import { initializePushNotifications, requestNotificationPermission } from './services/pushNotifications.ts';
+import { initializePushNotifications } from './services/pushNotifications.ts';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -59,10 +59,15 @@ const AppContent = () => {
     // Determinamos si es una página de "flujo ininterrumpido" (Mapa o Chat) para quitar paddings y footer
     const isFullScreenPage = location.pathname.startsWith('/meeting-map') || location.pathname.startsWith('/chat');
 
-    return React.createElement("div", { className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" },
+    return React.createElement("div", { 
+        className: "min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200" 
+    },
         !isFullScreenPage && React.createElement(OfflineBanner, null),
         !isFullScreenPage && React.createElement(Header, null),
-        React.createElement("main", { className: `${isFullScreenPage ? 'flex-grow h-screen' : 'flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1rem)]'}` },
+        React.createElement("main", { 
+            // pb-safe asegura que en móviles el contenido no quede detrás de la barra de navegación de gestos
+            className: `${isFullScreenPage ? 'flex-grow h-screen' : 'flex-grow container mx-auto p-4 md:p-6 flex flex-col pt-[calc(env(safe-area-inset-top,0)_+_1.5rem)] pb-safe'}` 
+        },
             React.createElement(AppRoutes, null)
         ),
         !isFullScreenPage && React.createElement(AppFooter, null),
@@ -74,14 +79,14 @@ const AppFooter = () => {
   const { theme } = useColorTheme();
 
   return (
-    React.createElement("footer", { className: "text-center p-4 text-gray-500 text-sm border-t border-gray-200 dark:border-gray-700" },
+    React.createElement("footer", { className: "text-center p-6 text-gray-500 text-sm border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pb-[calc(env(safe-area-inset-bottom,0)_+_1.5rem)]" },
       `© 2025 Swapit. Todos los derechos reservados.`,
-      React.createElement("div", { className: "mt-2" },
-        React.createElement(Link, { to: "/terms-of-service", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Términos de Servicio"),
-        "|",
-        React.createElement(Link, { to: "/cookie-policy", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Política de Cookies"),
-        "|",
-        React.createElement(Link, { to: "/terms-of-service#privacy", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mx-2` }, "Política de Privacidad")
+      React.createElement("div", { className: "mt-3 flex flex-wrap justify-center gap-2" },
+        React.createElement(Link, { to: "/terms-of-service", className: `font-bold ${theme.textColor} ${theme.hoverTextColor}` }, "Términos"),
+        "•",
+        React.createElement(Link, { to: "/cookie-policy", className: `font-bold ${theme.textColor} ${theme.hoverTextColor}` }, "Cookies"),
+        "•",
+        React.createElement(Link, { to: "/terms-of-service#privacy", className: `font-bold ${theme.textColor} ${theme.hoverTextColor}` }, "Privacidad")
       )
     )
   );
@@ -95,7 +100,6 @@ const AppRoutes = () => {
         initializePushNotifications();
     }
   }, [user]);
-
 
   if (loading) {
     return React.createElement("div", { className: "flex justify-center items-center h-64" },
@@ -149,7 +153,8 @@ const ProtectedRoute = ({ children }) => {
 
 const AdminRoute = ({ children }) => {
   const { user } = useAuth();
-  if (!user || user.role !== 'SUPER_ADMIN') {
+  const isStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR';
+  if (!user || !isStaff) {
     return React.createElement(Navigate, { to: "/", replace: true });
   }
   return children;

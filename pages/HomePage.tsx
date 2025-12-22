@@ -7,81 +7,69 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { Link } from 'react-router-dom';
 import ItemCardSkeleton from '../components/ItemCardSkeleton.tsx';
+import Button from '../components/Button.tsx';
+import EmptyState from '../components/EmptyState.tsx';
+import { ICONS } from '../constants.tsx';
 
 const PAGE_SIZE = 12;
 
-const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2 }) => {
+const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "" }) => {
     const { theme } = useColorTheme();
-
-    if (!items || items.length === 0) {
-        return null;
-    }
-    
-    // Lógica adaptativa: El número real de columnas será el mínimo entre el deseado y el número de items
-    // Por ejemplo, si pides 4 columnas pero solo hay 2 items, se mostrarán 2 columnas grandes.
+    if (!items || items.length === 0) return null;
     const effectiveColumns = Math.min(items.length, columns);
-
-    const gridLayoutClasses = {
-        1: 'grid-cols-1',
-        2: 'grid-cols-2',
-        3: 'grid-cols-3',
-        4: 'grid-cols-4',
-    };
+    const gridLayoutClasses = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' };
 
     return (
-        React.createElement("div", { className: "mb-12 animate-fade-in-up" },
-            React.createElement("h2", { className: `text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-sm border-l-4 ${theme.border}` }, icon, title),
+        React.createElement("div", { id: id, className: "mb-12 animate-fade-in-up scroll-mt-20" },
+            React.createElement("h2", { className: `text-xl font-black text-gray-900 dark:text-white mb-4 flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border-l-4 ${theme.border}` }, 
+                React.createElement("span", { className: "text-2xl" }, icon), 
+                title
+            ),
             React.createElement("div", { className: `grid ${gridLayoutClasses[effectiveColumns] || 'grid-cols-2'} gap-4 md:gap-6 transition-all duration-500` },
-                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: effectiveColumns, onDelete: undefined, deletingItemId: undefined }))
+                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: effectiveColumns }))
             )
         )
     );
 };
 
-const LayoutSelector = ({ layout, setLayout }) => {
+const ViewSelector = ({ mode, setMode }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const wrapperRef = useRef(null);
+    const dropdownRef = useRef(null);
+    const options = [
+        { id: 'landing', label: 'Descubrir todo', icon: '✨' },
+        { id: 'cerca', label: 'Cerca de mí', icon: '📍' },
+        { id: 'favoritos', label: 'Mis Favoritos', icon: '❤️' },
+        { id: 'recientes', label: 'Más Recientes', icon: '🕒' }
+    ];
 
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        const clickOut = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false); };
+        document.addEventListener('mousedown', clickOut);
+        return () => document.removeEventListener('mousedown', clickOut);
     }, []);
 
-    const options = [1, 2, 3, 4];
-    const icons = {
-        1: React.createElement("div", { className: "flex gap-0.5", title:"1 columna" }, React.createElement("div", { className: "w-4 h-4 bg-gray-500 rounded-sm" })),
-        2: React.createElement("div", { className: "flex gap-0.5", title:"2 columnas" }, React.createElement("div", { className: "w-3 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-3 h-4 bg-gray-500 rounded-sm" })),
-        3: React.createElement("div", { className: "flex gap-0.5", title:"3 columnas" }, React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-2 h-4 bg-gray-500 rounded-sm" })),
-        4: React.createElement("div", { className: "flex gap-0.5", title:"4 columnas" }, React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" }), React.createElement("div", { className: "w-1.5 h-4 bg-gray-500 rounded-sm" })),
-    };
-
-    const handleSelect = (option) => {
-        setLayout(option);
-        setIsOpen(false);
-    };
+    const selected = options.find(o => o.id === mode) || options[0];
 
     return (
-        React.createElement("div", { className: "flex items-center justify-end gap-2", ref: wrapperRef },
-             React.createElement("span", {
-                className: `text-sm font-medium text-gray-600 dark:text-gray-400 transition-all duration-300 ease-in-out ${isOpen ? 'max-w-xs opacity-100 mr-2' : 'max-w-0 opacity-0'} overflow-hidden whitespace-nowrap`,
-            }, "Artículos por línea"),
-            React.createElement("div", { className: `flex items-center p-1 bg-gray-200 dark:bg-gray-700 rounded-full transition-all duration-300 ease-in-out` },
-                !isOpen && React.createElement("button", {
-                    onClick: () => setIsOpen(true),
-                    className: `p-1.5 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600`
-                }, icons[layout]),
-                
-                isOpen && [...options].reverse().map(opt => (
+        React.createElement("div", { className: "relative", ref: dropdownRef },
+            React.createElement("button", { 
+                onClick: () => setIsOpen(!isOpen),
+                className: "flex items-center gap-2 px-3 py-2.5 sm:px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm font-bold text-sm"
+            }, 
+                React.createElement("span", null, selected.icon),
+                React.createElement("span", { className: "hidden sm:inline" }, selected.label),
+                React.createElement("svg", { className: `w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`, fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M19 9l-7 7-7-7" }))
+            ),
+            isOpen && React.createElement("div", { className: "absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-50 border border-gray-100 dark:border-gray-700 overflow-hidden" },
+                options.map(opt => (
                     React.createElement("button", {
-                        key: opt,
-                        onClick: () => handleSelect(opt),
-                        className: `p-1.5 rounded-full transition-colors ml-1 first:ml-0 ${layout === opt ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-300 dark:hover:bg-gray-600'}`
-                    }, icons[opt])
+                        key: opt.id,
+                        onClick: () => { setMode(opt.id); setIsOpen(false); },
+                        className: `w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 ${mode === opt.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : ''}`
+                    }, 
+                        React.createElement("span", null, opt.icon),
+                        React.createElement("span", { className: "font-bold" }, opt.label)
+                    )
                 ))
             )
         )
@@ -90,186 +78,140 @@ const LayoutSelector = ({ layout, setLayout }) => {
 
 const applySearch = (items, query, type) => {
     if (!query.trim()) return items;
-    const lowercasedQuery = query.toLowerCase();
-    if (type === 'articles') {
-        return items.filter(item =>
-            (item.title && typeof item.title === 'string' && item.title.toLowerCase().includes(lowercasedQuery)) ||
-            (item.description && typeof item.description === 'string' && item.description.toLowerCase().includes(lowercasedQuery))
-        );
-    } else { 
-        return items.filter(item =>
-            item.ownerLocation && (
-                item.ownerLocation.city.toLowerCase().includes(lowercasedQuery) ||
-                item.ownerLocation.postalCode.toLowerCase().includes(lowercasedQuery)
-            )
-        );
-    }
+    const q = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return items.filter(item => {
+        const title = (item.title || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const desc = (item.description || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const city = (item.ownerLocation?.city || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const prov = (item.ownerLocation?.province || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        if (type === 'articles') return title.includes(q) || desc.includes(q);
+        return city.includes(q) || prov.includes(q);
+    });
 };
 
 const HomePage = () => {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { theme } = useColorTheme();
   
-  const [columnLayout, setColumnLayout] = useState(() => {
-    if (typeof window !== 'undefined') {
-        const saved = window.localStorage.getItem('swapit_column_layout');
-        if (saved) return parseInt(saved, 10);
-    }
-    if (user?.columnLayout) return user.columnLayout;
-    if (typeof window !== 'undefined') return window.innerWidth < 768 ? 2 : 4;
-    return 2;
-  });
-
-  useEffect(() => {
-    const handleResize = () => {
-        const saved = window.localStorage.getItem('swapit_column_layout');
-        if (!saved && !user?.columnLayout) {
-            setColumnLayout(window.innerWidth < 768 ? 2 : 4);
-        }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [user?.columnLayout]);
-
-  const [directMatches, setDirectMatches] = useState([]);
-  const [recommended, setRecommended] = useState([]);
-  const [exploreItems, setExploreItems] = useState([]);
-  const [followedUsersItems, setFollowedUsersItems] = useState([]);
-  const [totalExploreItems, setTotalExploreItems] = useState(0);
+  const [viewMode, setViewMode] = useState('landing');
+  const [columnLayout, setColumnLayout] = useState(window.innerWidth < 768 ? 2 : 4);
+  const [data, setData] = useState({ exploreItems: [], directMatches: [], recommended: [], nearItems: [], favoriteItems: [], popularItems: [], totalExploreItems: 0 });
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('articles'); 
-  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
-  const searchDropdownRef = useRef(null);
-  const observer = useRef<IntersectionObserver>(null);
 
-  const handleSetLayout = async (newLayout) => {
-    setColumnLayout(newLayout);
-    if (typeof window !== 'undefined') {
-        window.localStorage.setItem('swapit_column_layout', newLayout.toString());
-    }
-    if (user) {
-        try { await api.updateUserColumnLayout(newLayout); } catch (e) {}
-    }
+  const fetchItems = async (p = 1, append = false) => {
+    try {
+      if (!append) setLoading(true);
+      const res = await api.getHomePageData({ page: p, limit: PAGE_SIZE, viewMode });
+      setData(prev => ({
+          ...res,
+          exploreItems: append ? [...prev.exploreItems, ...res.exploreItems] : res.exploreItems
+      }));
+      setPage(p);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  const loadMoreItems = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-        const nextPage = page + 1;
-        const data = await api.getHomePageData({ page: nextPage, limit: PAGE_SIZE });
-        setExploreItems(prev => [...prev, ...data.exploreItems]);
-        setPage(nextPage);
-        setHasMore((exploreItems.length + data.exploreItems.length) < data.totalExploreItems);
-    } catch (err) { console.error(err); } finally { setLoadingMore(false); }
-  }, [page, loadingMore, hasMore, exploreItems.length]);
-
-  const loaderRef = useCallback(node => {
-      if (loading || loadingMore) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver(entries => {
-          if (entries[0].isIntersecting && hasMore) loadMoreItems();
-      });
-      if (node) observer.current.observe(node);
-  }, [loading, loadingMore, hasMore, loadMoreItems]);
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getHomePageData({ page: 1, limit: PAGE_SIZE });
-        setDirectMatches(data.directMatches || []);
-        setRecommended(data.recommended || []);
-        setExploreItems(data.exploreItems || []);
-        setFollowedUsersItems(data.followedUsersItems || []);
-        setTotalExploreItems(data.totalExploreItems || 0);
-        setHasMore((data.exploreItems?.length || 0) < (data.totalExploreItems || 0));
-        setPage(1);
-        setError(null);
-      } catch (err) { setError('Error al cargar artículos.'); } finally { setLoading(false); }
-    };
-    if (user) fetchItems();
-  }, [user]);
+  useEffect(() => { fetchItems(1, false); }, [user]);
 
   const handleToggleFavorite = async (itemId) => {
     try {
-        const updatedItem = await api.toggleFavorite(itemId);
-        const updater = (prev) => prev.map(i => i.id === itemId ? { ...i, ...updatedItem } : i);
-        setDirectMatches(updater); setRecommended(updater); setExploreItems(updater); setFollowedUsersItems(updater);
-    } catch (error) { console.error(error); }
+        const updated = await api.toggleFavorite(itemId);
+        const updater = (prev) => prev.map(i => i.id === itemId ? { ...i, ...updated } : i);
+        setData(d => ({ 
+            ...d, 
+            exploreItems: updater(d.exploreItems), 
+            directMatches: updater(d.directMatches), 
+            recommended: updater(d.recommended), 
+            favoriteItems: updater(d.favoriteItems),
+            nearItems: updater(d.nearItems),
+            popularItems: updater(d.popularItems)
+        }));
+    } catch (e) { console.error(e); }
   };
 
-  const filteredMatches = useMemo(() => applySearch(directMatches, searchQuery, searchType), [directMatches, searchQuery, searchType]);
-  const filteredRecommended = useMemo(() => applySearch(recommended, searchQuery, searchType), [recommended, searchQuery, searchType]);
-  const filteredExplore = useMemo(() => applySearch(exploreItems, searchQuery, searchType), [exploreItems, searchQuery, searchType]);
-  const filteredFollowed = useMemo(() => applySearch(followedUsersItems, searchQuery, searchType), [followedUsersItems, searchQuery, searchType]);
+  const filtered = useMemo(() => ({
+      matches: applySearch(data.directMatches, searchQuery, searchType),
+      rec: applySearch(data.recommended, searchQuery, searchType),
+      near: applySearch(data.nearItems, searchQuery, searchType),
+      favs: applySearch(data.favoriteItems, searchQuery, searchType),
+      popular: applySearch(data.popularItems, searchQuery, searchType),
+      explore: applySearch(data.exploreItems, searchQuery, searchType)
+  }), [data, searchQuery, searchType]);
 
-  if (loading && exploreItems.length === 0) {
+  if (loading && page === 1) {
     return (
-      React.createElement("div", null,
-        React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6" },
-          [...Array(8)].map((_, i) => React.createElement(ItemCardSkeleton, { key: i }))
+        React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4" }, 
+            [...Array(8)].map((_, i) => React.createElement(ItemCardSkeleton, { key: i }))
         )
-      )
     );
   }
 
-  return React.createElement("div", null,
-    React.createElement("div", { className: "mb-6 flex flex-col md:flex-row gap-4 justify-between md:items-center" },
-      React.createElement("div", { className: "w-full md:w-1/2 lg:w-1/3" },
-          React.createElement("form", { className: "flex items-center" },
-              React.createElement("div", { className: "relative", ref: searchDropdownRef },
-                  React.createElement("button", { 
-                      type: "button",
-                      onClick: () => setSearchDropdownOpen(prev => !prev),
-                      className: "flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center text-gray-900 bg-gray-100 border border-gray-300 rounded-l-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-white"
-                  },
-                      searchType === 'articles' ? 'Artículos' : 'Ubicación',
-                      React.createElement("svg", { className: "w-2.5 h-2.5 ml-2.5", fill: "none", viewBox: "0 0 10 6" },
-                          React.createElement("path", { stroke: "currentColor", strokeWidth: "2", d: "m1 1 4 4 4-4" })
-                      )
-                  ),
-                  searchDropdownOpen && React.createElement("div", { className: "absolute top-full mt-1 z-20 bg-white rounded-lg shadow w-44 dark:bg-gray-700" },
-                      React.createElement("ul", { className: "py-2 text-sm text-gray-700 dark:text-gray-200" },
-                          React.createElement("li", null, React.createElement("button", { type: "button", className: "w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600", onClick: () => { setSearchType('articles'); setSearchDropdownOpen(false); } }, "Artículos")),
-                          React.createElement("li", null, React.createElement("button", { type: "button", className: "w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600", onClick: () => { setSearchType('location'); setSearchDropdownOpen(false); } }, "Ubicación"))
-                      )
-                  )
-              ),
-              React.createElement("div", { className: "relative w-full" },
-                  React.createElement("input", {
-                      type: "search",
-                      className: `block p-2.5 w-full z-10 text-sm text-gray-900 bg-gray-50 rounded-r-lg border border-l-0 border-gray-300 focus:ring-2 ${theme.focus} dark:bg-gray-700 dark:text-white`,
-                      placeholder: searchType === 'articles' ? "Buscar..." : "Ciudad o código postal...",
-                      value: searchQuery,
-                      onChange: (e) => setSearchQuery(e.target.value)
-                  })
-              )
-          )
-      ),
-      React.createElement("div", { className: "w-full md:w-auto flex justify-end" },
-        React.createElement(LayoutSelector, { layout: columnLayout, setLayout: handleSetLayout })
+  const renderCurrentView = () => {
+      if (viewMode === 'landing') {
+          return React.createElement(React.Fragment, null,
+            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Tus Favoritos", icon: "❤️", items: filtered.favs, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Más para explorar", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout })
+          );
+      }
+
+      const activeItems = viewMode === 'cerca' ? filtered.near 
+                        : viewMode === 'favoritos' ? filtered.favs 
+                        : filtered.explore;
+      
+      const titles = { cerca: `Todo cerca de ${user?.location?.city || 'ti'}`, favoritos: "Tus Preferidos", recientes: "Nuevas Publicaciones" };
+      const icons = { cerca: "📍", favoritos: "❤️", recientes: "🕒" };
+
+      if (activeItems.length === 0) {
+          return React.createElement(EmptyState, {
+              icon: ICONS.swap,
+              title: "No hay resultados",
+              message: "Parece que no hay nada por aquí con estos filtros.",
+              actionButton: React.createElement(Button, { onClick: () => setViewMode('landing'), children: "Volver a Descubrir" })
+          });
+      }
+
+      return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems, onToggleFavorite: handleToggleFavorite, columns: columnLayout });
+  };
+
+  return React.createElement("div", { className: "pb-20" },
+    React.createElement("div", { className: "mb-8 flex flex-col md:flex-row gap-3 justify-between md:items-center" },
+      React.createElement("div", { className: "flex items-center gap-2 w-full md:w-auto" },
+        React.createElement(ViewSelector, { mode: viewMode, setMode: setViewMode }),
+        React.createElement("div", { className: "flex-grow md:w-72 lg:w-96" },
+            React.createElement("input", {
+                type: "search",
+                className: "w-full p-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm",
+                placeholder: searchType === 'articles' ? "Buscar artículos..." : "Buscar por ciudad o provincia...",
+                value: searchQuery,
+                onChange: (e) => setSearchQuery(e.target.value)
+            })
+        ),
+        React.createElement("button", {
+            onClick: () => setSearchType(t => t === 'articles' ? 'location' : 'articles'),
+            title: searchType === 'location' ? "Buscar por nombre" : "Buscar por ubicación",
+            className: `p-2.5 rounded-xl border transition-colors ${searchType === 'location' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-400 hover:text-gray-600'}`
+        }, searchType === 'location' ? '📍' : '🔍')
       )
     ),
 
-    React.createElement(ItemGroup, { title: "De tus Swappers Favoritos", icon: "⭐", items: filteredFollowed, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-    React.createElement(ItemGroup, { title: "¡Matches Directos!", icon: "⚡️", items: filteredMatches, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-    React.createElement(ItemGroup, { title: "Recomendado para Ti", icon: "❤️", items: filteredRecommended, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-    React.createElement(ItemGroup, { title: "Explorar", icon: "🌍", items: filteredExplore, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+    renderCurrentView(),
     
-    React.createElement("div", { ref: loaderRef }),
-    loadingMore && React.createElement("div", { className: "flex justify-center py-8" }, React.createElement(SwapSpinner, null)),
+    data.exploreItems.length < data.totalExploreItems && viewMode !== 'landing' && React.createElement("div", { className: "flex justify-center mt-8" },
+        React.createElement(Button, { onClick: () => fetchItems(page + 1, true), children: "Cargar más contenido" })
+    ),
     
     React.createElement(Link, {
         to: "/add-item",
-        className: `fixed bottom-6 right-6 bg-gradient-to-r ${theme.bg} text-white rounded-full p-4 shadow-lg hover:scale-110 transition-transform z-40`
+        className: `fixed bottom-24 right-6 bg-gradient-to-r ${theme.bg} text-white rounded-full p-4 shadow-xl hover:scale-110 transition-transform z-40 border-4 border-white dark:border-gray-900`
     },
-      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"2" },
+      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"3" },
         React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4v16m8-8H4" })
       )
     )
