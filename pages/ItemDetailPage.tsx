@@ -75,6 +75,30 @@ const ItemDetailPage = () => {
     React.createElement(ReportModal, { isOpen: isReportModalOpen, onClose: () => setIsReportModalOpen(false), title: "Reportar Artículo", onSubmit: (r) => api.reportContent(item.id, 'ITEM', r).then(() => showToast("Reporte enviado", "success")) }),
     React.createElement(ExchangeProposalModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), userItems: userItems, targetItem: item, onSubmit: handleSubmitProposal, isLoading: isSubmitting }),
     
+    // Barra de navegación superior con botón Volver
+    React.createElement("div", { className: "mb-6 flex items-center justify-between" },
+        React.createElement("button", { 
+            onClick: () => navigate(-1),
+            className: `flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all active:scale-95 group`
+        },
+            React.createElement("svg", { 
+                xmlns: "http://www.w3.org/2000/svg", 
+                className: `h-5 w-5 ${theme.textColor} group-hover:-translate-x-1 transition-transform`, 
+                fill: "none", 
+                viewBox: "0 0 24 24", 
+                stroke: "currentColor", 
+                strokeWidth: "3" 
+            },
+                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M10 19l-7-7m0 0l7-7m-7 7h18" })
+            ),
+            React.createElement("span", { className: "text-sm font-black text-gray-700 dark:text-gray-200" }, "Volver")
+        ),
+        !isOwnItem && React.createElement("button", {
+            onClick: () => setIsReportModalOpen(true),
+            className: "text-xs font-bold text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+        }, React.createElement("span", null, "🚩"), "Reportar")
+    ),
+
     React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700" },
         React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2" },
             // Galería

@@ -16,7 +16,6 @@ const PAGE_SIZE = 12;
 const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "" }) => {
     const { theme } = useColorTheme();
     if (!items || items.length === 0) return null;
-    const effectiveColumns = Math.min(items.length, columns);
     const gridLayoutClasses = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' };
 
     return (
@@ -25,21 +24,23 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "" 
                 React.createElement("span", { className: "text-2xl" }, icon), 
                 title
             ),
-            React.createElement("div", { className: `grid ${gridLayoutClasses[effectiveColumns] || 'grid-cols-2'} gap-4 md:gap-6 transition-all duration-500` },
-                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: effectiveColumns }))
+            React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4 md:gap-6 transition-all duration-500` },
+                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns }))
             )
         )
     );
 };
 
-const ViewSelector = ({ mode, setMode }) => {
+const ViewSelectorCompact = ({ mode, setMode }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const { theme } = useColorTheme();
+    
     const options = [
         { id: 'landing', label: 'Descubrir todo', icon: '✨' },
         { id: 'cerca', label: 'Cerca de mí', icon: '📍' },
         { id: 'favoritos', label: 'Mis Favoritos', icon: '❤️' },
-        { id: 'recientes', label: 'Más Recientes', icon: '🕒' }
+        { id: 'recientes', label: 'Novedades', icon: '🕒' }
     ];
 
     useEffect(() => {
@@ -48,31 +49,49 @@ const ViewSelector = ({ mode, setMode }) => {
         return () => document.removeEventListener('mousedown', clickOut);
     }, []);
 
-    const selected = options.find(o => o.id === mode) || options[0];
-
     return (
         React.createElement("div", { className: "relative", ref: dropdownRef },
             React.createElement("button", { 
                 onClick: () => setIsOpen(!isOpen),
-                className: "flex items-center gap-2 px-3 py-2.5 sm:px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm font-bold text-sm"
+                title: "Cambiar vista",
+                className: `flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all`
             }, 
-                React.createElement("span", null, selected.icon),
-                React.createElement("span", { className: "hidden sm:inline" }, selected.label),
-                React.createElement("svg", { className: `w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`, fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M19 9l-7 7-7-7" }))
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: `h-5 w-5 ${theme.textColor}`, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2.5" },
+                    React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" })
+                )
             ),
-            isOpen && React.createElement("div", { className: "absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-50 border border-gray-100 dark:border-gray-700 overflow-hidden" },
+            isOpen && React.createElement("div", { className: "absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl z-50 border border-gray-100 dark:border-gray-700 overflow-hidden animate-fade-in-up" },
                 options.map(opt => (
                     React.createElement("button", {
                         key: opt.id,
                         onClick: () => { setMode(opt.id); setIsOpen(false); },
-                        className: `w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 ${mode === opt.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : ''}`
+                        className: `w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${mode === opt.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600' : 'text-gray-700 dark:text-gray-300'}`
                     }, 
-                        React.createElement("span", null, opt.icon),
-                        React.createElement("span", { className: "font-bold" }, opt.label)
+                        React.createElement("span", { className: "text-lg" }, opt.icon),
+                        React.createElement("span", { className: "font-black" }, opt.label)
                     )
                 ))
             )
         )
+    );
+};
+
+const GridIconContent = ({ columns }) => {
+    if (columns === 1) return React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "1", strokeWidth: "2" });
+    if (columns === 2) return React.createElement(React.Fragment, null, 
+        React.createElement("rect", { x: "3", y: "3", width: "8", height: "18", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "13", y: "3", width: "8", height: "18", rx: "1", strokeWidth: "2" })
+    );
+    if (columns === 3) return React.createElement(React.Fragment, null,
+        React.createElement("rect", { x: "2", y: "3", width: "5", height: "18", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "9.5", y: "3", width: "5", height: "18", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "17", y: "3", width: "5", height: "18", rx: "1", strokeWidth: "2" })
+    );
+    return React.createElement(React.Fragment, null,
+        React.createElement("rect", { x: "3", y: "3", width: "8", height: "8", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "13", y: "3", width: "8", height: "8", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "3", y: "13", width: "8", height: "8", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "13", y: "13", width: "8", height: "8", rx: "1", strokeWidth: "2" })
     );
 };
 
@@ -114,7 +133,7 @@ const HomePage = () => {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchItems(1, false); }, [user]);
+  useEffect(() => { fetchItems(1, false); }, [user, viewMode]);
 
   const handleToggleFavorite = async (itemId) => {
     try {
@@ -130,6 +149,10 @@ const HomePage = () => {
             popularItems: updater(d.popularItems)
         }));
     } catch (e) { console.error(e); }
+  };
+
+  const toggleColumns = () => {
+      setColumnLayout(prev => (prev >= 4 ? 1 : prev + 1));
   };
 
   const filtered = useMemo(() => ({
@@ -157,7 +180,7 @@ const HomePage = () => {
             React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
             React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
             React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Más para explorar", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout })
+            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout })
           );
       }
 
@@ -182,21 +205,34 @@ const HomePage = () => {
 
   return React.createElement("div", { className: "pb-20" },
     React.createElement("div", { className: "mb-8 flex flex-col md:flex-row gap-3 justify-between md:items-center" },
-      React.createElement("div", { className: "flex items-center gap-2 w-full md:w-auto" },
-        React.createElement(ViewSelector, { mode: viewMode, setMode: setViewMode }),
-        React.createElement("div", { className: "flex-grow md:w-72 lg:w-96" },
+      React.createElement("div", { className: "flex items-center gap-2 w-full" },
+        React.createElement("div", { className: "flex items-center gap-1.5" },
+            React.createElement(ViewSelectorCompact, { mode: viewMode, setMode: setViewMode }),
+            React.createElement("button", {
+                onClick: toggleColumns,
+                title: `Cambiar a ${columnLayout >= 4 ? 1 : columnLayout + 1} columnas`,
+                className: "relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all"
+            },
+                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: `h-5 w-5 ${theme.textColor}`, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+                    React.createElement(GridIconContent, { columns: columnLayout })
+                )
+            )
+        ),
+        
+        React.createElement("div", { className: "flex-grow" },
             React.createElement("input", {
                 type: "search",
-                className: "w-full p-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm",
-                placeholder: searchType === 'articles' ? "Buscar artículos..." : "Buscar por ciudad o provincia...",
+                className: "w-full h-10 sm:h-11 px-4 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm transition-all",
+                placeholder: searchType === 'articles' ? "Buscar artículos..." : "Buscar por ciudad...",
                 value: searchQuery,
                 onChange: (e) => setSearchQuery(e.target.value)
             })
         ),
+
         React.createElement("button", {
             onClick: () => setSearchType(t => t === 'articles' ? 'location' : 'articles'),
             title: searchType === 'location' ? "Buscar por nombre" : "Buscar por ubicación",
-            className: `p-2.5 rounded-xl border transition-colors ${searchType === 'location' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-400 hover:text-gray-600'}`
+            className: `flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl border transition-all shadow-sm ${searchType === 'location' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-400 hover:text-gray-600'}`
         }, searchType === 'location' ? '📍' : '🔍')
       )
     ),
@@ -209,7 +245,7 @@ const HomePage = () => {
     
     React.createElement(Link, {
         to: "/add-item",
-        className: `fixed bottom-24 right-6 bg-gradient-to-r ${theme.bg} text-white rounded-full p-4 shadow-xl hover:scale-110 transition-transform z-40 border-4 border-white dark:border-gray-900`
+        className: `fixed bottom-24 right-6 bg-gradient-to-r ${theme.bg} text-white rounded-full p-4 shadow-xl hover:scale-110 active:scale-90 transition-all z-40 border-4 border-white dark:border-gray-900`
     },
       React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"3" },
         React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4v16m8-8H4" })
