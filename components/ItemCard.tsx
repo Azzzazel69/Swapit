@@ -49,6 +49,11 @@ const ItemCard = ({ item, onToggleFavorite, columns = 2 }) => {
                 React.createElement("span", { className: "truncate max-w-[70px]" }, item.ownerLocation?.city || 'España')
             ),
             React.createElement("span", { className: "text-[9px] font-medium text-gray-400" }, formatTimeAgo(item.createdAt))
+        ),
+        // Fila del Propietario añadida
+        React.createElement("div", { className: "flex items-center gap-2 mt-2 pt-2 border-t border-gray-50 dark:border-gray-700/50" },
+            React.createElement("img", { src: item.ownerAvatarUrl, className: "w-4 h-4 rounded-full object-cover shadow-xs" }),
+            React.createElement("span", { className: "text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate" }, item.ownerName)
         )
       )
     )

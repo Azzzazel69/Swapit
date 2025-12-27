@@ -120,7 +120,7 @@ const ItemDetailPage = () => {
                         ),
                         isOwnItem ? 
                         React.createElement(Button, { onClick: () => setIsEditModalOpen(true), variant: "secondary", className: "rounded-xl px-8", children: "Gestionar" }) :
-                        React.createElement(Button, { onClick: handleSwapClick, className: "rounded-xl px-10 shadow-lg", children: "¡Hacer Trueque!" })
+                        React.createElement(Button, { onClick: handleSwapClick, className: "rounded-xl px-10 shadow-lg", children: "¡Te lo cambio!" })
                     )
                 )
             )

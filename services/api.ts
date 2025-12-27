@@ -78,9 +78,9 @@ const setupInitialData = () => {
     } catch (e) {}
     
     users = [
-        { id: 'azzazel69', name: 'Admin Supremo', email: 'azzazel69@gmail.com', role: 'SUPER_ADMIN', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Valencia', province: 'Valencia', country: 'España', lat: 39.469, lng: -0.376 }, preferences: ['Seguridad'], contactCard: { enabled: true }, favorites: [], following: [] },
-        { id: 'carlos', name: 'Carlos Pérez', email: 'carlos@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Madrid', province: 'Madrid', country: 'España', lat: 40.416, lng: -3.703 }, preferences: ['Herramientas', 'Bicicletas'], contactCard: { enabled: true }, favorites: [], following: [] },
-        { id: 'lucia', name: 'Lucía Fernández', email: 'lucia@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Barcelona', province: 'Barcelona', country: 'España', lat: 41.385, lng: 2.173 }, preferences: ['Muebles', 'Decoración'], contactCard: { enabled: true }, favorites: [], following: [] },
+        { id: 'azzazel69', name: 'Admin Supremo', email: 'azzazel69@gmail.com', role: 'SUPER_ADMIN', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Valencia', province: 'Valencia', country: 'España', lat: 39.469, lng: -0.376 }, preferences: ['Seguridad'], contactCard: { enabled: true, meetingPointAddress: 'Plaza del Ayuntamiento', meetingPointCoords: { lat: 39.470, lng: -0.376 } }, favorites: [], following: [] },
+        { id: 'carlos', name: 'Carlos Pérez', email: 'carlos@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Madrid', province: 'Madrid', country: 'España', lat: 40.416, lng: -3.703 }, preferences: ['Herramientas', 'Bicicletas'], contactCard: { enabled: true, meetingPointAddress: 'Puerta del Sol', meetingPointCoords: { lat: 40.417, lng: -3.703 } }, favorites: [], following: [] },
+        { id: 'lucia', name: 'Lucía Fernández', email: 'lucia@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Barcelona', province: 'Barcelona', country: 'España', lat: 41.385, lng: 2.173 }, preferences: ['Muebles', 'Decoración'], contactCard: { enabled: true, meetingPointAddress: 'Plaza Cataluña', meetingPointCoords: { lat: 41.387, lng: 2.170 } }, favorites: [], following: [] },
         { id: 'ana', name: 'Ana Martínez', email: 'ana@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Sevilla', province: 'Sevilla', country: 'España', lat: 37.389, lng: -5.984 }, preferences: ['Libros', 'Música (CDs, Vinilos)'], contactCard: { enabled: true }, favorites: [], following: [] },
         { id: 'miguel', name: 'Miguel Ángel', email: 'miguel@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Málaga', province: 'Málaga', country: 'España', lat: 36.721, lng: -4.421 }, preferences: ['Móviles y Accesorios', 'Consolas y Videojuegos'], contactCard: { enabled: true }, favorites: [], following: [] },
         { id: 'elena', name: 'Elena García', email: 'elena@test.com', role: 'USER', avatarUrl: DEFAULT_AVATAR_NEUTRAL, emailVerified: true, phoneVerified: true, location: { city: 'Zaragoza', province: 'Zaragoza', country: 'España', lat: 41.648, lng: -0.889 }, preferences: ['Tratamientos Estéticos', 'Yoga'], contactCard: { enabled: true }, favorites: [], following: [] },
@@ -165,6 +165,7 @@ class ApiClient {
     const newUser = { 
         id: `user-${Date.now()}`, name, email, role: 'USER', avatarUrl: avatarUrl || DEFAULT_AVATAR_NEUTRAL, 
         emailVerified: false, phoneVerified: false, location, preferences: [], favorites: [], following: [],
+        contactCard: { enabled: true },
         createdAt: new Date().toISOString()
     };
     users.push(newUser);

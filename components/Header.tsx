@@ -10,7 +10,6 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
-  const APP_VERSION = "1.2";
 
   const activeLinkClass = `bg-gray-200 dark:bg-gray-700`;
   const inactiveLinkClass = 'hover:bg-gray-200 dark:hover:bg-gray-700';
@@ -29,7 +28,7 @@ const Header = () => {
       React.createElement("div", { className: "container mx-auto px-4 sm:px-6 lg:px-8" },
         React.createElement("div", { className: "flex items-center justify-between h-16" },
           
-          // Lado izquierdo: Enlace de perfil (Ahora siempre visible)
+          // Lado izquierdo: Perfil
           React.createElement("div", { className: "flex-1 flex items-center justify-start overflow-hidden mr-2" },
             user && (
               React.createElement("div", { className: "flex items-center gap-1 sm:gap-2 max-w-full" },
@@ -53,16 +52,16 @@ const Header = () => {
             )
           ),
 
-          // Centro: Logo
+          // Centro: Logo Original (Restaurado)
           React.createElement("div", { className: "flex-shrink-0 flex items-center mx-1 sm:mx-4" },
             React.createElement(Link, { 
               to: "/", 
               className: "flex items-center group",
               title: "Volver al Inicio"
             },
-               React.createElement("div", { className: `bg-gradient-to-r ${theme.bg} px-2 py-1 sm:px-4 sm:py-1.5 rounded-lg flex items-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-[1.02] border-b-4 border-black/20` },
-                    React.createElement("span", { className: "text-white font-black text-lg sm:text-2xl tracking-tighter leading-none" }, "SWAP"),
-                    React.createElement("span", { className: `${theme.logoAccent} font-black text-lg sm:text-2xl tracking-tighter shadow-sm leading-none ml-0.5` }, "IT")
+               React.createElement("div", { className: `bg-gradient-to-r ${theme.bg} px-3 py-1.5 rounded-xl flex items-center shadow-lg group-hover:shadow-xl transition-all transform group-hover:scale-[1.03] border-b-4 border-black/20` },
+                    React.createElement("span", { className: "text-white font-black text-xl sm:text-3xl tracking-tighter leading-none" }, "SWAP"),
+                    React.createElement("span", { className: `${theme.logoAccent} font-black text-xl sm:text-3xl tracking-tighter shadow-sm leading-none ml-0.5` }, "IT")
                )
             )
           ),
