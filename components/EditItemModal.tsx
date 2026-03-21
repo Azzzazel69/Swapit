@@ -6,7 +6,7 @@ import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { api } from '../services/api.ts';
 import { ItemCondition } from '../types.ts';
 
-const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
+const EditItemModal = ({ isOpen, onClose, item, onSave }: { isOpen: boolean, onClose: () => void, item: any, onSave: (updatedItem: any) => void }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
@@ -79,7 +79,8 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
         setError('');
         setIsSubmitting(true);
         try {
-            await onSave({ title, description, category, condition, imageUrls: images, wishedItem });
+            const updatedItem = await api.updateItem(item.id, { title, description, category, condition, imageUrls: images, wishedItem });
+            onSave(updatedItem);
             onClose();
         } catch (err) {
             setError(err.message || 'Error al guardar los cambios.');
@@ -88,23 +89,26 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
         }
     };
 
-    return React.createElement("div", { className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4", onClick: onClose },
-        React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col", onClick: e => e.stopPropagation() },
+    return React.createElement("div", { 
+        className: "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4", 
+        onClick: onClose 
+    } as any,
+        React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col", onClick: (e: any) => e.stopPropagation() } as any,
             React.createElement("div", { className: "p-4 border-b dark:border-gray-700 flex justify-between items-center" },
                 React.createElement("h2", { className: "text-xl font-bold" }, "Editar Artículo"),
-                React.createElement("button", { onClick: onClose, className: "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" }, ICONS.close)
+                React.createElement("button", { onClick: onClose, className: "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" } as any, ICONS.close)
             ),
             React.createElement("form", { id: formId, onSubmit: handleSubmit, className: "flex-grow overflow-y-auto p-6 space-y-4" },
                 error && React.createElement("p", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
                 React.createElement(Input, { id: "edit-title", label: "Título", type: "text", value: title, onChange: e => setTitle(e.target.value), required: true }),
                 React.createElement("div", null,
                     React.createElement("label", { htmlFor: "edit-description", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Descripción"),
-                    React.createElement("textarea", { id: "edit-description", value: description, onChange: (e) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
+                    React.createElement("textarea" as any, { id: "edit-description", value: description, onChange: (e: any) => setDescription(e.target.value), required: true, rows: 4, className: `mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` })
                 ),
                 React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4" },
                     React.createElement("div", null,
                         React.createElement("label", { htmlFor: "edit-category", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Categoría"),
-                        React.createElement("select", { id: "edit-category", value: category, onChange: (e) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                        React.createElement("select" as any, { id: "edit-category", value: category, onChange: (e: any) => setCategory(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
                             React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
                             CATEGORIES_WITH_SUBCATEGORIES.map(cat => 
                                 cat.sub.length > 0 ? (
@@ -119,7 +123,7 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }) => {
                     ),
                     React.createElement("div", null,
                         React.createElement("label", { htmlFor: "edit-condition", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Condición"),
-                        React.createElement("select", { id: "edit-condition", value: condition, onChange: (e) => setCondition(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
+                        React.createElement("select" as any, { id: "edit-condition", value: condition, onChange: (e: any) => setCondition(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
                             React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
                             Object.values(ItemCondition).map(cond => React.createElement("option", { key: cond, value: cond }, cond))
                         )

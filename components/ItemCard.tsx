@@ -15,7 +15,7 @@ const formatTimeAgo = (dateStr) => {
     return `${Math.floor(diffInSeconds / 86400)}d`;
 };
 
-const ItemCard = ({ item, onToggleFavorite, columns = 2 }) => {
+const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns = 2, deletingItemId }: { item: any, onToggleFavorite?: (id: string) => void, onDelete?: (id: string) => void, isOwnItem?: boolean, columns?: number, deletingItemId?: string | null }) => {
   const { theme } = useColorTheme();
   
   // Definimos niveles de densidad lógica para clases condicionales de JS
@@ -38,8 +38,12 @@ const ItemCard = ({ item, onToggleFavorite, columns = 2 }) => {
   };
 
   return React.createElement("div", { 
-      className: `group bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col h-full` 
+      className: `group bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col h-full relative` 
     },
+    isOwnItem && onDelete && React.createElement("button" as any, {
+        onClick: (e: any) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); },
+        className: "absolute top-2 right-2 z-20 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+    }, "✕"),
     React.createElement(Link, { to: `/item/${item.id}`, className: "flex flex-col h-full" },
       // Contenedor de Imagen
       React.createElement("div", { className: "relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-900" },
@@ -70,10 +74,15 @@ const ItemCard = ({ item, onToggleFavorite, columns = 2 }) => {
                 className: `font-bold text-gray-900 dark:text-white truncate leading-tight transition-all
                 ${isMini ? 'text-[10px] md:text-sm lg:text-base' : isCompact ? 'text-xs md:text-base lg:text-lg' : 'text-sm md:text-lg lg:text-xl'}` 
             }, item.title),
-            onToggleFavorite && React.createElement("button", { 
-                onClick: (e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); },
+            onToggleFavorite && React.createElement("button" as any, { 
+                onClick: (e: any) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id); },
                 className: `flex-shrink-0 transition-transform active:scale-125 ${isMini ? 'text-[10px] md:text-sm' : 'text-xs md:text-base'}`
             }, item.isFavorited ? '❤️' : '🤍')
+        ),
+
+        // BUSCO (NUEVO)
+        item.wishedItem && !isMini && React.createElement("p", { className: "text-[10px] md:text-xs text-orange-600 dark:text-orange-400 font-bold italic mb-2 truncate" }, 
+            `Busco: ${item.wishedItem}`
         ),
 
         // Información Secundaria
@@ -87,8 +96,12 @@ const ItemCard = ({ item, onToggleFavorite, columns = 2 }) => {
 
         // Fila del Propietario (Solo se muestra en 1 o 2 columnas en móvil, o siempre en escritorio si no es 4 col)
         (!isHighDensity || window.innerWidth >= 1024) && React.createElement("div", { className: "flex items-center gap-2 mt-2 pt-3 border-t border-gray-100 dark:border-gray-700/50" },
-            React.createElement("img", { src: item.ownerAvatarUrl, className: "w-5 h-5 md:w-6 md:h-6 rounded-full object-cover shadow-sm" }),
-            React.createElement("span", { className: "text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 truncate" }, item.ownerName)
+            React.createElement("img", { src: item.ownerAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (item.ownerId || 'default'), className: "w-5 h-5 md:w-6 md:h-6 rounded-full object-cover shadow-sm" }),
+            React.createElement("span", { className: "text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 truncate" }, item.ownerName || 'Usuario'),
+            (item.ownerRating || 0) > 0 && React.createElement("div", { className: "ml-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md" },
+                React.createElement("span", { className: "text-[8px] md:text-[10px]" }, "⭐"),
+                React.createElement("span", { className: "text-[9px] md:text-[11px] font-black text-gray-700 dark:text-gray-300" }, item.ownerRating)
+            )
         )
       )
     )

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SwapIt</string>
+    <string name="title_activity_main">SwapIt</string>
+    <string name="package_name">com.swapit.app</string>
+    <string name="custom_url_scheme">com.swapit.app</string>
+</resources>

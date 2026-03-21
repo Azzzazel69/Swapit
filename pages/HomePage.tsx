@@ -124,7 +124,7 @@ const HomePage = () => {
   const fetchItems = async (p = 1, append = false) => {
     try {
       if (!append) setLoading(true);
-      const res = await api.getHomePageData({ page: p, limit: PAGE_SIZE, viewMode });
+      const res = await api.getHomePageData(user?.id);
       setData(prev => ({
           ...res,
           exploreItems: append ? [...prev.exploreItems, ...res.exploreItems] : res.exploreItems
@@ -194,19 +194,22 @@ const HomePage = () => {
       if (activeItems.length === 0) {
           return React.createElement(EmptyState, {
               icon: ICONS.swap,
-              title: "No hay resultados",
-              message: "Parece que no hay nada por aquí con estos filtros.",
-              actionButton: React.createElement(Button, { onClick: () => setViewMode('landing'), children: "Volver a Descubrir" })
+              title: "No hay artículos disponibles",
+              message: "Parece que no hay nada por aquí todavía. Prueba a recargar o vuelve más tarde.",
+              actionButton: React.createElement("div", { className: "flex flex-col gap-3" },
+                React.createElement(Button, { onClick: () => fetchItems(1, false), children: "Recargar contenido" }),
+                React.createElement(Button, { variant: "outline", onClick: () => setViewMode('landing'), children: "Volver a Descubrir" })
+              )
           });
       }
 
       return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems, onToggleFavorite: handleToggleFavorite, columns: columnLayout });
   };
 
-  return React.createElement("div", { className: "pb-20" },
-    React.createElement("div", { className: "mb-8 flex flex-col md:flex-row gap-3 justify-between md:items-center" },
-      React.createElement("div", { className: "flex items-center gap-2 w-full" },
-        React.createElement("div", { className: "flex items-center gap-1.5" },
+  return React.createElement("div", { className: "pb-32 w-full" },
+    React.createElement("div", { className: "mb-8 flex flex-col md:flex-row gap-3 justify-between md:items-center w-full" },
+      React.createElement("div", { className: "flex items-center gap-2 w-full min-w-0" },
+        React.createElement("div", { className: "flex items-center gap-1.5 flex-shrink-0" },
             React.createElement(ViewSelectorCompact, { mode: viewMode, setMode: setViewMode }),
             React.createElement("button", {
                 onClick: toggleColumns,
@@ -243,14 +246,7 @@ const HomePage = () => {
         React.createElement(Button, { onClick: () => fetchItems(page + 1, true), children: "Cargar más contenido" })
     ),
     
-    React.createElement(Link, {
-        to: "/add-item",
-        className: `fixed bottom-24 right-6 bg-gradient-to-r ${theme.bg} text-white rounded-full p-4 shadow-xl hover:scale-110 active:scale-90 transition-all z-40 border-4 border-white dark:border-gray-900`
-    },
-      React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-8 w-8", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth:"3" },
-        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4v16m8-8H4" })
-      )
-    )
+    /* Floating Action Dock removed from here and moved to App.tsx */
   );
 };
 

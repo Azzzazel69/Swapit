@@ -21,7 +21,8 @@ export const ICONS = {
   addContact: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { d: "M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 11a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1v-1z" })),
   meetingPoint: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { fillRule: "evenodd", d: "M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z", clipRule: "evenodd" })),
   schedule: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z", clipRule: "evenodd" })),
-  flag: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 21v-8a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2h-2a2 2 0 01-2-2v-3a2 2 0 01-2-3h-3a2 2 0 01-2 2" }))
+  flag: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 21v-8a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2h-2a2 2 0 01-2-2v-3a2 2 0 01-2-3h-3a2 2 0 01-2 2" })),
+  send: React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8" }))
 };
 
 export const CATEGORIES_WITH_SUBCATEGORIES = [
@@ -57,6 +58,33 @@ export const CATEGORIES_WITH_SUBCATEGORIES = [
     name: 'Otros',
     sub: [],
   },
+];
+
+export const APP_VERSION = "1.0.4-beta";
+export const UPDATE_DATE = "2026-02-27";
+
+export const SECURITY_LEVELS = {
+    VERIFIED: "Verificado",
+    TRUSTED: "Confiable",
+    ELITE: "Elite"
+};
+
+export const USER_CATEGORIES = [
+    { max: 20, label: "Novato" },
+    { max: 40, label: "Espabilado" },
+    { max: 60, label: "Crack" },
+    { max: 80, label: "Máquina" },
+    { max: 95, label: "Fiera" },
+    { max: 100, label: "Titán" }
+];
+
+export const RATING_LABELS = [
+    { max: 20, label: "Deficiente" },
+    { max: 40, label: "Mejorable" },
+    { max: 60, label: "Correcto" },
+    { max: 80, label: "Bueno" },
+    { max: 95, label: "Excelente" },
+    { max: 100, label: "Impecable" }
 ];
 
 export const ALL_SUBCATEGORIES = CATEGORIES_WITH_SUBCATEGORIES.flatMap(c => c.sub.length > 0 ? c.sub : [c.name]);

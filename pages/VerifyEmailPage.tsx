@@ -5,12 +5,14 @@ import { api } from '../services/api.ts';
 import Button from '../components/Button.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 const VerifyEmailPage = () => {
     const { token } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
     const { theme } = useColorTheme();
+    const { user, refreshUser } = useAuth();
 
     const [status, setStatus] = useState('loading'); // 'loading', 'info', 'success', 'error'
     const [message, setMessage] = useState('');
@@ -22,10 +24,14 @@ const VerifyEmailPage = () => {
         if (token) {
             setStatus('loading');
             api.verifyEmailWithToken(token)
-                .then(response => {
+                .then(async response => {
                     setStatus('success');
                     setMessage('¡Tu correo ha sido verificado con éxito!');
                     setVerifiedEmail(response.email);
+                    // Si el usuario está logueado, refrescamos su estado
+                    if (user) {
+                        await refreshUser();
+                    }
                 })
                 .catch(err => {
                     setStatus('error');
@@ -39,10 +45,14 @@ const VerifyEmailPage = () => {
                  setMessage('Por favor, revisa tu bandeja de entrada para el enlace de verificación.');
             }
         }
-    }, [token, userEmail]);
+    }, [token, userEmail, user, refreshUser]);
     
-    const handleLoginRedirect = () => {
-        navigate('/login', { state: { email: verifiedEmail } });
+    const handleActionRedirect = () => {
+        if (user) {
+            navigate('/', { replace: true });
+        } else {
+            navigate('/login', { state: { email: verifiedEmail } });
+        }
     };
 
     const renderContent = () => {
@@ -58,8 +68,10 @@ const VerifyEmailPage = () => {
                         React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-16 w-16 text-green-500", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }))
                     ),
                     React.createElement("h3", { className: "text-xl font-semibold text-green-600" }, message),
-                    React.createElement("p", { className: "mt-2 text-gray-600 dark:text-gray-400" }, "Ya puedes iniciar sesión en tu cuenta."),
-                    React.createElement(Button, { onClick: handleLoginRedirect, className: "mt-6", children: "Ir a Iniciar Sesión" })
+                    React.createElement("p", { className: "mt-2 text-gray-600 dark:text-gray-400" }, 
+                        user ? "Tu cuenta ya está lista para usarse." : "Ya puedes iniciar sesión en tu cuenta."
+                    ),
+                    React.createElement(Button, { onClick: handleActionRedirect, className: "mt-6", children: user ? "Entrar a la App" : "Ir a Iniciar Sesión" })
                 );
             case 'error':
                  return React.createElement("div", { className: "text-center" },
@@ -67,8 +79,15 @@ const VerifyEmailPage = () => {
                         React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-16 w-16 text-red-500", viewBox: "0 0 20 20", fill: "currentColor" }, React.createElement("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }))
                     ),
                     React.createElement("h3", { className: "text-xl font-semibold text-red-600" }, "Error de Verificación"),
-                    React.createElement("p", { className: "mt-2 text-gray-600 dark:text-gray-400" }, message),
-                    React.createElement(Link, { to: "/register", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mt-6 inline-block` }, "Intenta registrarte de nuevo")
+                    React.createElement("p", { className: "mt-2 text-gray-600 dark:text-gray-400" }, 
+                        message.includes('auth/too-many-requests') 
+                        ? 'Has solicitado demasiados correos. Por favor, espera unos minutos antes de intentarlo de nuevo.' 
+                        : message
+                    ),
+                    React.createElement("div", { className: "flex flex-col gap-3 mt-6" },
+                        React.createElement(Link, { to: "/login", className: `font-bold ${theme.textColor} ${theme.hoverTextColor} block` }, "Inicia sesión para reenviar el correo"),
+                        React.createElement(Link, { to: "/register", className: "text-sm text-gray-500 hover:underline" }, "O intenta registrarte de nuevo")
+                    )
                 );
             case 'info':
             default:
@@ -78,8 +97,11 @@ const VerifyEmailPage = () => {
                     ),
                     React.createElement("h3", { className: "text-xl font-semibold" }, "¡Casi listo! Revisa tu correo"),
                     React.createElement("p", { className: "mt-2 text-gray-600 dark:text-gray-400" }, message),
-                    React.createElement("p", { className: "mt-4 text-sm text-gray-500" }, "¿No has recibido el correo? Revisa tu carpeta de spam o contacta con soporte."),
-                    React.createElement(Link, { to: "/login", className: `font-medium ${theme.textColor} ${theme.hoverTextColor} mt-6 inline-block` }, "Ya lo he verificado, ir a Iniciar Sesión")
+                    React.createElement("p", { className: "mt-4 text-sm text-gray-500" }, "¿No has recibido el correo? Revisa tu carpeta de spam o inicia sesión para reenviarlo."),
+                    React.createElement("div", { className: "flex flex-col gap-3 mt-6" },
+                        React.createElement(Link, { to: "/login", className: `font-bold ${theme.textColor} ${theme.hoverTextColor} block` }, "Ir a Iniciar Sesión"),
+                        React.createElement(Link, { to: "/register", className: "text-sm text-gray-500 hover:underline" }, "¿No tienes cuenta? Regístrate")
+                    )
                 );
         }
     };

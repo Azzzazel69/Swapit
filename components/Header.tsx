@@ -29,15 +29,15 @@ const Header = () => {
         React.createElement("div", { className: "flex items-center justify-between h-16" },
           
           // Lado izquierdo: Perfil
-          React.createElement("div", { className: "flex-1 flex items-center justify-start overflow-hidden mr-2" },
+          React.createElement("div", { className: "flex-1 flex items-center justify-start min-w-0 mr-2" },
             user && (
-              React.createElement("div", { className: "flex items-center gap-1 sm:gap-2 max-w-full" },
+              React.createElement("div", { className: "flex items-center gap-1 sm:gap-2 min-w-0" },
                 React.createElement(NavLink, { 
                   to: "/profile", 
-                  className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2 !p-1 sm:!p-2 overflow-hidden` 
+                  className: ({ isActive }) => `${navLinkClasses} ${isActive ? activeLinkClass : inactiveLinkClass} flex items-center gap-2 !p-1 sm:!p-2 min-w-0` 
                 }, 
                   React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "h-8 w-8 sm:h-9 sm:w-9 rounded-full object-cover border-2 border-gray-100 dark:border-gray-600 shadow-sm flex-shrink-0" }),
-                  React.createElement("span", { className: "inline-block font-bold text-gray-700 dark:text-gray-200 text-[10px] xs:text-xs sm:text-sm truncate max-w-[50px] xs:max-w-[80px] lg:max-w-none" }, user.name)
+                  React.createElement("span", { className: "inline-block font-bold text-gray-700 dark:text-gray-200 text-xs sm:text-sm truncate max-w-[80px] xs:max-w-[120px] sm:max-w-[150px] lg:max-w-[200px]" }, user.name)
                 ),
                 isStaff && (
                   React.createElement(Link, {

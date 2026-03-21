@@ -1,8 +1,5 @@
 {
   "name": "Swapit - No te compliques, !cambialo!",
   "description": "Una aplicación web moderna para intercambiar y hacer trueques de artículos con otros usuarios. Cuenta con autenticación de usuario, gestión de artículos y un sistema de intercambio, construido con un backend seguro y un frontend responsivo.",
-  "requestFramePermissions": [
-    "geolocation",
-    "camera"
-  ]
+  "requestFramePermissions": ["geolocation"]
 }

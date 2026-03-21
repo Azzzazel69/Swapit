@@ -20,9 +20,9 @@ const ForgotPasswordPage = () => {
         setError('');
         setMessage('');
         try {
-            const response = await api.requestPasswordReset(email);
-            setMessage(response.message);
-        } catch (err) {
+            await api.resetPassword(email);
+            setMessage('Correo de restablecimiento enviado. Revisa tu bandeja de entrada.');
+        } catch (err: any) {
             setError(err.message || 'Ocurrió un error. Por favor, inténtalo de nuevo.');
         } finally {
             setIsLoading(false);

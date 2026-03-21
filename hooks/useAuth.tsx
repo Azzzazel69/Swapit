@@ -1,6 +1,8 @@
 
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import { api } from '../services/api.ts';
+import { api } from '../services/api';
+import { auth } from '../firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const AuthContext = createContext(undefined);
 
@@ -9,65 +11,120 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem('jwt_token');
+  const logout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setToken(null);
+      api.setToken(null);
+    } catch (error) {
+      console.error("Error signing out", error);
     }
-    api.setToken(null);
   }, []);
 
   const refreshUser = useCallback(async () => {
+    console.log("refreshUser iniciado");
     try {
-        const currentUser = await api.getCurrentUser();
-        setUser(currentUser);
-    } catch(error) {
-        console.error("Fallo al refrescar el usuario", error);
-        logout();
-        throw error; // Re-throw to allow callers to handle it
-    }
-  }, [logout]);
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+            console.log("No hay firebaseUser en refreshUser");
+            setUser(null);
+            return;
+        }
 
-  const login = useCallback(async (newToken) => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('jwt_token', newToken);
+        console.log("Obteniendo usuario de Firestore para UID:", firebaseUser.uid);
+        let currentUser = null;
+        try {
+            currentUser = await api.getCurrentUser();
+        } catch (e) {
+            console.error("Error al obtener usuario de Firestore en refreshUser:", e);
+            // Si falla la red o hay un error, no deslogueamos al usuario inmediatamente
+            // Permitimos que la app intente funcionar con el estado básico
+        }
+        
+        if (!currentUser) {
+            console.log("Usuario no encontrado en Firestore o error, marcando como needsProfile");
+            setUser({
+                id: firebaseUser.uid,
+                email: firebaseUser.email,
+                emailVerified: firebaseUser.emailVerified,
+                needsProfile: true
+            });
+        } else {
+            console.log("Usuario obtenido de Firestore:", currentUser.id);
+            setUser(currentUser);
+        }
+    } catch(error) {
+        console.error("Fallo crítico al refrescar el usuario", error);
+        // Solo ponemos a null si realmente no hay rastro del usuario
+        if (!auth.currentUser) setUser(null);
     }
+  }, []);
+
+  const login = useCallback(async (newToken, rememberMe = false) => {
+    console.log("login(token) llamado");
     setToken(newToken);
     api.setToken(newToken);
-    try {
-      await refreshUser();
-    } catch (error) {
-      console.error('Fallo al obtener el usuario al iniciar sesión:', error);
-      // logout() is already called inside refreshUser on failure
-    }
+    await refreshUser();
+    console.log("login(token) completado");
   }, [refreshUser]);
 
   const updateUser = useCallback((updatedUser) => {
+    console.log("updateUser llamado", updatedUser?.id);
     setUser(updatedUser);
   }, []);
 
   useEffect(() => {
-    const initAuth = async () => {
+    console.log("Configurando onAuthStateChanged");
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("onAuthStateChanged disparado, firebaseUser:", firebaseUser?.uid);
       setLoading(true);
-      let storedToken = null;
-      if (typeof window !== 'undefined' && window.localStorage) {
-        storedToken = window.localStorage.getItem('jwt_token');
-      }
-
-      if (storedToken) {
-        api.setToken(storedToken);
-        setToken(storedToken);
+      if (firebaseUser) {
         try {
-          await refreshUser();
-        } catch (error) {
-          // Token might be expired or invalid. 
-          // `refreshUser` already called `logout`.
+            console.log("Recargando firebaseUser para obtener emailVerified fresco");
+            await firebaseUser.reload();
+        } catch (e) {
+            console.error("Error reloading firebase user", e);
         }
+
+        const currentToken = await firebaseUser.getIdToken();
+        console.log("Token obtenido");
+        setToken(currentToken);
+        api.setToken(currentToken);
+        
+        let currentUser = null;
+        try {
+            console.log("Buscando usuario en Firestore desde onAuthStateChanged");
+            currentUser = await api.getCurrentUser();
+        } catch (e) {
+            console.error("Error fetching user from Firestore", e);
+        }
+        
+        if (!currentUser) {
+            console.log("Usuario no en Firestore (onAuthStateChanged), needsProfile: true");
+            setUser({
+                id: firebaseUser.uid,
+                email: firebaseUser.email,
+                emailVerified: firebaseUser.emailVerified,
+                needsProfile: true
+            });
+        } else {
+            console.log("Usuario en Firestore (onAuthStateChanged):", currentUser.id);
+            setUser(currentUser);
+        }
+        if (typeof window !== 'undefined') sessionStorage.setItem('active_auth_session', 'true');
+      } else {
+        console.log("Usuario deslogueado (onAuthStateChanged)");
+        setUser(null);
+        setToken(null);
+        api.setToken(null);
+        if (typeof window !== 'undefined') sessionStorage.removeItem('active_auth_session');
       }
       setLoading(false);
-    };
-    initAuth();
+      console.log("onAuthStateChanged finalizado, loading: false");
+    });
+
+    return () => unsubscribe();
   }, [refreshUser]);
 
   const value = useMemo(() => ({ user, token, loading, login, logout, updateUser, refreshUser }), 

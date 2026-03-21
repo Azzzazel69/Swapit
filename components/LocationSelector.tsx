@@ -12,6 +12,9 @@ interface LocationResult {
     lat: number;
     lng: number;
     cityId?: string;
+    country?: string;
+    postalCode?: string;
+    address?: string;
 }
 
 interface LocationSelectorProps {
@@ -42,7 +45,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
             return;
         }
 
-        // 1. Prioridad: Búsqueda en nuestra base de datos local de España (Instantánea y robusta con acentos)
+        // 1. Prioridad: Búsqueda en nuestra base de datos local de España
         const localMatches = FLAT_MUNICIPALITIES.filter(m => {
             const muniNormalized = normalizeText(m.muniName);
             const labelNormalized = normalizeText(m.label);
@@ -56,14 +59,29 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
             lng: m.lng,
             isLocal: true,
             displayLabel: m.label,
-            priority: 1 // Los locales siempre van primero
+            priority: 1
         }));
 
-        // 2. Si hay pocos matches o queremos ser exhaustivos, consultamos la API de forma inteligente
+        // Check for exact match in local matches to auto-select
+        const exactMatch = localMatches.find(m => normalizeText(m.name) === query);
+        if (exactMatch && rawQuery.length === exactMatch.name.length) {
+            // If it's an exact match, we notify the parent and close suggestions
+            onChange({
+                community: exactMatch.community,
+                province: exactMatch.province,
+                city: exactMatch.name,
+                lat: exactMatch.lat,
+                lng: exactMatch.lng,
+                cityId: String(exactMatch.id)
+            });
+            setSuggestions([]);
+            return; // Stop here if we have an exact local match
+        }
+
+        // 2. Si hay pocos matches o queremos ser exhaustivos, consultamos la API
         const timer = setTimeout(async () => {
             setIsLoadingSuggestions(true);
             try {
-                // Nominatim q= query es potente pero ruidosa. Usamos filtros de tipo lugar.
                 const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rawQuery)}&countrycodes=es&addressdetails=1&format=json&limit=30&featuretype=settlement&accept-language=es`;
                 const res = await fetch(url);
                 const data = await res.json();
@@ -74,12 +92,8 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                     .filter((item: any) => {
                         const type = item.addresstype || item.type;
                         const displayName = normalizeText(item.display_name || '');
-                        
-                        // Descartar si el nombre contiene palabras clave de calles (ruido común en OSM)
                         const forbiddenKeywords = ['calle', 'avenida', 'plaza', 'carretera', 'piso', 'numero'];
                         if (forbiddenKeywords.some(key => displayName.includes(key))) return false;
-
-                        // Solo queremos lugares poblados
                         return ['city', 'town', 'village', 'municipality', 'hamlet', 'administrative'].includes(type);
                     })
                     .map((item: any) => {
@@ -101,7 +115,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                         };
                     });
 
-                // Combinamos local y API evitando duplicados reales
                 const combined = [...localMatches];
                 apiResults.forEach(apiRes => {
                     const exists = combined.some(c => 
@@ -111,19 +124,32 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                     if (!exists) combined.push(apiRes);
                 });
 
-                // Ordenación profesional:
-                // 1. Locales que empiezan por el texto (exacto)
-                // 2. API que empiezan por el texto
-                // 3. El resto
                 combined.sort((a, b) => {
                     if (a.priority !== b.priority) return a.priority - b.priority;
-                    return b.name.length - a.name.length; // Nombres más largos/específicos suelen ser mejores
+                    return b.name.length - a.name.length;
                 });
 
-                setSuggestions(combined.slice(0, 10));
+                const finalSuggestions = combined.slice(0, 10);
+                setSuggestions(finalSuggestions);
+
+                // If we didn't find an exact match in local, check in API results
+                if (!exactMatch) {
+                    const apiExactMatch = finalSuggestions.find(s => normalizeText(s.name) === query);
+                    if (apiExactMatch) {
+                        onChange({
+                            community: apiExactMatch.community,
+                            province: apiExactMatch.province,
+                            city: apiExactMatch.name,
+                            lat: apiExactMatch.lat,
+                            lng: apiExactMatch.lng,
+                            cityId: String(apiExactMatch.id)
+                        });
+                        setSuggestions([]);
+                    }
+                }
             } catch (e) {
                 console.error("Error API:", e);
-                setSuggestions(localMatches.slice(0, 10)); // Fallback a lo que tengamos local
+                setSuggestions(localMatches.slice(0, 10));
             } finally {
                 setIsLoadingSuggestions(false);
             }
@@ -139,8 +165,17 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
         }
 
         setIsDetecting(true);
+        
+        // Timeout de 10 segundos para la geolocalización
+        const timeoutId = setTimeout(() => {
+            setIsDetecting(false);
+            onError?.("La geolocalización ha tardado demasiado. Por favor, introduce tu ubicación manualmente.");
+            setMode('manual');
+        }, 10000);
+
         navigator.geolocation.getCurrentPosition(
             async (pos) => {
+                clearTimeout(timeoutId);
                 const lat = parseFloat(pos.coords.latitude.toFixed(4));
                 const lng = parseFloat(pos.coords.longitude.toFixed(4));
 
@@ -156,15 +191,24 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                     onChange({ community, province, city, lat, lng });
                     setMode('auto');
                 } catch (e) {
+                    onError?.("Error al obtener el nombre de la ciudad. Por favor, búscalo manualmente.");
                     setMode('manual');
                 } finally {
                     setIsDetecting(false);
                 }
             },
-            () => {
+            (err) => {
+                clearTimeout(timeoutId);
                 setIsDetecting(false);
+                let msg = "No se pudo obtener tu ubicación.";
+                if (err.code === 1) msg = "Permiso de ubicación denegado. Por favor, búscalo manualmente.";
+                else if (err.code === 2) msg = "Ubicación no disponible.";
+                else if (err.code === 3) msg = "Tiempo de espera agotado.";
+                
+                onError?.(msg);
                 setMode('manual');
-            }
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
         );
     };
 

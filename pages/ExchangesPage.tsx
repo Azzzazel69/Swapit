@@ -62,7 +62,7 @@ const ExchangeCard = (props: any) => {
     return (
         React.createElement("div", { className: `relative flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all border-2 ${isSelected ? 'border-blue-500' : 'border-transparent'}` },
             React.createElement("div", { className: "flex items-center gap-3 p-4 cursor-pointer", onClick: () => setIsExpanded(!isExpanded) },
-                React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "flex-shrink-0" },
+                React.createElement("div" as any, { onClick: (e: any) => e.stopPropagation(), className: "flex-shrink-0" },
                     React.createElement("input", {
                         type: "checkbox",
                         checked: isSelected,
@@ -155,35 +155,34 @@ const ExchangesPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const fetchData = useCallback(async (isInitialLoad = false) => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      if (isInitialLoad) setLoading(true);
-      const allExchanges = await api.getExchanges();
-      setIncoming(allExchanges.filter(ex => ex.ownerId === user.id));
-      setOutgoing(allExchanges.filter(ex => ex.requesterId === user.id));
-      
-      const notifs = await (api as any).getNotificationsForUserDev(user.id);
-      setNotifications(notifs || []);
-      
-      if (isInitialLoad) {
-          await (api as any).markAllNotificationsReadDev(user.id);
-      }
-      
+      setLoading(true);
+      await (api as any).markAllNotificationsReadDev(user.id);
       setError(null);
     } catch (err) {
-      setError('Error al cargar los intercambios.');
+      setError('Error al cargar notificaciones.');
     } finally {
-      if (isInitialLoad) setLoading(false);
+      setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    let isMounted = true;
-    fetchData(true);
-    const intervalId = setInterval(() => { if (isMounted) fetchData(false); }, 5000);
-    return () => { isMounted = false; clearInterval(intervalId); };
-  }, [fetchData]);
+    fetchData();
+    if (!user) return;
+    const unsubExchanges = api.subscribeToExchanges((allExchanges) => {
+      setIncoming(allExchanges.filter(ex => ex.ownerId === user.id));
+      setOutgoing(allExchanges.filter(ex => ex.requesterId === user.id));
+    });
+    const unsubNotifications = api.subscribeToNotifications(user.id, (notifs) => {
+      setNotifications(notifs || []);
+    });
+    return () => {
+      unsubExchanges();
+      unsubNotifications();
+    };
+  }, [fetchData, user]);
 
   const handleSelect = (exchangeId) => {
     setSelectedIds(prev =>
@@ -199,7 +198,6 @@ const ExchangesPage = () => {
         try {
             await api.deleteExchanges(selectedIds);
             setSelectedIds([]);
-            await fetchData(true);
         } catch (err: any) {
             setError(err.message || 'Error al eliminar las conversaciones.');
         } finally {
@@ -225,10 +223,14 @@ const ExchangesPage = () => {
                 notifications.map((n: any) => (
                     React.createElement(Link, { 
                         key: n.id,
-                        to: n.meta?.type === 'favorite' ? `/user/${n.meta.userId}` : n.meta?.exchangeId ? `/chat/${n.meta.exchangeId}` : '/exchanges',
-                        className: "block p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" 
+                        to: n.meta?.type === 'favorite' ? `/user/${n.meta.userId}` 
+                          : n.meta?.type === 'EXPLORATION_LIKE' ? `/user/${n.meta.fromUserId}`
+                          : n.meta?.type === 'MATCH' ? `/chat/${n.meta.exchangeId}`
+                          : n.meta?.exchangeId ? `/chat/${n.meta.exchangeId}` 
+                          : '/exchanges',
+                        className: `block p-3 rounded-lg hover:opacity-90 transition-all border-l-4 ${n.meta?.type === 'MATCH' ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-500' : 'bg-blue-50 dark:bg-blue-900/30 border-blue-500'}` 
                     },
-                        React.createElement("p", { className: "font-semibold text-blue-800 dark:text-blue-200" }, n.title),
+                        React.createElement("p", { className: `font-black ${n.meta?.type === 'MATCH' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-800 dark:text-blue-200'}` }, n.title),
                         React.createElement("p", { className: "text-sm text-gray-700 dark:text-gray-300" }, n.body)
                     )
                 ))

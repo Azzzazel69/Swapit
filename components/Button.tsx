@@ -2,6 +2,14 @@
 import React from 'react';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children?: React.ReactNode;
+  isLoading?: boolean;
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
 const Button = ({
   children,
   isLoading = false,
@@ -9,7 +17,7 @@ const Button = ({
   size = 'md',
   className = '',
   ...props
-}) => {
+}: ButtonProps) => {
   const { theme } = useColorTheme();
   const baseClasses = 'font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-200 ease-in-out flex items-center justify-center relative';
 
@@ -23,6 +31,7 @@ const Button = ({
     primary: `bg-gradient-to-r ${theme.bg} text-white ${theme.hoverBg} ${theme.focus}`,
     secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
     danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
+    outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800',
   };
 
   return React.createElement("button",

@@ -72,7 +72,20 @@ const ItemDetailPage = () => {
 
   return React.createElement("div", { className: "max-w-4xl mx-auto px-4 py-6" },
     React.createElement(EditItemModal, { isOpen: isEditModalOpen, onClose: () => setIsEditModalOpen(false), item: item, onSave: (d) => api.updateItem(item.id, d).then(setItem) }),
-    React.createElement(ReportModal, { isOpen: isReportModalOpen, onClose: () => setIsReportModalOpen(false), title: "Reportar Artículo", onSubmit: (r) => api.reportContent(item.id, 'ITEM', r).then(() => showToast("Reporte enviado", "success")) }),
+    React.createElement(ReportModal, { 
+      isOpen: isReportModalOpen, 
+      onClose: () => setIsReportModalOpen(false), 
+      title: "Reportar Artículo", 
+      type: "ITEM", 
+      onSubmit: async (r) => {
+        try {
+          await api.reportContent(item.id, 'ITEM', r);
+          showToast("Reporte enviado", "success");
+        } catch (err) {
+          showToast("Error al enviar reporte", "error");
+        }
+      } 
+    }),
     React.createElement(ExchangeProposalModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), userItems: userItems, targetItem: item, onSubmit: handleSubmitProposal, isLoading: isSubmitting }),
     
     // Barra de navegación superior con botón Volver
@@ -118,7 +131,13 @@ const ItemDetailPage = () => {
                     !isOwnItem && React.createElement("button", { onClick: () => api.toggleFavorite(item.id).then(setItem), className: "p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 hover:scale-110 transition-transform shadow-sm" }, item.isFavorited ? "❤️" : "🤍")
                 ),
                 
-                React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-8 text-lg" }, item.description),
+                React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-4 text-lg" }, item.description),
+                
+                // SECCIÓN "BUSCO"
+                item.wishedItem && React.createElement("div", { className: "mb-8 p-4 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 rounded-r-xl" },
+                    React.createElement("h4", { className: "text-[10px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-widest mb-1" }, "Lo que busco a cambio"),
+                    React.createElement("p", { className: "text-xl font-black text-gray-800 dark:text-gray-100 italic" }, `"${item.wishedItem}"`)
+                ),
                 
                 // INDICADOR DE UBICACIÓN (CRÍTICO)
                 React.createElement("div", { className: "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-2xl border-2 border-blue-100 dark:border-blue-800 mb-8 flex items-center gap-5 relative overflow-hidden" },
@@ -134,17 +153,23 @@ const ItemDetailPage = () => {
                 ),
 
                 React.createElement("div", { className: "mt-auto pt-8 border-t-2 border-gray-100 dark:border-gray-700" },
-                    React.createElement("div", { className: "flex items-center justify-between" },
-                        React.createElement(Link, { to: `/user/${item.userId}`, className: "flex items-center gap-3 group" },
-                            React.createElement("img", { src: item.ownerAvatarUrl, className: "w-12 h-12 rounded-full border-2 border-white dark:border-gray-600 shadow-md group-hover:scale-105 transition-transform" }),
+                    React.createElement("div", { className: "flex flex-col sm:flex-row items-center justify-between gap-4" },
+                        React.createElement(Link, { to: `/user/${item.ownerId || item.userId}`, className: "flex items-center gap-3 group w-full sm:w-auto" },
+                            React.createElement("img", { src: item.ownerAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (item.ownerId || 'default'), className: "w-12 h-12 rounded-full border-2 border-white dark:border-gray-600 shadow-md group-hover:scale-105 transition-transform" }),
                             React.createElement("div", null,
                                 React.createElement("p", { className: "text-[10px] font-bold text-gray-400 uppercase" }, "Propietario"),
-                                React.createElement("p", { className: "font-black group-hover:text-blue-500 transition-colors" }, item.ownerName)
+                                React.createElement("div", { className: "flex items-center gap-2" },
+                                    React.createElement("p", { className: "font-black group-hover:text-blue-500 transition-colors" }, item.ownerName || 'Usuario'),
+                                    (item.ownerRating || 0) > 0 && React.createElement("div", { className: "flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md" },
+                                        React.createElement("span", { className: "text-[10px]" }, "⭐"),
+                                        React.createElement("span", { className: "text-xs font-black text-gray-700 dark:text-gray-300" }, item.ownerRating)
+                                    )
+                                )
                             )
                         ),
                         isOwnItem ? 
-                        React.createElement(Button, { onClick: () => setIsEditModalOpen(true), variant: "secondary", className: "rounded-xl px-8", children: "Gestionar" }) :
-                        React.createElement(Button, { onClick: handleSwapClick, className: "rounded-xl px-10 shadow-lg", children: "¡Te lo cambio!" })
+                        React.createElement(Button, { onClick: () => setIsEditModalOpen(true), variant: "secondary", className: "rounded-xl px-8 w-full sm:w-auto", children: "Editar" }) :
+                        React.createElement(Button, { onClick: handleSwapClick, className: "rounded-xl px-10 shadow-lg w-full sm:w-auto", children: "¡Te lo cambio!" })
                     )
                 )
             )

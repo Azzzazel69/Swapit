@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { RATING_LABELS } from '../constants.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
 import { useToast } from '../hooks/useToast.tsx';
@@ -24,7 +25,7 @@ const RateExchangePage = () => {
     const [exchange, setExchange] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [rating, setRating] = useState(0);
+    const [rating, setRating] = useState(50);
     const [comment, setComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,10 +44,6 @@ const RateExchangePage = () => {
     }, [exchangeId]);
 
     const handleSubmit = async () => {
-        if (rating === 0) {
-            setError("Por favor, selecciona una puntuación.");
-            return;
-        }
         setError('');
         setIsSubmitting(true);
         try {
@@ -74,10 +71,18 @@ const RateExchangePage = () => {
     
     const otherUser = currentUser.id === exchange.owner.id ? exchange.requester : exchange.owner;
     
-    const ratingLabels = [
-        "Muy Mal", "Mal", "Regular", "Normal", "Bien",
-        "Bastante Bien", "Muy Bien", "Genial", "Excelente", "¡Perfecto!"
-    ];
+    const getRatingLabel = (val) => {
+        const label = RATING_LABELS.find(l => val <= l.max);
+        return label ? label.label : RATING_LABELS[RATING_LABELS.length - 1].label;
+    };
+
+    const getScoreColor = (s) => {
+        if (s >= 90) return "text-emerald-500";
+        if (s >= 75) return "text-blue-500";
+        if (s >= 50) return "text-yellow-500";
+        if (s >= 25) return "text-orange-500";
+        return "text-red-500";
+    };
 
     // Fix: Extract props for textarea to fix TS error
     const textareaProps = {
@@ -97,21 +102,29 @@ const RateExchangePage = () => {
                     React.createElement("img", { src: otherUser.avatarUrl, alt: otherUser.name, className: "w-16 h-16 rounded-full object-cover" }),
                     React.createElement("span", { className: "text-2xl font-bold" }, otherUser.name)
                 ),
-                React.createElement("p", { className: "text-gray-600 dark:text-gray-400 mb-6" }, "¿Cómo ha sido tu experiencia? Tu opinión ayuda a construir una comunidad segura."),
+                React.createElement("p", { className: "text-gray-600 dark:text-gray-400 mb-6" }, "¿Cómo ha sido tu experiencia? Desliza para puntuar del 1 al 100."),
 
-                React.createElement("div", { className: "flex justify-center items-center flex-nowrap gap-1 md:gap-2 my-6" },
-                    [...Array(10)].map((_, i) => {
-                        const ratingValue = i + 1;
-                        return React.createElement(Star, { 
-                            key: ratingValue, 
-                            filled: ratingValue <= rating, 
-                            onClick: () => setRating(ratingValue) 
-                        });
+                React.createElement("div", { className: "my-10 px-4" },
+                    React.createElement("div", { className: "flex justify-between items-end mb-4" },
+                        React.createElement("span", { className: "text-4xl" }, "👎"),
+                        React.createElement("div", { className: "flex flex-col items-center" },
+                            React.createElement("span", { className: `text-6xl font-black ${getScoreColor(rating)}` }, rating),
+                            React.createElement("span", { className: "text-xs font-bold text-gray-400 uppercase" }, "Puntos")
+                        ),
+                        React.createElement("span", { className: "text-4xl" }, "👍")
+                    ),
+                    React.createElement("input", {
+                        type: "range",
+                        min: "1",
+                        max: "100",
+                        value: rating,
+                        onChange: (e) => setRating(parseInt(e.target.value)),
+                        className: "w-full h-4 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     })
                 ),
                 
-                React.createElement("div", { className: "h-6 mb-6" },
-                    rating > 0 && React.createElement("p", { className: "text-lg font-semibold text-gray-700 dark:text-gray-200" }, `${rating} - ${ratingLabels[rating-1]}`)
+                React.createElement("div", { className: "h-12 mb-6 flex items-center justify-center" },
+                    React.createElement("p", { className: `text-xl font-black italic ${getScoreColor(rating)}` }, getRatingLabel(rating))
                 ),
                 
                 React.createElement("div", { className: "mb-6 text-left" },
@@ -124,7 +137,6 @@ const RateExchangePage = () => {
                 React.createElement(Button, {
                     onClick: handleSubmit,
                     isLoading: isSubmitting,
-                    disabled: rating === 0,
                     size: "lg",
                     className: "w-full",
                     children: "Enviar Valoración y Finalizar"

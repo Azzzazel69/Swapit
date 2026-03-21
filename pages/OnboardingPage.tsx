@@ -8,19 +8,23 @@ import Input from '../components/Input.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import { CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { useToast } from '../hooks/useToast.tsx';
 import LocationSelector from '../components/LocationSelector.tsx';
-import { requestNotificationPermission } from '../services/pushNotifications.ts';
+import { auth } from '../firebase.ts';
 import TutorialModal from '../components/TutorialModal.tsx';
+import { requestNotificationPermission } from '../services/pushNotifications.ts';
 
 const OnboardingPage = () => {
     const { user, refreshUser } = useAuth();
     const { theme } = useColorTheme();
+    const { showToast } = useToast();
     const navigate = useNavigate();
     const [step, setStep] = useState('initial_check');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<string | React.ReactNode>('');
     
     const [phone, setPhone] = useState('');
+    const [countryCode, setCountryCode] = useState('+34');
     const [code, setCode] = useState('');
     const [codeSent, setCodeSent] = useState(false);
     const [locationData, setLocationData] = useState<any>(null);
@@ -28,21 +32,79 @@ const OnboardingPage = () => {
     const [address, setAddress] = useState('');
     const [preferences, setPreferences] = useState([]);
     
-    const determineOnboardingStep = useCallback(() => {
+    const [name, setName] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('pending_registration_name') || auth.currentUser?.displayName || '';
+        }
+        return auth.currentUser?.displayName || '';
+    });
+    
+    const [emailSent, setEmailSent] = useState(true); // Default to true as api.register now sends it
+    
+    const determineOnboardingStep = useCallback(async () => {
         if (!user) return;
-        if (user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0) {
+        
+        // If user is from Auth but not in Firestore, they need to complete profile
+        if (user.needsProfile) {
+            // Check if email was verified since last check
+            if (!user.emailVerified && auth.currentUser?.emailVerified) {
+                console.log("Email verificado detectado en determineOnboardingStep");
+                await refreshUser();
+                return;
+            }
+
+            if (!user.emailVerified) {
+                setStep('email');
+            } else if (!locationData || !postalCode) {
+                // Try to load from localStorage if not already loaded
+                if (!locationData) {
+                    const savedLoc = typeof window !== 'undefined' ? localStorage.getItem('pending_registration_location') : null;
+                    if (savedLoc) {
+                        try {
+                            const parsed = JSON.parse(savedLoc);
+                            setLocationData(parsed);
+                        } catch (e) {
+                            console.error("Error parsing saved location", e);
+                        }
+                    }
+                }
+                setStep('location');
+            } else {
+                setStep('preferences');
+            }
+            return;
+        }
+
+        // Check if fully onboarded
+        const isFullyOnboarded = user.emailVerified && user.location && user.preferences?.length > 0;
+        
+        if (isFullyOnboarded) {
             setStep('complete');
-            setTimeout(() => navigate('/'), 2000);
+            setTimeout(() => {
+                navigate('/', { replace: true });
+            }, 1500);
         } else if (!user.emailVerified) {
             setStep('email');
-        } else if (!user.phoneVerified) {
-            setStep('phone');
         } else if (!user.location || !user.location.province) {
             setStep('location');
         } else {
             setStep('preferences');
         }
-    }, [user, navigate]);
+    }, [user, navigate, refreshUser, locationData]);
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            if (user) {
+                console.log("OnboardingPage: Refrescando usuario para obtener estado de verificación");
+                try {
+                    await refreshUser();
+                } catch (e) {
+                    console.error("Error al refrescar usuario en OnboardingPage:", e);
+                }
+            }
+        };
+        checkStatus();
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -55,6 +117,21 @@ const OnboardingPage = () => {
         }
     }, [user, determineOnboardingStep]);
 
+    useEffect(() => {
+        if (user && step === 'email' && !user.emailVerified) {
+            const interval = setInterval(async () => {
+                console.log("Checking email verification status...");
+                await auth.currentUser?.reload();
+                if (auth.currentUser?.emailVerified) {
+                    console.log("Email verified! Refreshing user...");
+                    await refreshUser();
+                    clearInterval(interval);
+                }
+            }, 3000);
+            return () => clearInterval(interval);
+        }
+    }, [user, step, refreshUser]);
+
     const handleTutorialClose = () => {
         if (typeof window !== 'undefined' && window.localStorage) {
             window.localStorage.setItem('tutorial_completed', 'true');
@@ -62,43 +139,50 @@ const OnboardingPage = () => {
         determineOnboardingStep();
     };
 
+    const handleSendEmail = async () => {
+        setIsLoading(true); setError('');
+        try {
+            await api.sendEmailVerificationLink();
+            setEmailSent(true);
+            showToast("Correo enviado. Revisa tu bandeja de entrada.", "success");
+        } catch (err: any) { 
+            let friendlyError = err.message;
+            if (err.message.includes('auth/too-many-requests')) {
+                friendlyError = 'Has solicitado demasiados correos. Por favor, espera unos minutos.';
+            }
+            setError(friendlyError); 
+            showToast(friendlyError, "error");
+        } 
+        finally { setIsLoading(false); }
+    };
+
     const handleVerifyEmail = async () => {
         setIsLoading(true); setError('');
         try {
-            await api.verifyEmail();
-            await refreshUser();
-        } catch (err: any) { setError(err.message); } 
-        finally { setIsLoading(false); }
-    };
-
-    const handleSendCode = async (e) => {
-        e.preventDefault();
-        setIsLoading(true); setError('');
-        try {
-            await api.sendPhoneVerificationCode(phone);
-            setCodeSent(true);
-        } catch (err: any) { setError(err.message); } 
-        finally { setIsLoading(false); }
-    };
-
-    const handleVerifyCode = async (e) => {
-        e.preventDefault();
-        setIsLoading(true); setError('');
-        try {
-            const success = await api.verifyPhoneCode(code);
-            if (success) { await refreshUser(); } 
-            else { setError('Código incorrecto.'); }
+            const result = await api.checkEmailVerified();
+            if (result.verified) {
+                await refreshUser();
+                showToast("Correo verificado con éxito", "success");
+            } else {
+                setError("El correo aún no ha sido verificado. Haz clic en el enlace que te enviamos.");
+            }
         } catch (err: any) { setError(err.message); } 
         finally { setIsLoading(false); }
     };
 
     const handleSaveLocation = async (e) => {
         if (e) e.preventDefault();
+        if (user?.needsProfile && !name.trim()) { setError('Por favor, indica tu nombre.'); return; }
         if (!locationData) { setError('Por favor, indica tu ubicación.'); return; }
         setIsLoading(true); setError('');
         try {
-            await api.updateUserLocation({ ...locationData, postalCode, address });
-            await refreshUser(); 
+            if (user?.needsProfile) {
+                // Just save to state, will be sent in completeRegistration
+                setStep('preferences');
+            } else {
+                await api.updateUserLocation({ ...locationData, postalCode, address });
+                await refreshUser(); 
+            }
         } catch (err: any) { setError(err.message); } 
         finally { setIsLoading(false); }
     };
@@ -111,7 +195,25 @@ const OnboardingPage = () => {
         if (preferences.length === 0) { setError('Selecciona al menos un interés.'); return; }
         setIsLoading(true); setError('');
         try {
-            await api.updateUserPreferences(preferences);
+            if (user?.needsProfile) {
+                const finalName = name.trim() || 'Usuario';
+                
+                await api.completeRegistration({
+                    name: finalName,
+                    email: user.email,
+                    location: { ...locationData, postalCode, address },
+                    preferences: preferences
+                });
+                
+                // Cleanup
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('pending_registration_name');
+                    localStorage.removeItem('pending_registration_location');
+                }
+            } else {
+                await api.updateUserPreferences(preferences);
+            }
+            
             await requestNotificationPermission();
             await refreshUser();
         } catch (err: any) { setError(err.message); }
@@ -126,47 +228,98 @@ const OnboardingPage = () => {
                 return (
                     <div className="animate-fade-in-up">
                         <h3 className="text-xl font-bold mb-2">Paso 1: Verifica tu Correo</h3>
-                        <p className="mb-6 text-gray-600 dark:text-gray-400">Pulsa el botón para simular la verificación de <strong>{user?.email}</strong>.</p>
-                        <Button onClick={handleVerifyEmail} isLoading={isLoading} children="Confirmar Correo" />
-                    </div>
-                );
-            case 'phone':
-                 return (
-                    <div className="animate-fade-in-up">
-                        <h3 className="text-xl font-bold mb-2">Paso 2: Seguridad 2FA</h3>
-                        <p className="mb-4 text-gray-600 dark:text-gray-400">Verifica tu identidad con tu móvil.</p>
-                        {!codeSent ? (
-                            <form onSubmit={handleSendCode} className="space-y-4">
-                                <Input id="phone" label="Teléfono" type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+34 600 000 000" />
-                                <Button type="submit" isLoading={isLoading} children="Enviar SMS" />
-                            </form>
-                        ) : (
-                            <form onSubmit={handleVerifyCode} className="space-y-4">
-                                <p className="text-sm text-green-600">SMS enviado. Pista demo: 123456</p>
-                                <Input id="code" label="Código SMS" type="text" value={code} onChange={e => setCode(e.target.value)} required placeholder="6 dígitos" />
-                                <Button type="submit" isLoading={isLoading} children="Verificar" />
-                            </form>
-                        )}
+                        <p className="mb-6 text-gray-600 dark:text-gray-400">
+                            Para mantener la seguridad en SwapIt, necesitamos verificar tu correo electrónico: <strong>{user?.email}</strong>.
+                        </p>
+                        <div className="space-y-3">
+                            {!emailSent ? (
+                                <Button onClick={handleSendEmail} isLoading={isLoading} className="w-full" children="Enviar correo de verificación" />
+                            ) : (
+                                <>
+                                    <p className="text-sm text-green-600 font-medium mb-4 text-center">¡Correo enviado! Revisa tu bandeja de entrada o spam.</p>
+                                    <Button onClick={handleVerifyEmail} isLoading={isLoading} className="w-full" children="Ya he hecho clic en el enlace" />
+                                    <button 
+                                        onClick={handleSendEmail}
+                                        className="w-full text-xs font-bold text-gray-500 hover:text-gray-700 underline py-2"
+                                    >
+                                        Reenviar correo
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 );
             case 'location':
                 return (
                     <div className="animate-fade-in-up">
-                        <h3 className="text-xl font-bold mb-2">Paso 3: Tu Zona</h3>
-                        <p className="mb-6 text-gray-600 dark:text-gray-400">Encuentra swappers cerca de ti.</p>
-                        <form onSubmit={handleSaveLocation} className="space-y-4">
-                            <LocationSelector onChange={setLocationData} onError={setError} />
-                            <div className="pt-4 space-y-4">
-                                <Input id="postalCode" label="Código Postal" type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} required />
-                                <Button type="submit" isLoading={isLoading} disabled={!locationData} children="Guardar Ubicación" />
+                        <h3 className="text-xl font-bold mb-2">Paso 2: Perfil y Ubicación</h3>
+                        <p className="mb-6 text-gray-600 dark:text-gray-400">Completa tu perfil para empezar a intercambiar.</p>
+                        <form onSubmit={handleSaveLocation} className="space-y-6">
+                            {user?.needsProfile && (
+                                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                                    <Input 
+                                        id="name" 
+                                        label="Tu Nombre" 
+                                        type="text" 
+                                        value={name} 
+                                        onChange={(e: any) => setName(e.target.value)} 
+                                        required 
+                                        placeholder="Ej: Juan Pérez" 
+                                    />
+                                </div>
+                            )}
+                            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+                                <LocationSelector 
+                                    onChange={(data) => {
+                                        setLocationData(data);
+                                        setError('');
+                                    }} 
+                                    onError={setError}
+                                />
+                                
+                                {locationData && (
+                                    <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800 animate-fade-in">
+                                        <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
+                                            📍 {locationData.city}, {locationData.province}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                <Input 
+                                    id="postalCode" 
+                                    label="Código Postal" 
+                                    type="text" 
+                                    value={postalCode} 
+                                    onChange={e => setPostalCode(e.target.value)} 
+                                    placeholder="Ej: 28001"
+                                    required 
+                                />
+                                <Input 
+                                    id="address" 
+                                    label="Dirección (Opcional)" 
+                                    type="text" 
+                                    value={address} 
+                                    onChange={e => setAddress(e.target.value)} 
+                                    placeholder="Calle, número, piso..."
+                                />
+                            </div>
+
+                            <Button 
+                                type="submit" 
+                                isLoading={isLoading}
+                                disabled={!locationData || !postalCode}
+                                className="w-full py-4 text-lg font-bold shadow-lg shadow-indigo-500/20"
+                                children="Continuar"
+                            />
                         </form>
                     </div>
                 );
             case 'preferences':
                 return (
                     <div className="animate-fade-in-up">
-                        <h3 className="text-xl font-bold mb-2">¿Qué buscas?</h3>
+                        <h3 className="text-xl font-bold mb-2">Paso 3: ¿Qué buscas?</h3>
                         <p className="mb-4 text-gray-600 dark:text-gray-400">Personaliza tu catálogo.</p>
                         <div className="space-y-4 max-h-80 overflow-y-auto pr-2 mb-6">
                             {CATEGORIES_WITH_SUBCATEGORIES.map(cat => (
@@ -202,11 +355,24 @@ const OnboardingPage = () => {
     return (
         <React.Fragment>
             <TutorialModal isOpen={step === 'tutorial'} onClose={handleTutorialClose} />
-            <div className={`max-w-xl mx-auto py-12 transition-all duration-500 ${step === 'tutorial' ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+            <div className={`max-w-xl mx-auto py-12 px-4 transition-all duration-500 ${step === 'tutorial' ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
                 <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700">
                      <h2 className="text-3xl font-black text-center mb-8">Bienvenido</h2>
                      {error && <p className="text-red-500 text-xs font-bold text-center mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">{error}</p>}
                      {renderStepContent()}
+                     
+                     <div className="mt-8 text-center border-t border-gray-100 dark:border-gray-700 pt-6">
+                         <button 
+                             onClick={() => {
+                                 auth.signOut().then(() => {
+                                     window.location.href = '/';
+                                 });
+                             }} 
+                             className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline transition-colors"
+                         >
+                             Cerrar sesión y usar otra cuenta
+                         </button>
+                     </div>
                 </div>
             </div>
         </React.Fragment>

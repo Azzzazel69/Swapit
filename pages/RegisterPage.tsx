@@ -43,7 +43,6 @@ const PasswordStrengthIndicator = ({ password }) => {
 const RegisterPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [locationData, setLocationData] = useState<any>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -58,19 +57,10 @@ const RegisterPage = () => {
     return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password);
   }, [password]);
 
-  const handleLocationChange = useCallback((data) => {
-    setLocationData(data);
-    setError(null);
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!agreedToTerms) {
         setError("Debes aceptar los Términos de Servicio para registrarte.");
-        return;
-    }
-    if (!locationData) {
-        setError("Por favor, indica tu ubicación.");
         return;
     }
     if (!isPasswordValid) {
@@ -84,23 +74,22 @@ const RegisterPage = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.register(name, email, password, '', { 
-        province: locationData.province, 
-        city: locationData.city,
-        community: locationData.community,
-        lat: locationData.lat,
-        lng: locationData.lng,
-        locationId: locationData.cityId
-      });
+      await api.register(name, email, password, '', null);
+      
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem('cookie_consent', 'accepted');
+        window.localStorage.setItem('pending_registration_name', name);
       }
-      navigate('/verify-email', { state: { email } });
+      navigate('/onboarding');
     } catch (err: any) {
       if (err.message.includes('Ya existe un usuario con este correo')) {
           setError(
               <span>
-                  Ya existe un usuario con este correo. ¿Has{' '}
+                  Ya existe un usuario con este correo. Si ya empezaste el registro,{' '}
+                  <Link to="/login" className={`font-medium ${theme.textColor} ${theme.hoverTextColor}`}>
+                      inicia sesión
+                  </Link>{' '}
+                  para continuar. ¿Has{' '}
                   <Link to="/forgot-password" state={{email}} className={`font-medium ${theme.textColor} ${theme.hoverTextColor}`}>
                       olvidado tu contraseña?
                   </Link>
@@ -127,14 +116,8 @@ const RegisterPage = () => {
           {error && <div className="text-red-500 text-sm text-center p-3 bg-red-100 dark:bg-red-900/50 rounded-lg">{error}</div>}
           
           <div className="flex flex-col gap-y-5">
-            <Input id="name" label="Nombre completo" name="name" type="text" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" />
+            <Input id="name" label="Nombre o nombre de usuario" name="name" type="text" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" />
             
-            {/* z-index crucial: z-30 es mayor que el z-index por defecto de los campos de abajo */}
-            <div className="relative z-30 bg-gray-50 dark:bg-gray-900/30 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-inner">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Ubicación para intercambios</h3>
-                <LocationSelector onChange={handleLocationChange} onError={setError} />
-            </div>
-
             <div className="relative z-20 space-y-5">
                 <Input id="email-address" label="Correo electrónico" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@ejemplo.com" />
                 
@@ -199,7 +182,7 @@ const RegisterPage = () => {
                 isLoading={isLoading} 
                 className="w-full shadow-lg transform active:scale-95 transition-transform" 
                 disabled={!isPasswordValid || password !== confirmPassword || !agreedToTerms} 
-                children="Finalizar Registro" 
+                children="Siguiente paso" 
             />
           </div>
         </form>

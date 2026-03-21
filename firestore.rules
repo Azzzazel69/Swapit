@@ -1,0 +1,171 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "azzazel69@gmail.com" && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['SUPER_ADMIN', 'MODERATOR'])
+      );
+    }
+
+    function uidUnchanged() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser() {
+      let data = request.resource.data;
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['USER', 'MODERATOR', 'SUPER_ADMIN'];
+    }
+
+    function isValidItem() {
+      let data = request.resource.data;
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 100 &&
+             data.condition is string && data.condition.size() > 0 && data.condition.size() <= 50 &&
+             data.status in ['AVAILABLE', 'SWAPPED', 'HIDDEN', 'DELETED', 'EXCHANGED'] &&
+             data.userId is string && data.userId.size() > 0 &&
+             (!('imageUrls' in data) || data.imageUrls is list);
+    }
+
+    function isValidExchange() {
+      let data = request.resource.data;
+      return data.ownerId is string && data.ownerId.size() > 0 &&
+             data.requesterId is string && data.requesterId.size() > 0 &&
+             data.requestedItemId is string && data.requestedItemId.size() > 0 &&
+             data.status in ['PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELLED'];
+    }
+
+    function isValidChat() {
+      let data = request.resource.data;
+      return data.exchangeId is string && data.exchangeId.size() > 0 &&
+             data.messages is list;
+    }
+
+    function isValidReport() {
+      let data = request.resource.data;
+      return data.reporterId is string && data.reporterId.size() > 0 &&
+             data.targetId is string && data.targetId.size() > 0 &&
+             data.targetType in ['USER', 'ITEM', 'EXCHANGE', 'MESSAGE'] &&
+             data.reason is string && data.reason.size() > 0 && data.reason.size() <= 1000 &&
+             data.status in ['PENDING', 'RESOLVED', 'DISMISSED'];
+    }
+
+    function isValidNotification() {
+      let data = request.resource.data;
+      return data.userId is string && data.userId.size() > 0 &&
+             data.type is string && data.type.size() > 0 && data.type.size() <= 100 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.message is string && data.message.size() > 0 && data.message.size() <= 1000 &&
+             data.read is bool;
+    }
+
+    function isValidSwipe() {
+      let data = request.resource.data;
+      return data.userId is string && data.userId.size() > 0 &&
+             data.itemId is string && data.itemId.size() > 0 &&
+             data.type in ['like', 'dislike'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow create: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser();
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser();
+      allow delete: if isAdmin();
+    }
+
+    match /items/{itemId} {
+      allow get: if isAuthenticated();
+      allow list: if isAuthenticated();
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidItem();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidItem();
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /exchanges/{exchangeId} {
+      allow read: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || resource.data.requesterId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.requesterId == request.auth.uid && isValidExchange();
+      allow update: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || resource.data.requesterId == request.auth.uid || isAdmin()) && isValidExchange();
+      allow delete: if isAdmin();
+    }
+
+    match /chats/{exchangeId} {
+      // We check if the user is part of the exchange by looking up the exchange document
+      function isParticipant() {
+        let exchange = get(/databases/$(database)/documents/exchanges/$(exchangeId)).data;
+        return exchange.ownerId == request.auth.uid || exchange.requesterId == request.auth.uid;
+      }
+      allow read: if isAuthenticated() && (isParticipant() || isAdmin());
+      allow create: if isAuthenticated() && isParticipant() && isValidChat();
+      allow update: if isAuthenticated() && isParticipant() && isValidChat();
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.reporterId == request.auth.uid && isValidReport();
+      allow update: if isAdmin() && isValidReport();
+      allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin() || isAuthenticated(); // System or users can create notifications
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidNotification();
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /swipes/{swipeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidSwipe();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

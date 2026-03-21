@@ -1,0 +1,195 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the SwapIt application.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["USER", "MODERATOR", "SUPER_ADMIN"] },
+        "avatarUrl": { "type": "string", "format": "uri" },
+        "emailVerified": { "type": "boolean" },
+        "phoneVerified": { "type": "boolean" },
+        "identityVerified": { "type": "boolean" },
+        "identityVerificationStatus": { "type": "string", "enum": ["NONE", "PENDING", "VERIFIED", "REJECTED"] },
+        "location": {
+          "type": "object",
+          "properties": {
+            "city": { "type": "string" },
+            "province": { "type": "string" },
+            "country": { "type": "string" },
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "preferences": { "type": "array", "items": { "type": "string" } },
+        "contactCard": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "meetingPointAddress": { "type": "string" },
+            "meetingPointCoords": {
+              "type": "object",
+              "properties": {
+                "lat": { "type": "number" },
+                "lng": { "type": "number" }
+              }
+            }
+          }
+        },
+        "favorites": { "type": "array", "items": { "type": "string" } },
+        "following": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ratings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rating": { "type": "number" },
+              "comment": { "type": "string" },
+              "date": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "required": ["id", "name", "email", "role", "createdAt"]
+    },
+    "Item": {
+      "title": "Item",
+      "description": "An item listed for swapping.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "condition": { "type": "string" },
+        "wishedItem": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "status": { "type": "string", "enum": ["AVAILABLE", "SWAPPED", "HIDDEN", "DELETED"] },
+        "moderationStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likes": { "type": "number" },
+        "flagged": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "title", "category", "condition", "status", "createdAt"]
+    },
+    "Exchange": {
+      "title": "Exchange",
+      "description": "A swap proposal between two users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "requesterId": { "type": "string" },
+        "requestedItemId": { "type": "string" },
+        "offeredItemIds": { "type": "array", "items": { "type": "string" } },
+        "offeredOtherItems": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["PENDING", "ACCEPTED", "REJECTED", "COMPLETED", "CANCELLED"] },
+        "cashPlus": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ownerName": { "type": "string" },
+        "requesterName": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "requesterId", "requestedItemId", "status", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A chat conversation for an exchange.",
+      "type": "object",
+      "properties": {
+        "exchangeId": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "senderId": { "type": "string" },
+              "text": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "required": ["exchangeId", "messages"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A report of inappropriate content.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["USER", "ITEM", "EXCHANGE", "MESSAGE"] },
+        "reason": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "RESOLVED", "DISMISSED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "reporterId", "targetId", "targetType", "reason", "status", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification for a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "data": { "type": "object" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "type", "title", "message", "read", "createdAt"]
+    },
+    "Swipe": {
+      "title": "Swipe",
+      "description": "A swipe action on an item.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "itemId": { "type": "string" },
+        "type": { "type": "string", "enum": ["like", "dislike"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "itemId", "type", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Collection of user profiles."
+    },
+    "/items/{itemId}": {
+      "schema": { "$ref": "#/entities/Item" },
+      "description": "Collection of items for swap."
+    },
+    "/exchanges/{exchangeId}": {
+      "schema": { "$ref": "#/entities/Exchange" },
+      "description": "Collection of exchange proposals."
+    },
+    "/chats/{exchangeId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Collection of chats linked to exchanges."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Collection of user reports."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Collection of user notifications."
+    },
+    "/swipes/{swipeId}": {
+      "schema": { "$ref": "#/entities/Swipe" },
+      "description": "Collection of user swipes."
+    }
+  }
+}

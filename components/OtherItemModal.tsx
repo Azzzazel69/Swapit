@@ -5,7 +5,7 @@ import { ICONS } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { api } from '../services/api.ts';
 
-const OtherItemModal = ({ isOpen, onClose, onSave }) => {
+const OtherItemModal = ({ isOpen, onClose, onSave }: { isOpen: boolean, onClose: () => void, onSave: (item: any) => void }) => {
     const [description, setDescription] = useState('');
     const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +39,7 @@ const OtherItemModal = ({ isOpen, onClose, onSave }) => {
                 return;
             }
 
-            const resizingPromises = filesArray.map(file => api.resizeImageBeforeUpload(file));
+            const resizingPromises = filesArray.map((file: File) => api.resizeImageBeforeUpload(file));
 
             try {
                 const resizedImages = await Promise.all(resizingPromises);

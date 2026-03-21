@@ -22,6 +22,31 @@ const AddItemPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
 
+    React.useEffect(() => {
+        const loadDraft = async () => {
+            const draft = await api.getDraft();
+            if (draft) {
+                setTitle(draft.title || '');
+                setDescription(draft.description || '');
+                setCategory(draft.category || '');
+                setCondition(draft.condition || '');
+                setWishedItem(draft.wishedItem || '');
+                setImages(draft.images || []);
+            }
+        };
+        loadDraft();
+    }, []);
+
+    React.useEffect(() => {
+        const saveDraft = async () => {
+            if (title || description || category || condition || wishedItem || images.length > 0) {
+                await api.saveDraft({ title, description, category, condition, wishedItem, images });
+            }
+        };
+        const timer = setTimeout(saveDraft, 2000);
+        return () => clearTimeout(timer);
+    }, [title, description, category, condition, wishedItem, images]);
+
     const MAX_IMAGES = 5;
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,8 +98,13 @@ const AddItemPage = () => {
         setError(null);
         setIsSubmitting(true);
         try {
-            await api.createItem({ title, description, category, condition, imageUrls: images, wishedItem });
-            navigate('/profile', { state: { message: '¡Artículo añadido con éxito!' } });
+            const newItem = await api.createItem({ title, description, category, condition, imageUrls: images, wishedItem });
+            await api.clearDraft();
+            if (newItem.moderationStatus === 'PENDING') {
+                navigate('/profile', { state: { message: '¡Artículo subido! Está en revisión por seguridad y aparecerá pronto.', variant: 'warning' } });
+            } else {
+                navigate('/profile', { state: { message: '¡Artículo añadido con éxito!' } });
+            }
         } catch (err) {
             setError('Error al crear el artículo.');
         } finally {
@@ -113,7 +143,21 @@ const AddItemPage = () => {
         React.createElement("div", { className: "max-w-2xl mx-auto" },
             React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md" },
                 React.createElement("form", { onSubmit: handleAddItem, className: "space-y-4" },
-                    React.createElement("h1", { className: "text-2xl font-bold text-gray-900 dark:text-white" }, "Sube tu artículo"),
+                    React.createElement("div", { className: "flex justify-between items-center" },
+                        React.createElement("h1", { className: "text-2xl font-bold text-gray-900 dark:text-white" }, "Sube tu artículo"),
+                        React.createElement(Button, { type: "button", variant: "secondary", size: "sm", onClick: async () => {
+                            if (window.confirm('¿Estás seguro de que quieres limpiar el formulario? Se perderán los cambios no publicados.')) {
+                                await api.clearDraft();
+                                setTitle('');
+                                setDescription('');
+                                setCategory('');
+                                setCondition('');
+                                setWishedItem('');
+                                setImages([]);
+                                setError(null);
+                            }
+                        }, children: "Limpiar" })
+                    ),
                     error && React.createElement("p", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
                     React.createElement(Input, { id: "title", label: "Título", type: "text", value: title, onChange: e => setTitle(e.target.value), required: true, placeholder: "Ej: Bicicleta de montaña" }),
                     React.createElement("div", null,

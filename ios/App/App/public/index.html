@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Swapit - Plataforma de Trueques</title>
+    
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="/assets/manifest-E49-CEMK.json" />
+    <meta name="theme-color" content="#FFFFFF" />
+
+    <!-- iOS PWA Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Swapit" />
+    <link rel="apple-touch-icon" href="/assets/icon-192x192-D8N3DDOZ.png" />
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+      .animate-shake {
+        animation: shake 0.8s ease-in-out;
+      }
+      @keyframes heartbeat {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.3); }
+        100% { transform: scale(1); }
+      }
+      .animate-heartbeat {
+        animation: heartbeat 0.5s ease-in-out;
+      }
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 15px, 0);
+        }
+        to {
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fadeInUp 0.4s ease-out forwards;
+      }
+      /* Safe area padding for notched phones */
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+      }
+    </style>
+
+<link rel="stylesheet" href="/index.css">
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.4",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.5.0/",
+    "@capacitor/core": "https://aistudiocdn.com/@capacitor/core@^7.4.4",
+    "@capacitor/status-bar": "https://aistudiocdn.com/@capacitor/status-bar@^7.0.3",
+    "@capacitor/push-notifications": "https://aistudiocdn.com/@capacitor/push-notifications@^7.0.3",
+    "@capacitor/splash-screen": "https://aistudiocdn.com/@capacitor/splash-screen@^7.0.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/assets/index-BkKnZS36.js"></script>
+</head>
+  <body class="bg-gray-100 dark:bg-gray-900">
+    <div id="root"></div>
+
+    <!-- Firebase SDKs are loaded via importmap -->
+
+  </body>
+</html>

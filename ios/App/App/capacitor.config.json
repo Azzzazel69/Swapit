@@ -1,0 +1,10 @@
+{
+	"appId": "com.swapit.app",
+	"appName": "SwapIt",
+	"webDir": "dist",
+	"packageClassList": [
+		"PushNotificationsPlugin",
+		"SplashScreenPlugin",
+		"StatusBarPlugin"
+	]
+}
