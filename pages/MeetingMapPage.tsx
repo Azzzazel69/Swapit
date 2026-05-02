@@ -38,7 +38,7 @@ const MeetingMapPage = () => {
     }, [exchangeId]);
 
     const mapData = useMemo(() => {
-        if (!exchange) return null;
+        if (!exchange || !exchange.owner || !exchange.requester) return null;
         
         const userA = exchange.owner;
         const userB = exchange.requester;

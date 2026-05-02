@@ -79,11 +79,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
         }
 
         // 2. Si hay pocos matches o queremos ser exhaustivos, consultamos la API
+        const controller = new AbortController();
         const timer = setTimeout(async () => {
             setIsLoadingSuggestions(true);
             try {
                 const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rawQuery)}&countrycodes=es&addressdetails=1&format=json&limit=30&featuretype=settlement&accept-language=es`;
-                const res = await fetch(url);
+                const res = await fetch(url, { signal: controller.signal });
                 const data = await res.json();
 
                 if (!Array.isArray(data)) return;
@@ -147,15 +148,20 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ onChange, onError }
                         setSuggestions([]);
                     }
                 }
-            } catch (e) {
-                console.error("Error API:", e);
-                setSuggestions(localMatches.slice(0, 10));
+            } catch (e: any) {
+                if (e.name !== 'AbortError') {
+                    console.error("Error API:", e);
+                    setSuggestions(localMatches.slice(0, 10));
+                }
             } finally {
                 setIsLoadingSuggestions(false);
             }
         }, 300);
 
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
     }, [manualValue, mode]);
 
     const handleAutoDetect = () => {

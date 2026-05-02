@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { ColorThemeProvider } from './hooks/useColorTheme.tsx';
@@ -23,6 +23,7 @@ import ChatDetailPage from './pages/ChatDetailPage.tsx';
 import UserProfilePage from './pages/UserProfilePage.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
 import CookieBanner from './components/CookieBanner.tsx';
+import BottomNav from './components/BottomNav.tsx';
 import AddItemPage from './pages/AddItemPage.tsx';
 import RateExchangePage from './pages/RateExchangePage.tsx';
 import AdminPage from './pages/AdminPage.tsx';
@@ -30,34 +31,19 @@ import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
 import MeetingMapPage from './pages/MeetingMapPage.tsx';
 import ExplorationModePage from './pages/ExplorationModePage.tsx';
 import { initializePushNotifications } from './services/pushNotifications.ts';
+import { api } from './services/api.ts';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 
-import { seedAllData } from './services/seedData.ts';
+console.log("Checking components:", { AuthProvider, ColorThemeProvider, ConfettiProvider, ToastProvider, Header, HomePage, LoginPage, RegisterPage, ExchangesPage, ProfilePage, SwapSpinner, ItemDetailPage, OnboardingPage, ForgotPasswordPage, TermsOfServicePage, CookiePolicyPage, ChatDetailPage, UserProfilePage, OfflineBanner, CookieBanner, AddItemPage, RateExchangePage, AdminPage, VerifyEmailPage, MeetingMapPage, ExplorationModePage });
 
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 
-const DataSeeder = () => {
-  const { user } = useAuth();
-  useEffect(() => {
-    console.log('DataSeeder: User state changed', { 
-      email: user?.email, 
-      role: user?.role, 
-      uid: user?.id 
-    });
-    if (user?.email === 'azzazel69@gmail.com' || user?.role === 'SUPER_ADMIN') {
-      console.log('DataSeeder: Admin detected, triggering seedAllData...');
-      seedAllData().catch(err => {
-        console.error('DataSeeder: Error during seeding', err);
-      });
-    }
-  }, [user]);
-  return null;
-};
-
 const App = () => {
+  console.log("App.tsx: Renderizando componente App");
   useEffect(() => {
+    console.log("App.tsx: useEffect inicial ejecutándose");
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({ style: Style.Dark });
       StatusBar.setBackgroundColor({ color: '#111827' }); 
@@ -67,7 +53,6 @@ const App = () => {
 
   return React.createElement(ErrorBoundary, null,
     React.createElement(AuthProvider, null,
-      React.createElement(DataSeeder, null),
       React.createElement(ColorThemeProvider, null,
         React.createElement(ConfettiProvider, null,
           React.createElement(ToastProvider, null,
@@ -103,32 +88,8 @@ const AppContent = () => {
             React.createElement(AppRoutes, null)
         ),
         
-        // Global Floating Action Buttons - Only on Home Page
-        user && location.pathname === '/' && (
-            React.createElement("div", { className: "fixed bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-3" },
-                // Botón Añadir Artículo (+)
-                React.createElement(Link, {
-                    to: "/add-item",
-                    title: "Añadir Artículo",
-                    className: `flex items-center justify-center w-12 h-12 rounded-full shadow-xl bg-gradient-to-br ${theme.bg} text-white hover:scale-105 transition-all`
-                },
-                    React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-7 w-7", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2.5" },
-                        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M12 4v16m8-8H4" })
-                    )
-                ),
-                // Botón Exploración (Píldora con texto para máxima claridad)
-                React.createElement(Link, {
-                    to: "/exploration",
-                    title: "Modo Exploración",
-                    className: "flex items-center justify-center h-12 px-5 gap-2 rounded-full shadow-xl bg-orange-500 text-white hover:scale-105 transition-all font-bold"
-                },
-                    React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" },
-                        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" })
-                    ),
-                    "Explorar"
-                )
-            )
-        ),
+        // Bottom Navigation Bar
+        user && !isFullScreenPage && React.createElement(BottomNav, null),
 
         !isFullScreenPage && React.createElement(AppFooter, null),
         !isFullScreenPage && React.createElement(CookieBanner, null)
@@ -154,12 +115,30 @@ const AppFooter = () => {
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   React.useEffect(() => {
     if (user) {
         initializePushNotifications();
+        
+        // Heartbeat for presence
+        const interval = setInterval(() => {
+            api.updateLastSeen();
+        }, 30000); // Every 30 seconds
+        api.updateLastSeen(); // Initial update
+        
+        return () => clearInterval(interval);
     }
   }, [user]);
+
+  // Intercept Firebase Email verification/Password reset codes
+  const mode = searchParams.get('mode');
+  const oobCode = searchParams.get('oobCode');
+  
+  if (oobCode && mode === 'verifyEmail' && location.pathname !== '/verify-email') {
+     return React.createElement(Navigate, { to: `/verify-email?oobCode=${oobCode}`, replace: true });
+  }
 
   if (loading) {
     return (
@@ -194,18 +173,18 @@ const AppRoutes = () => {
     React.createElement(Route, { path: "/terms-of-service", element: React.createElement(TermsOfServicePage, null) }),
     React.createElement(Route, { path: "/cookie-policy", element: React.createElement(CookiePolicyPage, null) }),
 
-    React.createElement(Route, { path: "/", element: React.createElement(ProtectedRoute, null, React.createElement(HomePage, null)) }),
-    React.createElement(Route, { path: "/add-item", element: React.createElement(ProtectedRoute, null, React.createElement(AddItemPage, null)) }),
-    React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ItemDetailPage, null)) }),
-    React.createElement(Route, { path: "/exploration", element: React.createElement(ProtectedRoute, null, React.createElement(ExplorationModePage, null)) }),
-    React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ExchangesPage, null)) }),
-    React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ChatDetailPage, null)) }),
-    React.createElement(Route, { path: "/meeting-map/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(MeetingMapPage, null)) }),
-    React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(RateExchangePage, null)) }),
-    React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ProfilePage, null)) }),
-    React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(UserProfilePage, null)) }),
+    React.createElement(Route, { path: "/", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(HomePage, null))) }),
+    React.createElement(Route, { path: "/add-item", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(AddItemPage, null))) }),
+    React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ItemDetailPage, null))) }),
+    React.createElement(Route, { path: "/exploration", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ExplorationModePage, null))) }),
+    React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ExchangesPage, null))) }),
+    React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ChatDetailPage, null))) }),
+    React.createElement(Route, { path: "/meeting-map/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(MeetingMapPage, null))) }),
+    React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(RateExchangePage, null))) }),
+    React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ProfilePage, null))) }),
+    React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(UserProfilePage, null))) }),
     
-    React.createElement(Route, { path: "/admin", element: React.createElement(AdminRoute, null, React.createElement(AdminPage, null)) }),
+    React.createElement(Route, { path: "/admin", element: React.createElement(AdminRoute, null, React.createElement(ErrorBoundary, null, React.createElement(AdminPage, null))) }),
 
     React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
   );
@@ -219,14 +198,18 @@ const ProtectedRoute = ({ children }) => {
     return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
   }
 
-  const isFullyOnboarded = user.emailVerified && user.location && user.preferences?.length > 0;
+  const isTestUser = user.email?.endsWith('@test.com');
+  const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.location.city && user.location.province && user.preferences?.length > 0);
 
   if (!isFullyOnboarded) {
-    console.log("ProtectedRoute: User not fully onboarded", {
-        verified: user.emailVerified,
-        location: !!user.location,
-        prefs: user.preferences?.length
-    });
+    const missingSteps = [];
+    if (!user.emailVerified) missingSteps.push("Email no verificado");
+    if (!user.phoneVerified) missingSteps.push("Teléfono no verificado");
+    if (!user.location || !user.location.city) missingSteps.push("Ubicación no configurada");
+    if (!user.preferences || user.preferences.length === 0) missingSteps.push("Preferencias no seleccionadas");
+    
+    console.log("ProtectedRoute: Redirigiendo a onboarding. Pasos pendientes:", missingSteps);
+    
     return React.createElement(Navigate, { to: "/onboarding", state: { from: location }, replace: true });
   }
 
@@ -235,7 +218,7 @@ const ProtectedRoute = ({ children }) => {
 
 const AdminRoute = ({ children }) => {
   const { user } = useAuth();
-  const isStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR' || user?.email === 'azzazel69@gmail.com';
+  const isStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR';
   if (!user || !isStaff) {
     return React.createElement(Navigate, { to: "/", replace: true });
   }
@@ -250,7 +233,8 @@ const OnboardingGuard = ({ children }) => {
         return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
     }
 
-    const isFullyOnboarded = user.emailVerified && user.location && user.preferences?.length > 0;
+    const isTestUser = user.email?.endsWith('@test.com');
+    const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.location.city && user.location.province && user.preferences?.length > 0);
 
     if (isFullyOnboarded) {
         console.log("OnboardingGuard: User already fully onboarded, redirecting to home");

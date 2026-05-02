@@ -49,7 +49,7 @@ class ErrorBoundary extends Component<Props, State> {
               {errorMessage}
             </p>
             <button
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.reload()}
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
             >
               Reiniciar Aplicación

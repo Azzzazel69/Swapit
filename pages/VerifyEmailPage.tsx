@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation, Link, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import Button from '../components/Button.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
@@ -9,6 +9,12 @@ import { useAuth } from '../hooks/useAuth.tsx';
 
 const VerifyEmailPage = () => {
     const { token } = useParams();
+    const [searchParams] = useSearchParams();
+    const oobCode = searchParams.get('oobCode');
+    
+    // Si viene oobCode, usamos ese, si no usamos token de params
+    const activeToken = oobCode || token;
+    
     const location = useLocation();
     const navigate = useNavigate();
     const { theme } = useColorTheme();
@@ -21,13 +27,13 @@ const VerifyEmailPage = () => {
     const userEmail = location.state?.email;
 
     useEffect(() => {
-        if (token) {
+        if (activeToken) {
             setStatus('loading');
-            api.verifyEmailWithToken(token)
+            api.verifyEmailWithToken(activeToken)
                 .then(async response => {
                     setStatus('success');
                     setMessage('¡Tu correo ha sido verificado con éxito!');
-                    setVerifiedEmail(response.email);
+                    setVerifiedEmail(response.email || '');
                     // Si el usuario está logueado, refrescamos su estado
                     if (user) {
                         await refreshUser();
@@ -45,7 +51,7 @@ const VerifyEmailPage = () => {
                  setMessage('Por favor, revisa tu bandeja de entrada para el enlace de verificación.');
             }
         }
-    }, [token, userEmail, user, refreshUser]);
+    }, [activeToken, userEmail, user, refreshUser]);
     
     const handleActionRedirect = () => {
         if (user) {

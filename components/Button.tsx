@@ -5,7 +5,7 @@ import { useColorTheme } from '../hooks/useColorTheme.tsx';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
   isLoading?: boolean;
-  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -31,6 +31,8 @@ const Button = ({
     primary: `bg-gradient-to-r ${theme.bg} text-white ${theme.hoverBg} ${theme.focus}`,
     secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
     danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500',
+    success: 'bg-green-500 text-white hover:bg-green-600 focus:ring-green-500',
+    warning: 'bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500',
     outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800',
   };
 

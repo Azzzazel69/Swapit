@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const themes = [
   {
@@ -72,7 +72,7 @@ const themes = [
 const ColorThemeContext = createContext(undefined);
 
 export const ColorThemeProvider = ({ children }) => {
-  const theme = useMemo(() => themes[Math.floor(Math.random() * themes.length)], []);
+  const [theme] = useState(() => themes[Math.floor(Math.random() * themes.length)]);
 
   return React.createElement(ColorThemeContext.Provider, { value: { theme } },
       children

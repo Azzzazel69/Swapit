@@ -27,6 +27,7 @@ const OnboardingPage = () => {
     const [countryCode, setCountryCode] = useState('+34');
     const [code, setCode] = useState('');
     const [codeSent, setCodeSent] = useState(false);
+    const [isPhoneVerified, setIsPhoneVerified] = useState(false);
     const [locationData, setLocationData] = useState<any>(null);
     const [postalCode, setPostalCode] = useState('');
     const [address, setAddress] = useState('');
@@ -55,6 +56,8 @@ const OnboardingPage = () => {
 
             if (!user.emailVerified) {
                 setStep('email');
+            } else if (!isPhoneVerified) {
+                setStep('phone');
             } else if (!locationData || !postalCode) {
                 // Try to load from localStorage if not already loaded
                 if (!locationData) {
@@ -76,7 +79,8 @@ const OnboardingPage = () => {
         }
 
         // Check if fully onboarded
-        const isFullyOnboarded = user.emailVerified && user.location && user.preferences?.length > 0;
+        const isTestUser = user.email?.endsWith('@test.com');
+        const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0);
         
         if (isFullyOnboarded) {
             setStep('complete');
@@ -85,12 +89,14 @@ const OnboardingPage = () => {
             }, 1500);
         } else if (!user.emailVerified) {
             setStep('email');
+        } else if (!user.phoneVerified && !isTestUser) {
+            setStep('phone');
         } else if (!user.location || !user.location.province) {
             setStep('location');
         } else {
             setStep('preferences');
         }
-    }, [user, navigate, refreshUser, locationData]);
+    }, [user, navigate, refreshUser, locationData, isPhoneVerified]);
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -108,8 +114,9 @@ const OnboardingPage = () => {
 
     useEffect(() => {
         if (user) {
+            const isTestUser = user.email?.endsWith('@test.com');
             const tutorialCompleted = typeof window !== 'undefined' ? window.localStorage.getItem('tutorial_completed') === 'true' : true;
-            if (!tutorialCompleted) {
+            if (!tutorialCompleted && !isTestUser) {
                 setStep('tutorial');
             } else {
                 determineOnboardingStep();
@@ -170,10 +177,51 @@ const OnboardingPage = () => {
         finally { setIsLoading(false); }
     };
 
+    const handleSendPhoneCode = (e) => {
+        e.preventDefault();
+        if (!phone || phone.length < 9) {
+            setError("Introduce un número de teléfono válido.");
+            return;
+        }
+        setIsLoading(true); setError('');
+        setTimeout(() => {
+            setCodeSent(true);
+            setIsLoading(false);
+            showToast("Código SMS enviado a " + countryCode + phone, "success");
+        }, 1200);
+    };
+
+    const handleVerifyPhoneCode = async (e) => {
+        e.preventDefault();
+        if (!code || code.length < 4) {
+            setError("El código debe tener al menos 4 dígitos (puedes usar 1234).");
+            return;
+        }
+        setIsLoading(true); setError('');
+        setTimeout(async () => {
+            if (user?.needsProfile) {
+                setIsPhoneVerified(true);
+                setStep('location');
+            } else {
+                try {
+                    await api.updateUserProfileData({
+                        phone: `${countryCode}${phone}`,
+                        phoneVerified: true
+                    });
+                    await refreshUser();
+                } catch (err: any) {
+                    setError(err.message);
+                }
+            }
+            setIsLoading(false);
+            showToast("Teléfono verificado con éxito", "success");
+        }, 1200);
+    };
+
     const handleSaveLocation = async (e) => {
         if (e) e.preventDefault();
         if (user?.needsProfile && !name.trim()) { setError('Por favor, indica tu nombre.'); return; }
-        if (!locationData) { setError('Por favor, indica tu ubicación.'); return; }
+        if (!locationData || !locationData.city || !locationData.province) { setError('Por favor, indica tu ubicación completa (Ciudad y Provincia).'); return; }
         setIsLoading(true); setError('');
         try {
             if (user?.needsProfile) {
@@ -193,6 +241,11 @@ const OnboardingPage = () => {
 
     const handleSavePreferences = async () => {
         if (preferences.length === 0) { setError('Selecciona al menos un interés.'); return; }
+        if (user?.needsProfile && (!locationData || !locationData.city || !locationData.province)) { 
+            setError('Por favor, selecciona una ubicación válida antes de continuar.'); 
+            setStep('location'); 
+            return; 
+        }
         setIsLoading(true); setError('');
         try {
             if (user?.needsProfile) {
@@ -202,7 +255,9 @@ const OnboardingPage = () => {
                     name: finalName,
                     email: user.email,
                     location: { ...locationData, postalCode, address },
-                    preferences: preferences
+                    preferences: preferences,
+                    phone: `${countryCode}${phone}`,
+                    phoneVerified: true
                 });
                 
                 // Cleanup
@@ -236,7 +291,8 @@ const OnboardingPage = () => {
                                 <Button onClick={handleSendEmail} isLoading={isLoading} className="w-full" children="Enviar correo de verificación" />
                             ) : (
                                 <>
-                                    <p className="text-sm text-green-600 font-medium mb-4 text-center">¡Correo enviado! Revisa tu bandeja de entrada o spam.</p>
+                                    <p className="text-sm text-green-600 font-medium mb-4 text-center">¡Correo enviado! Revisa tu bandeja de entrada o la carpeta de spam.</p>
+                                    <p className="text-xs text-gray-500 mb-4 text-center">Si no recibes el correo, es posible que estemos en fase beta y nuestra plataforma de envíos tenga un límite temporal. Espera unos minutos y revisa de nuevo.</p>
                                     <Button onClick={handleVerifyEmail} isLoading={isLoading} className="w-full" children="Ya he hecho clic en el enlace" />
                                     <button 
                                         onClick={handleSendEmail}
@@ -249,10 +305,74 @@ const OnboardingPage = () => {
                         </div>
                     </div>
                 );
+            case 'phone':
+                return (
+                    <div className="animate-fade-in-up">
+                        <h3 className="text-xl font-bold mb-2">Paso 2: Verifica tu Teléfono</h3>
+                        <p className="mb-6 text-gray-600 dark:text-gray-400">
+                            Para evitar bots y mantener a salvo a la comunidad, necesitamos un número de teléfono válido.
+                        </p>
+                        {!codeSent ? (
+                            <form onSubmit={handleSendPhoneCode} className="space-y-4">
+                                <div className="flex gap-2">
+                                    <div className="w-1/3">
+                                        <Input 
+                                            id="countryCode" 
+                                            label="Prefijo" 
+                                            type="text" 
+                                            value={countryCode} 
+                                            onChange={e => setCountryCode(e.target.value)} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="w-2/3">
+                                        <Input 
+                                            id="phone" 
+                                            label="Teléfono" 
+                                            type="tel" 
+                                            value={phone} 
+                                            onChange={e => setPhone(e.target.value)} 
+                                            placeholder="600 000 000"
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+                                <Button type="submit" isLoading={isLoading} className="w-full" children="Enviar código SMS" />
+                            </form>
+                        ) : (
+                            <form onSubmit={handleVerifyPhoneCode} className="space-y-4">
+                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Introduce el código que hemos enviado al {countryCode} {phone}
+                                    <br/>
+                                    <span className="text-xs text-blue-500 font-bold block mt-1">(Simulación: Usa '1234')</span>
+                                </p>
+                                <Input 
+                                    id="code" 
+                                    label="Código de seguridad" 
+                                    type="text" 
+                                    value={code} 
+                                    onChange={e => setCode(e.target.value)} 
+                                    placeholder="----"
+                                    className="text-center text-xl tracking-[0.5em]"
+                                    required 
+                                    maxLength={6}
+                                />
+                                <Button type="submit" isLoading={isLoading} className="w-full" children="Verificar y continuar" />
+                                <button 
+                                    type="button"
+                                    onClick={() => setCodeSent(false)}
+                                    className="w-full text-xs font-bold text-gray-500 hover:text-gray-700 underline py-2"
+                                >
+                                    Cambiar número de teléfono
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                );
             case 'location':
                 return (
                     <div className="animate-fade-in-up">
-                        <h3 className="text-xl font-bold mb-2">Paso 2: Perfil y Ubicación</h3>
+                        <h3 className="text-xl font-bold mb-2">Paso 3: Perfil y Ubicación</h3>
                         <p className="mb-6 text-gray-600 dark:text-gray-400">Completa tu perfil para empezar a intercambiar.</p>
                         <form onSubmit={handleSaveLocation} className="space-y-6">
                             {user?.needsProfile && (
@@ -319,7 +439,7 @@ const OnboardingPage = () => {
             case 'preferences':
                 return (
                     <div className="animate-fade-in-up">
-                        <h3 className="text-xl font-bold mb-2">Paso 3: ¿Qué buscas?</h3>
+                        <h3 className="text-xl font-bold mb-2">Paso 4: ¿Qué buscas?</h3>
                         <p className="mb-4 text-gray-600 dark:text-gray-400">Personaliza tu catálogo.</p>
                         <div className="space-y-4 max-h-80 overflow-y-auto pr-2 mb-6">
                             {CATEGORIES_WITH_SUBCATEGORIES.map(cat => (
@@ -365,7 +485,7 @@ const OnboardingPage = () => {
                          <button 
                              onClick={() => {
                                  auth.signOut().then(() => {
-                                     window.location.href = '/';
+                                     window.location.reload();
                                  });
                              }} 
                              className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline transition-colors"

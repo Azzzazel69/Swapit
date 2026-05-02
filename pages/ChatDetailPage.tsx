@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api, DEFAULT_AVATAR_NEUTRAL } from '../services/api.ts';
+import { db } from '../firebase.ts';
+import { onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
@@ -15,6 +17,23 @@ import { useToast } from '../hooks/useToast.tsx';
 import BanUserModal from '../components/BanUserModal.tsx';
 
 // Components remain similar but logic for handleSendMessage is updated
+
+const ItemCardSmall = ({ item }: { item: any }) => {
+    return React.createElement("div", { className: "flex items-center gap-3 p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all hover:shadow-md" },
+        React.createElement("div", { className: "w-12 h-12 rounded-md overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800" },
+            React.createElement("img", { 
+                src: item.images?.[0] || DEFAULT_AVATAR_NEUTRAL, 
+                alt: item.title,
+                className: "w-full h-full object-cover",
+                referrerPolicy: "no-referrer"
+            })
+        ),
+        React.createElement("div", { className: "flex-1 min-w-0" },
+            React.createElement("p", { className: "text-xs font-bold text-gray-900 dark:text-white truncate" }, item.title),
+            React.createElement("p", { className: "text-[10px] text-gray-500 dark:text-gray-400 truncate" }, item.category)
+        )
+    );
+};
 
 const Message = ({ message, senderName, isOwnMessage, isAdminView, onCensor, onImageClick, onReport }: { message: any, senderName: string, isOwnMessage: boolean, isAdminView: boolean, onCensor: (id: string) => void, onImageClick: (url: string) => void, onReport: (id: string) => void }) => {
     const [showBlurred, setShowBlurred] = useState(false);
@@ -122,15 +141,73 @@ const ChatDetailPage = () => {
 
     useEffect(() => { scrollToBottom(); }, [chat?.messages]);
 
+    useEffect(() => {
+        if (!exchange || !currentUser) return;
+        const partnerId = exchange.ownerId === currentUser.id ? exchange.requesterId : exchange.ownerId;
+        if (!partnerId) return;
+
+        const unsubPartner = onSnapshot(doc(db, 'users', partnerId), (snap) => {
+            if (snap.exists()) {
+                const partnerData = { id: snap.id, ...snap.data() };
+                setExchange(prev => {
+                    if (!prev) return prev;
+                    const isOwner = prev.ownerId === currentUser.id;
+                    return {
+                        ...prev,
+                        owner: isOwner ? prev.owner : partnerData,
+                        requester: isOwner ? partnerData : prev.requester
+                    };
+                });
+            }
+        });
+
+        return () => unsubPartner();
+    }, [exchange?.ownerId, exchange?.requesterId, currentUser?.id]);
+
     const handleSendMessage = async (text, image = null) => {
         if (!text.trim() && !image) return;
-        setActionLoading(true);
+        
+        // Disable action loading for text to allow fast typing
+        if (image) {
+            setActionLoading(true);
+        }
+
+        // Optimistic UI Update
+        const tempId = `msg-${Date.now()}-temp`;
+        const newMessage = {
+            id: tempId,
+            senderId: currentUser.id,
+            text,
+            image, // This will be base64 or undefined
+            timestamp: new Date().toISOString(),
+            isOptimistic: true
+        };
+
+        setChat(prev => {
+            if (!prev) return { id: exchangeId, messages: [newMessage] };
+            return {
+                ...prev,
+                messages: [...(prev?.messages || []), newMessage]
+            };
+        });
+
         try {
-            await api.sendMessage(exchangeId, text, image);
+            const partnerId = exchange?.ownerId === currentUser.id ? exchange?.requesterId : exchange?.ownerId;
+            await api.sendMessage(exchangeId, text, image, partnerId);
         } catch (err: any) {
             showToast(err.message, "error");
+            // Basic rollback on error
+            setChat(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    messages: (prev.messages || []).filter(m => m.id !== tempId)
+                };
+            });
         } finally {
-            setActionLoading(false);
+            if (image) {
+                setActionLoading(false);
+            }
         }
     };
 
@@ -151,12 +228,23 @@ const ChatDetailPage = () => {
     };
 
     const handleUpdateStatus = async (status) => {
+        let cancelReason = '';
+        if (status === ExchangeStatus.Cancelled) {
+            cancelReason = window.prompt("Por favor, indica el motivo de la cancelación:") || "";
+            if (!cancelReason.trim()) {
+                showToast("Debes indicar un motivo para cancelar.", "error");
+                return;
+            }
+        }
+        
         setActionLoading(true);
         try {
-            await api.updateExchangeStatus(exchangeId, status);
+            await api.updateExchangeStatus(exchangeId, status, cancelReason);
             if (status === ExchangeStatus.Accepted) {
                 showConfetti();
                 showToast("¡Intercambio aceptado! Acordad un punto de encuentro.", "success");
+            } else if (status === ExchangeStatus.Cancelled) {
+                showToast("Transacción cancelada.", "info");
             }
         } catch (err: any) {
             showToast(err.message, "error");
@@ -177,12 +265,37 @@ const ChatDetailPage = () => {
         }
     };
 
+    // Debug logging para el usuario
+    useEffect(() => {
+        if (exchange && currentUser) {
+            console.log("ChatDetailPage State:", {
+                exchangeId,
+                status: exchange.status,
+                isPending: exchange.status?.toUpperCase() === 'PENDING',
+                ownerId: exchange.ownerId,
+                requesterId: exchange.requesterId,
+                currentUserId: currentUser.id,
+                isOwner: exchange.ownerId === currentUser.id,
+                isRequester: exchange.requesterId === currentUser.id
+            });
+        }
+    }, [exchange, currentUser, exchangeId]);
+
     if (loading) return React.createElement(SwapSpinner, { size: 'lg' });
     if (!chat || !exchange) return React.createElement("div", { className: "p-10 text-center" }, "No se encontró el chat.");
+    if (!currentUser) return React.createElement("div", { className: "p-10 text-center" }, "Inicia sesión para ver este chat.");
 
     const partner = exchange.ownerId === currentUser.id ? exchange.requester : exchange.owner;
+    
+    if (!partner) {
+        return React.createElement("div", { className: "p-10 text-center" }, "No se pudo cargar la información del otro usuario.");
+    }
+
     const isOwner = exchange.ownerId === currentUser.id;
-    const canManage = isOwner && exchange.status === ExchangeStatus.Pending;
+    const isRequester = exchange.requesterId === currentUser.id;
+    const isPending = exchange.status?.toUpperCase() === 'PENDING';
+
+    const isOnline = partner.lastSeen ? (new Date().getTime() - new Date(partner.lastSeen).getTime() < 120000) : false;
 
     return React.createElement("div", { className: "flex flex-col h-[100dvh] max-w-4xl mx-auto bg-white dark:bg-gray-900 shadow-xl overflow-hidden relative" },
             // Modales
@@ -214,16 +327,16 @@ const ChatDetailPage = () => {
                         React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 19l-7-7 7-7" }))
                     ),
                     React.createElement(Link, { to: `/user/${partner.id}`, className: "flex items-center gap-3 group" },
-                        React.createElement("img", { src: partner.avatarUrl, className: "w-10 h-10 rounded-full object-cover border-2 border-gray-100 dark:border-gray-600 group-hover:scale-105 transition-transform" }),
+                        React.createElement("img", { src: partner.avatarUrl || DEFAULT_AVATAR_NEUTRAL, className: "w-10 h-10 rounded-full object-cover border-2 border-gray-100 dark:border-gray-600 group-hover:scale-105 transition-transform" }),
                         React.createElement("div", null,
                             React.createElement("div", { className: "flex items-center gap-2" },
-                                React.createElement("h1", { className: "font-black text-gray-900 dark:text-white leading-none" }, partner.name),
+                                React.createElement("h1", { className: "font-black text-gray-900 dark:text-white leading-none" }, partner.name || 'Usuario'),
                                 partner.ratings && partner.ratings.length > 0 && React.createElement("div", { className: "flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md" },
                                     React.createElement("span", { className: "text-[10px]" }, "⭐"),
                                     React.createElement("span", { className: "text-xs font-black text-gray-700 dark:text-gray-300" }, Math.round(partner.ratings.reduce((acc, r) => acc + r.rating, 0) / partner.ratings.length))
                                 )
                             ),
-                            React.createElement("p", { className: "text-[10px] text-green-500 font-bold uppercase mt-1" }, "En línea")
+                            React.createElement("p", { className: `text-[10px] ${isOnline ? 'text-green-500' : 'text-gray-400'} font-bold uppercase mt-1` }, isOnline ? "En línea" : "Desconectado")
                         )
                     )
                 ),
@@ -240,22 +353,87 @@ const ChatDetailPage = () => {
                         React.createElement("span", { className: "text-lg" }, "📍"), 
                         "Mapa"
                     ),
-                    exchange.status === ExchangeStatus.Completed && React.createElement(Link, { 
+                    exchange.status === ExchangeStatus.Completed && (!exchange.ratedBy || !exchange.ratedBy.includes(currentUser?.id)) && React.createElement(Link, { 
                         to: `/rate-exchange/${exchangeId}`,
-                        className: "px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-black border border-green-100 dark:border-green-800"
+                        className: "px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-black border border-green-100 dark:border-green-800 hover:scale-105 transition-transform"
                     }, "Valorar")
                 )
             ),
 
+            // Resumen del Intercambio
+            React.createElement("div", { className: "p-4 bg-gray-50 dark:bg-gray-800/50 border-b dark:border-gray-700" },
+                React.createElement("div", { className: "flex items-center justify-between gap-4" },
+                    // Artículo solicitado (El artículo del dueño)
+                    exchange.requestedItem && React.createElement("div", { className: "flex-1" },
+                        React.createElement("p", { className: "text-[10px] font-black text-gray-400 uppercase mb-1" }, isOwner ? "Tu artículo" : "Solicitas"),
+                        React.createElement(Link, { 
+                            to: `/item/${exchange.requestedItem.id}`,
+                            className: "flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 hover:border-blue-500 transition-all group"
+                        },
+                            React.createElement("img", { src: exchange.requestedItem.imageUrls?.[0] || DEFAULT_AVATAR_NEUTRAL, className: "w-10 h-10 rounded-lg object-cover group-hover:scale-105 transition-transform" }),
+                            React.createElement("p", { className: "text-xs font-bold truncate group-hover:text-blue-500 transition-colors" }, exchange.requestedItem.title)
+                        )
+                    ),
+                    
+                    React.createElement("div", { className: "flex flex-col items-center" },
+                        React.createElement("span", { className: "text-xl animate-pulse" }, "🔄"),
+                    ),
+
+                    // Artículos ofrecidos (Los artículos del solicitante)
+                    React.createElement("div", { className: "flex-1" },
+                        React.createElement("p", { className: "text-[10px] font-black text-gray-400 uppercase mb-1" }, isOwner ? "Te ofrecen" : "Ofreces"),
+                        React.createElement("div", { className: "flex flex-col gap-1" },
+                            exchange.offeredItems?.map((item: any, idx: number) => {
+                                const isOther = item.id?.startsWith('other-');
+                                const content = React.createElement("div", { className: "flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 hover:border-blue-500 transition-all group" },
+                                    React.createElement("img", { src: item.imageUrls?.[0] || DEFAULT_AVATAR_NEUTRAL, className: "w-10 h-10 rounded-lg object-cover group-hover:scale-105 transition-transform" }),
+                                    React.createElement("p", { className: "text-xs font-bold truncate group-hover:text-blue-500 transition-colors" }, item.title)
+                                );
+
+                                if (isOther) return React.createElement("div", { key: item.id || idx }, content);
+                                return React.createElement(Link, { key: item.id || idx, to: `/item/${item.id}` }, content);
+                            })
+                        )
+                    )
+                )
+            ),
+
             // Banner de Estado
-            canManage && React.createElement("div", { className: "bg-yellow-50 dark:bg-yellow-900/20 p-4 border-b border-yellow-100 dark:border-yellow-800 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in-up" },
+            React.createElement("div", { className: "bg-yellow-50 dark:bg-yellow-900/20 p-4 border-b border-yellow-100 dark:border-yellow-800 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in-up" },
                 React.createElement("div", null,
-                    React.createElement("p", { className: "text-sm font-bold text-yellow-800 dark:text-yellow-200" }, "¿Aceptas este intercambio?"),
-                    React.createElement("p", { className: "text-xs text-yellow-600 dark:text-yellow-400" }, "Revisa los artículos propuestos antes de decidir.")
+                    React.createElement("div", { className: "flex items-center gap-2 mb-1" },
+                        React.createElement("span", { className: `px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${isOwner ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}` }, 
+                            isOwner ? "Dueño del artículo" : "Solicitante"
+                        ),
+                        isPending && React.createElement("span", { className: "animate-pulse w-2 h-2 rounded-full bg-yellow-400" })
+                    ),
+                    React.createElement("p", { className: "text-sm font-bold text-yellow-800 dark:text-yellow-200" }, 
+                        isPending 
+                            ? (isOwner ? "¿Aceptas este intercambio?" : "Propuesta enviada. Esperando respuesta...")
+                            : `Estado: ${exchange.status === 'ACCEPTED' ? 'ACEPTADO - Acordad la entrega' : exchange.status}`
+                    ),
+                    React.createElement("p", { className: "text-xs text-yellow-600 dark:text-yellow-400" }, 
+                        isPending 
+                            ? (isOwner ? "Revisa los artículos propuestos antes de decidir." : "Puedes seguir negociando por el chat.")
+                            : (exchange.status === 'ACCEPTED' ? "Cuando hayáis realizado el intercambio, márcalo como completado." : "")
+                    )
                 ),
                 React.createElement("div", { className: "flex gap-2" },
-                    React.createElement(Button, { size: "sm", variant: "danger", onClick: () => handleUpdateStatus(ExchangeStatus.Rejected), children: "Rechazar" }),
-                    React.createElement(Button, { size: "sm", onClick: () => handleUpdateStatus(ExchangeStatus.Accepted), children: "Aceptar Trueque" })
+                    isPending && isOwner && (
+                        React.createElement(React.Fragment, null,
+                            React.createElement(Button, { size: "sm", variant: "success", onClick: () => handleUpdateStatus(ExchangeStatus.Accepted), children: "Aceptar" }),
+                            React.createElement(Button, { size: "sm", variant: "danger", onClick: () => handleUpdateStatus(ExchangeStatus.Rejected), children: "Rechazar" })
+                        )
+                    ),
+                    isPending && isRequester && (
+                        React.createElement(Button, { size: "sm", variant: "danger", onClick: () => handleUpdateStatus(ExchangeStatus.Cancelled), children: "Cancelar Propuesta" })
+                    ),
+                    exchange.status?.toUpperCase() === 'ACCEPTED' && (
+                        React.createElement(React.Fragment, null,
+                            React.createElement(Button, { size: "sm", variant: "danger", onClick: () => handleUpdateStatus(ExchangeStatus.Cancelled), children: "Cancelar Transacción" }),
+                            React.createElement(Button, { size: "sm", onClick: () => handleUpdateStatus(ExchangeStatus.Completed), children: "Marcar como Completado" })
+                        )
+                    )
                 )
             ),
 
@@ -272,7 +450,7 @@ const ChatDetailPage = () => {
                     key: m.id, 
                     message: m, 
                     isOwnMessage: m.senderId === currentUser.id, 
-                    senderName: partner.name,
+                    senderName: partner.name || 'Usuario',
                     isAdminView: false,
                     onCensor: () => {},
                     onImageClick: setFullscreenImage,

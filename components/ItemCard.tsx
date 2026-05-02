@@ -38,7 +38,7 @@ const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns
   };
 
   return React.createElement("div", { 
-      className: `group bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col h-full relative` 
+      className: `group bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden transition-all hover:-translate-y-1 hover:shadow-lg border border-gray-100 dark:border-gray-700 flex flex-col h-full relative` 
     },
     isOwnItem && onDelete && React.createElement("button" as any, {
         onClick: (e: any) => { e.preventDefault(); e.stopPropagation(); onDelete(item.id); },
@@ -47,6 +47,18 @@ const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns
     React.createElement(Link, { to: `/item/${item.id}`, className: "flex flex-col h-full" },
       // Contenedor de Imagen
       React.createElement("div", { className: "relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-900" },
+        // STATUS OVERLAYS
+        item.status === 'RESERVED' && React.createElement("div", { 
+            className: "absolute inset-0 z-20 bg-black bg-opacity-40 flex items-center justify-center p-2 text-center backdrop-blur-sm" 
+        }, 
+            React.createElement("span", { className: "bg-yellow-500 text-white font-black px-2 py-1 md:px-3 text-[10px] md:text-sm rounded-md shadow-lg transform -rotate-12 outline outline-2 outline-white" }, "RESERVADO") 
+        ),
+        item.status === 'EXCHANGED' && React.createElement("div", { 
+            className: "absolute inset-0 z-20 bg-black bg-opacity-60 flex items-center justify-center p-2 text-center backdrop-blur-sm" 
+        }, 
+            React.createElement("span", { className: "bg-indigo-600 text-white font-black px-2 py-1 md:px-3 text-[10px] md:text-sm rounded-md shadow-lg transform -rotate-12 outline outline-2 outline-white" }, "INTERCAMBIADO") 
+        ),
+
         item.isMatch && React.createElement("div", { 
             className: `absolute top-1 left-1 z-10 bg-orange-500 text-white font-black rounded-md shadow-lg flex items-center justify-center animate-pulse
             ${isMini ? 'w-5 h-5 text-[8px] md:w-auto md:h-auto md:px-2 md:py-1 md:text-xs' : 'px-1.5 py-0.5 text-[9px] md:text-xs md:px-2 md:py-1'}` 
@@ -81,12 +93,13 @@ const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns
         ),
 
         // BUSCO (NUEVO)
-        item.wishedItem && !isMini && React.createElement("p", { className: "text-[10px] md:text-xs text-orange-600 dark:text-orange-400 font-bold italic mb-2 truncate" }, 
-            `Busco: ${item.wishedItem}`
+        item.wishedItem && !isMini && React.createElement("div", { className: "text-xs md:text-sm text-gray-800 dark:text-gray-200 mb-2 truncate flex flex-col" }, 
+            React.createElement("span", { className: "text-gray-500 text-[10px] md:text-sm" }, "Busca:"),
+            React.createElement("span", { className: "text-orange-500 font-bold" }, item.wishedItem)
         ),
 
         // Información Secundaria
-        (!isMini || (isMini && window.innerWidth >= 768)) && React.createElement("div", { className: "flex justify-between items-center mt-auto" },
+        React.createElement("div", { className: `${isMini ? 'hidden md:flex' : 'flex'} justify-between items-center mt-auto` },
             React.createElement("div", { className: `flex items-center gap-1 font-bold text-gray-400 ${isCompact ? 'text-[8px] md:text-xs' : 'text-[9px] md:text-sm'}` },
                 React.createElement("span", { className: "md:text-sm" }, "📍"),
                 React.createElement("span", { className: "truncate max-w-[60px] md:max-w-none" }, item.ownerLocation?.city || 'ES')
@@ -95,7 +108,7 @@ const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns
         ),
 
         // Fila del Propietario (Solo se muestra en 1 o 2 columnas en móvil, o siempre en escritorio si no es 4 col)
-        (!isHighDensity || window.innerWidth >= 1024) && React.createElement("div", { className: "flex items-center gap-2 mt-2 pt-3 border-t border-gray-100 dark:border-gray-700/50" },
+        React.createElement("div", { className: `${isHighDensity ? 'hidden lg:flex' : 'flex'} items-center gap-2 mt-2 pt-3 border-t border-gray-100 dark:border-gray-700/50` },
             React.createElement("img", { src: item.ownerAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (item.ownerId || 'default'), className: "w-5 h-5 md:w-6 md:h-6 rounded-full object-cover shadow-sm" }),
             React.createElement("span", { className: "text-[10px] md:text-xs font-bold text-gray-500 dark:text-gray-400 truncate" }, item.ownerName || 'Usuario'),
             (item.ownerRating || 0) > 0 && React.createElement("div", { className: "ml-auto flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md" },

@@ -9,11 +9,12 @@ import { Link } from 'react-router-dom';
 import ItemCardSkeleton from '../components/ItemCardSkeleton.tsx';
 import Button from '../components/Button.tsx';
 import EmptyState from '../components/EmptyState.tsx';
+import AdBanner from '../components/AdBanner.tsx';
 import { ICONS } from '../constants.tsx';
 
 const PAGE_SIZE = 12;
 
-const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "" }) => {
+const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "", showAds = false }) => {
     const { theme } = useColorTheme();
     if (!items || items.length === 0) return null;
     const gridLayoutClasses = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' };
@@ -25,7 +26,14 @@ const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "" 
                 title
             ),
             React.createElement("div", { className: `grid ${gridLayoutClasses[columns] || 'grid-cols-2'} gap-4 md:gap-6 transition-all duration-500` },
-                items.map(item => React.createElement(ItemCard, { key: item.id, item: item, onToggleFavorite: onToggleFavorite, columns: columns }))
+                items.map((item, index) => (
+                    React.createElement(React.Fragment, { key: item.id },
+                        React.createElement(ItemCard, { item: item, onToggleFavorite: onToggleFavorite, columns: columns }),
+                        showAds && index > 0 && (index + 1) % 6 === 0 && (
+                            React.createElement(AdBanner, { adSlot: `ad-slot-${index}` })
+                        )
+                    )
+                ))
             )
         )
     );
@@ -114,7 +122,7 @@ const HomePage = () => {
   const { theme } = useColorTheme();
   
   const [viewMode, setViewMode] = useState('landing');
-  const [columnLayout, setColumnLayout] = useState(window.innerWidth < 768 ? 2 : 4);
+  const [columnLayout, setColumnLayout] = useState(2);
   const [data, setData] = useState({ exploreItems: [], directMatches: [], recommended: [], nearItems: [], favoriteItems: [], popularItems: [], totalExploreItems: 0 });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -175,12 +183,12 @@ const HomePage = () => {
   const renderCurrentView = () => {
       if (viewMode === 'landing') {
           return React.createElement(React.Fragment, null,
-            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
             React.createElement(ItemGroup, { title: "Tus Favoritos", icon: "❤️", items: filtered.favs, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
             React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout })
+            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true })
           );
       }
 
@@ -203,40 +211,33 @@ const HomePage = () => {
           });
       }
 
-      return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems, onToggleFavorite: handleToggleFavorite, columns: columnLayout });
+      return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true });
   };
 
   return React.createElement("div", { className: "pb-32 w-full" },
-    React.createElement("div", { className: "mb-8 flex flex-col md:flex-row gap-3 justify-between md:items-center w-full" },
-      React.createElement("div", { className: "flex items-center gap-2 w-full min-w-0" },
-        React.createElement("div", { className: "flex items-center gap-1.5 flex-shrink-0" },
-            React.createElement(ViewSelectorCompact, { mode: viewMode, setMode: setViewMode }),
-            React.createElement("button", {
-                onClick: toggleColumns,
-                title: `Cambiar a ${columnLayout >= 4 ? 1 : columnLayout + 1} columnas`,
-                className: "relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all"
-            },
-                React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: `h-5 w-5 ${theme.textColor}`, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
-                    React.createElement(GridIconContent, { columns: columnLayout })
-                )
-            )
+    React.createElement("div", { className: "mb-6 flex flex-col gap-4 w-full" },
+      React.createElement("div", { className: "flex items-center gap-2 w-full" },
+        // Botón Filtros
+        React.createElement("button", {
+            className: "flex items-center justify-center w-12 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
+            onClick: () => {} // Futuro
+        },
+            ICONS.filter
         ),
         
-        React.createElement("div", { className: "flex-grow" },
+        // Buscador
+        React.createElement("div", { className: "relative flex-grow h-12" },
             React.createElement("input", {
                 type: "search",
-                className: "w-full h-10 sm:h-11 px-4 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 shadow-sm transition-all",
-                placeholder: searchType === 'articles' ? "Buscar artículos..." : "Buscar por ciudad...",
+                className: "w-full h-full pl-4 pr-12 text-base bg-gray-100/80 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 shadow-sm transition-all dark:text-white placeholder-gray-400",
+                placeholder: "Buscar artículos...",
                 value: searchQuery,
                 onChange: (e) => setSearchQuery(e.target.value)
-            })
-        ),
-
-        React.createElement("button", {
-            onClick: () => setSearchType(t => t === 'articles' ? 'location' : 'articles'),
-            title: searchType === 'location' ? "Buscar por nombre" : "Buscar por ubicación",
-            className: `flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl border transition-all shadow-sm ${searchType === 'location' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-400 hover:text-gray-600'}`
-        }, searchType === 'location' ? '📍' : '🔍')
+            }),
+            React.createElement("div", { className: "absolute right-3 top-0 h-full flex items-center pointer-events-none text-gray-400" },
+                ICONS.search
+            )
+        )
       )
     ),
 

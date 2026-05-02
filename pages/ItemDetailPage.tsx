@@ -12,6 +12,9 @@ import ExchangeProposalModal from '../components/ExchangeProposalModal.tsx';
 import EditItemModal from '../components/EditItemModal.tsx';
 import ItemDetailSkeleton from '../components/ItemDetailSkeleton.tsx';
 import ReportModal from '../components/ReportModal.tsx';
+import AdBanner from '../components/AdBanner.tsx';
+
+import { ItemConditionLabels } from '../types.ts';
 
 const ItemDetailPage = () => {
   const { itemId } = useParams();
@@ -56,12 +59,15 @@ const ItemDetailPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleSubmitProposal = async ({ offeredItemIds, message }) => {
+  const handleSubmitProposal = async (proposalData) => {
       setIsSubmitting(true);
       try {
-          const res = await api.createExchangeProposal({ requestedItemId: item.id, offeredItemIds, message });
+          const res = await api.createExchangeProposal({ 
+            requestedItemId: item.id, 
+            ...proposalData 
+          });
           navigate(`/chat/${res.id}`);
-      } catch (err) { showToast(err.message, "error"); }
+      } catch (err: any) { showToast(err.message, "error"); }
       finally { setIsSubmitting(false); }
   };
 
@@ -71,7 +77,7 @@ const ItemDetailPage = () => {
   const isOwnItem = user?.id === item.userId;
 
   return React.createElement("div", { className: "max-w-4xl mx-auto px-4 py-6" },
-    React.createElement(EditItemModal, { isOpen: isEditModalOpen, onClose: () => setIsEditModalOpen(false), item: item, onSave: (d) => api.updateItem(item.id, d).then(setItem) }),
+    React.createElement(EditItemModal, { isOpen: isEditModalOpen, onClose: () => setIsEditModalOpen(false), item: item, onSave: setItem }),
     React.createElement(ReportModal, { 
       isOpen: isReportModalOpen, 
       onClose: () => setIsReportModalOpen(false), 
@@ -125,7 +131,10 @@ const ItemDetailPage = () => {
             React.createElement("div", { className: "p-8 flex flex-col" },
                 React.createElement("div", { className: "flex justify-between items-start mb-4" },
                     React.createElement("div", null,
-                        React.createElement("span", { className: "text-[10px] font-black uppercase text-blue-500 tracking-widest" }, item.category),
+                        React.createElement("div", { className: "flex gap-2 items-center mb-1" },
+                            React.createElement("span", { className: "text-[10px] font-black uppercase text-blue-500 tracking-widest" }, item.category),
+                            item.condition && React.createElement("span", { className: "text-[10px] font-black uppercase px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full tracking-widest" }, ItemConditionLabels[item.condition as keyof typeof ItemConditionLabels] || item.condition)
+                        ),
                         React.createElement("h1", { className: "text-3xl font-black text-gray-900 dark:text-white leading-tight" }, item.title)
                     ),
                     !isOwnItem && React.createElement("button", { onClick: () => api.toggleFavorite(item.id).then(setItem), className: "p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 hover:scale-110 transition-transform shadow-sm" }, item.isFavorited ? "❤️" : "🤍")
@@ -147,33 +156,43 @@ const ItemDetailPage = () => {
                     ),
                     React.createElement("div", null,
                         React.createElement("h4", { className: "text-[11px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-tighter" }, "Disponible para intercambio en"),
-                        React.createElement("p", { className: "text-xl font-black text-gray-800 dark:text-gray-100" }, `${item.ownerLocation.city}`),
-                        React.createElement("p", { className: "text-sm font-bold text-blue-500/70" }, `${item.ownerLocation.province}, España`)
+                        React.createElement("p", { className: "text-xl font-black text-gray-800 dark:text-gray-100" }, `${item.ownerLocation?.city || 'Madrid'}`),
+                        React.createElement("p", { className: "text-sm font-bold text-blue-500/70" }, `${item.ownerLocation?.province || 'Madrid'}, España`)
                     )
                 ),
 
                 React.createElement("div", { className: "mt-auto pt-8 border-t-2 border-gray-100 dark:border-gray-700" },
                     React.createElement("div", { className: "flex flex-col sm:flex-row items-center justify-between gap-4" },
-                        React.createElement(Link, { to: `/user/${item.ownerId || item.userId}`, className: "flex items-center gap-3 group w-full sm:w-auto" },
-                            React.createElement("img", { src: item.ownerAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (item.ownerId || 'default'), className: "w-12 h-12 rounded-full border-2 border-white dark:border-gray-600 shadow-md group-hover:scale-105 transition-transform" }),
-                            React.createElement("div", null,
-                                React.createElement("p", { className: "text-[10px] font-bold text-gray-400 uppercase" }, "Propietario"),
-                                React.createElement("div", { className: "flex items-center gap-2" },
-                                    React.createElement("p", { className: "font-black group-hover:text-blue-500 transition-colors" }, item.ownerName || 'Usuario'),
-                                    (item.ownerRating || 0) > 0 && React.createElement("div", { className: "flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md" },
-                                        React.createElement("span", { className: "text-[10px]" }, "⭐"),
-                                        React.createElement("span", { className: "text-xs font-black text-gray-700 dark:text-gray-300" }, item.ownerRating)
+                        React.createElement(Link, { to: `/user/${item.ownerId || item.userId}`, className: "flex items-center justify-between group w-full px-4 py-3 border-2 border-slate-100 rounded-2xl" },
+                            React.createElement("div", { className: "flex items-center gap-3" },
+                                React.createElement("img", { src: item.ownerAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (item.ownerId || 'default'), className: "w-10 h-10 rounded-full object-cover shadow-sm" }),
+                                React.createElement("div", null,
+                                    React.createElement("p", { className: "font-bold text-slate-800 dark:text-white" }, item.ownerName || 'Usuario'),
+                                    (item.ownerRating || 0) > 0 && React.createElement("div", { className: "flex items-center gap-1 text-slate-500" },
+                                        React.createElement("span", { className: "text-yellow-400" }, "★"),
+                                        React.createElement("span", { className: "text-sm" }, `${item.ownerRating}/5`)
                                     )
                                 )
-                            )
-                        ),
-                        isOwnItem ? 
-                        React.createElement(Button, { onClick: () => setIsEditModalOpen(true), variant: "secondary", className: "rounded-xl px-8 w-full sm:w-auto", children: "Editar" }) :
-                        React.createElement(Button, { onClick: handleSwapClick, className: "rounded-xl px-10 shadow-lg w-full sm:w-auto", children: "¡Te lo cambio!" })
+                            ),
+                            React.createElement("button", { className: "text-sm font-bold text-slate-800 border-2 border-slate-800 rounded-full px-4 py-1.5" }, "Ver Perfil y Otros Artículos")
+                        )
                     )
                 )
             )
         )
+    ),
+    React.createElement("div", { className: "mt-8 pb-32" },
+        React.createElement(AdBanner, { adSlot: "item-detail-bottom" })
+    ),
+    !isOwnItem && React.createElement("div", { className: "fixed bottom-16 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-4 pb-6 px-4 md:px-8 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center justify-center gap-4" },
+        React.createElement("button", { 
+            onClick: handleSwapClick, 
+            className: "flex-grow max-w-sm py-4 px-6 bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-bold text-lg rounded-2xl shadow-lg transition-transform active:scale-[0.98]" 
+        }, "Proponer Trueque"),
+        React.createElement("button", {
+            onClick: () => api.toggleFavorite(item.id).then(setItem),
+            className: "p-4 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 transition-colors"
+        }, item.isFavorited ? "❤️" : "🤍")
     )
   );
 };

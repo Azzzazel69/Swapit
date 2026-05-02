@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { useToast } from '../hooks/useToast.tsx';
 import BanUserModal from '../components/BanUserModal.tsx';
 import ReportModal from '../components/ReportModal.tsx';
+import AdBanner from '../components/AdBanner.tsx';
 
 const UserRating = ({ ratings = [], stats = {} as any }) => {
     const score = stats.averageRating || 0;
@@ -82,6 +83,7 @@ const UserProfilePage = () => {
     
     const [profile, setProfile] = useState(null);
     const [items, setItems] = useState([]);
+    const [pastExchanges, setPastExchanges] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isFollowing, setIsFollowing] = useState(false);
@@ -97,8 +99,16 @@ const UserProfilePage = () => {
         try {
             setLoading(true);
             const userProfile = await api.getUserProfile(userId);
+            
+            let exchs = [];
+            if (currentUser && (currentUser.id === userId || currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'MODERATOR')) {
+                exchs = await api.getUserPastExchanges(userId);
+            }
+            
             setProfile(userProfile);
-            setItems(userProfile.items || []);
+            const activeItems = (userProfile.items || []).filter((i: any) => i.status !== 'EXCHANGED');
+            setItems(activeItems);
+            setPastExchanges(exchs || []);
             setIsFollowing(currentUser?.following?.includes(userId) || false);
         } catch (err) {
             setError(err.message);
@@ -243,15 +253,19 @@ const UserProfilePage = () => {
             ),
             React.createElement("div", { className: "space-y-4" },
                 (showAllRatings ? profile.ratings : profile.ratings.slice(0, 3)).map((r, idx) => (
-                    React.createElement("div", { key: idx, className: "p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700" },
+                    React.createElement("div", { key: idx, className: "p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer", onClick: (e) => {
+                        e.currentTarget.classList.toggle('expanded-rating');
+                        const p = e.currentTarget.querySelector('p');
+                        if(p) p.classList.toggle('line-clamp-2');
+                    }},
                         React.createElement("div", { className: "flex justify-between items-start mb-2" },
                             React.createElement("div", { className: "flex items-center gap-2" },
                                 React.createElement("span", { className: `px-2 py-0.5 rounded text-[10px] font-black text-white ${r.rating >= 90 ? 'bg-emerald-500' : r.rating >= 75 ? 'bg-blue-500' : r.rating >= 50 ? 'bg-yellow-500' : 'bg-red-500'}` }, r.rating),
                                 React.createElement("span", { className: "text-[10px] font-bold text-gray-400 uppercase" }, "Puntos")
                             ),
-                            React.createElement("span", { className: "text-[10px] text-gray-400" }, new Date(r.date).toLocaleDateString())
+                            React.createElement("span", { className: "text-[10px] text-gray-400" }, new Date(r.timestamp || r.date).toLocaleDateString())
                         ),
-                        React.createElement("p", { className: "text-gray-700 dark:text-gray-300 text-sm italic" }, `"${r.comment}"`)
+                        React.createElement("p", { className: "text-gray-700 dark:text-gray-300 text-sm italic line-clamp-2 transition-all" }, `"${r.comment || 'Sin comentario'}"`)
                     )
                 ))
             ),
@@ -270,19 +284,51 @@ const UserProfilePage = () => {
                 "Artículos de ", profile.name
             ),
             items.length === 0 ? (
-                React.createElement("div", { className: "text-center py-20 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700" },
+                React.createElement("div", { className: "text-center py-20 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 mb-10" },
                   React.createElement("p", { className: "text-gray-500" }, "No hay artículos disponibles.")
                 )
             ) : (
-                React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
-                  items.map((item) => (
-                      React.createElement(ItemCard, { 
-                          key: item.id, 
-                          item: item, 
-                          onToggleFavorite: handleToggleFavorite,
-                          onDelete: isStaff ? (id) => api.deleteItem(id).then(fetchProfile) : undefined
-                      })
+                React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10" },
+                  items.map((item, index) => (
+                      React.createElement(React.Fragment, { key: item.id },
+                          React.createElement(ItemCard, { 
+                              item: item, 
+                              onToggleFavorite: handleToggleFavorite,
+                              onDelete: isStaff ? (id) => api.deleteItem(id).then(fetchProfile) : undefined
+                          }),
+                          index > 0 && (index + 1) % 6 === 0 && (
+                              React.createElement(AdBanner, { adSlot: `user-profile-ad-${index}` })
+                          )
+                      )
                   ))
+                )
+            ),
+
+            React.createElement("h2", { className: "text-2xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-2 mt-10" }, 
+                React.createElement("span", { className: "p-2 bg-gray-100 dark:bg-gray-700 rounded-lg" }, "🤝"),
+                "Historial de Transacciones"
+            ),
+            pastExchanges.length === 0 ? (
+                React.createElement("div", { className: "text-center py-20 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700" },
+                  React.createElement("p", { className: "text-gray-500" }, "Aún no hay historial de transacciones.")
+                )
+            ) : (
+                React.createElement("div", { className: "flex flex-col gap-4" },
+                    pastExchanges.map(ex => (
+                       React.createElement("div", { key: ex.id, className: "bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4" },
+                          React.createElement("div", { className: "flex-1" },
+                             React.createElement("p", { className: "font-bold text-gray-800 dark:text-gray-200" }, 
+                                ex.ownerId === userId ? `Ofertado: Artículo(s)` : `Solicitado: Artículo(s)`
+                             ),
+                             React.createElement("p", { className: "text-xs text-gray-500" }, `Actualizado: ${new Date(ex.updatedAt?.toDate ? ex.updatedAt.toDate() : ex.updatedAt).toLocaleDateString()}`)
+                          ),
+                          React.createElement("div", null,
+                              ex.status === 'COMPLETED' && React.createElement("span", { className: "bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold" }, "COMPLETADO"),
+                              ex.status === 'REJECTED' && React.createElement("span", { className: "bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold" }, "RECHAZADO"),
+                              ex.status === 'CANCELLED' && React.createElement("span", { className: "bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold" }, "CANCELADO")
+                          )
+                       )
+                    ))
                 )
             )
         )

@@ -95,8 +95,18 @@ const ExchangeProposalModal = ({
     const sortedUserItems = useMemo(() => {
         if (!userItems || !targetItem) return [];
 
+        const checkMatch = (item: any, target: any) => {
+            if (!target.wishedItem || typeof target.wishedItem !== 'string') return false;
+            const searchTerms = target.wishedItem.toLowerCase().split(/[\s,]+/).filter(t => t.length >= 3);
+            if (searchTerms.length === 0) return false;
+            
+            const title = (item.title || "").toLowerCase();
+            const cat = (item.category || "").toLowerCase();
+            return searchTerms.some(term => title.includes(term) || cat.includes(term));
+        };
+
         const itemsWithMatchStatus = userItems.map(item => {
-            const isMatch = targetItem.wishedItem && item.title.toLowerCase().includes(targetItem.wishedItem.toLowerCase());
+            const isMatch = checkMatch(item, targetItem);
             return { ...item, isMatch };
         });
 

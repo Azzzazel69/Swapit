@@ -7,12 +7,19 @@ export const ExchangeStatus = {
   Accepted: 'ACCEPTED',
   Rejected: 'REJECTED',
   Completed: 'COMPLETED',
-  Cancelled: 'CANCELADO',
+  Cancelled: 'CANCELLED',
 };
 
 export const ItemCondition = {
-  New: 'NUEVO',
-  LikeNew: 'COMO NUEVO',
-  Good: 'USADO - BUEN ESTADO',
-  Acceptable: 'USADO - ACEPTABLE',
+  New: 'New',
+  LikeNew: 'LikeNew',
+  Good: 'Good',
+  Acceptable: 'Acceptable',
+};
+
+export const ItemConditionLabels = {
+  New: 'Nuevo',
+  LikeNew: 'Como nuevo',
+  Good: 'Buen estado',
+  Acceptable: 'Aceptable',
 };

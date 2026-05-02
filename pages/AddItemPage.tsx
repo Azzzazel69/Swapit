@@ -7,7 +7,7 @@ import Input from '../components/Input.tsx';
 import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { api } from '../services/api.ts';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
-import { ItemCondition } from '../types.ts';
+import { ItemCondition, ItemConditionLabels } from '../types.ts';
 
 const AddItemPage = () => {
     const navigate = useNavigate();
@@ -21,31 +21,6 @@ const AddItemPage = () => {
     const [images, setImages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
-
-    React.useEffect(() => {
-        const loadDraft = async () => {
-            const draft = await api.getDraft();
-            if (draft) {
-                setTitle(draft.title || '');
-                setDescription(draft.description || '');
-                setCategory(draft.category || '');
-                setCondition(draft.condition || '');
-                setWishedItem(draft.wishedItem || '');
-                setImages(draft.images || []);
-            }
-        };
-        loadDraft();
-    }, []);
-
-    React.useEffect(() => {
-        const saveDraft = async () => {
-            if (title || description || category || condition || wishedItem || images.length > 0) {
-                await api.saveDraft({ title, description, category, condition, wishedItem, images });
-            }
-        };
-        const timer = setTimeout(saveDraft, 2000);
-        return () => clearTimeout(timer);
-    }, [title, description, category, condition, wishedItem, images]);
 
     const MAX_IMAGES = 5;
 
@@ -69,8 +44,13 @@ const AddItemPage = () => {
             try {
                 const resizedImages = await Promise.all(resizingPromises);
                 setImages(prevImages => [...prevImages, ...resizedImages]);
-            } catch(err) {
-                setError(err.message);
+            } catch(err: any) {
+                console.error("Error al procesar imagen:", err);
+                let msg = "No se pudo procesar la imagen.";
+                if (err && err.message) msg = err.message;
+                else if (typeof err === "string") msg = err;
+                else msg = "Formato no soportado o archivo corrupto (asegúrate de usar JPG o PNG).";
+                setError(msg);
             }
 
             e.target.value = null;
@@ -99,14 +79,34 @@ const AddItemPage = () => {
         setIsSubmitting(true);
         try {
             const newItem = await api.createItem({ title, description, category, condition, imageUrls: images, wishedItem });
-            await api.clearDraft();
+            // Simulación de envío de correo
+            console.log("SIMULACIÓN: Enviando correo de confirmación de publicación a", (api as any)._getCurrentUserEmail?.() || 'usuario');
             if (newItem.moderationStatus === 'PENDING') {
                 navigate('/profile', { state: { message: '¡Artículo subido! Está en revisión por seguridad y aparecerá pronto.', variant: 'warning' } });
             } else {
-                navigate('/profile', { state: { message: '¡Artículo añadido con éxito!' } });
+                navigate('/profile', { state: { message: '¡Artículo añadido con éxito! Te hemos enviado un correo de confirmación.' } });
             }
-        } catch (err) {
-            setError('Error al crear el artículo.');
+        } catch (err: any) {
+            console.error("DEBUG Item creation error:", err);
+            let errMsg = err?.message || 'Error al crear el artículo.';
+            try {
+                const parsed = JSON.parse(errMsg);
+                if (parsed && typeof parsed.error === 'string') {
+                    errMsg = parsed.error;
+                } else if (parsed && typeof parsed.message === 'string') {
+                    errMsg = parsed.message;
+                }
+            } catch(e) {}
+            
+            if (typeof errMsg !== 'string') {
+                errMsg = String(errMsg);
+            }
+            
+            if (errMsg.includes("El contenido no cumple con las normas")) {
+                setError(errMsg);
+            } else {
+                setError('Error del servidor: ' + errMsg.slice(0, 500));
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -146,16 +146,13 @@ const AddItemPage = () => {
                     React.createElement("div", { className: "flex justify-between items-center" },
                         React.createElement("h1", { className: "text-2xl font-bold text-gray-900 dark:text-white" }, "Sube tu artículo"),
                         React.createElement(Button, { type: "button", variant: "secondary", size: "sm", onClick: async () => {
-                            if (window.confirm('¿Estás seguro de que quieres limpiar el formulario? Se perderán los cambios no publicados.')) {
-                                await api.clearDraft();
-                                setTitle('');
-                                setDescription('');
-                                setCategory('');
-                                setCondition('');
-                                setWishedItem('');
-                                setImages([]);
-                                setError(null);
-                            }
+                            setTitle('');
+                            setDescription('');
+                            setCategory('');
+                            setCondition('');
+                            setWishedItem('');
+                            setImages([]);
+                            setError(null);
                         }, children: "Limpiar" })
                     ),
                     error && React.createElement("p", { className: "text-red-500 text-sm text-center p-2 bg-red-100 dark:bg-red-900/50 rounded-md" }, error),
@@ -184,7 +181,7 @@ const AddItemPage = () => {
                             React.createElement("label", { htmlFor: "condition", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Condición"),
                             React.createElement("select", conditionSelectProps,
                                 React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
-                                Object.values(ItemCondition).map(cond => React.createElement("option", { key: cond, value: cond }, cond))
+                                Object.entries(ItemCondition).map(([key, value]) => React.createElement("option", { key: value, value: value }, ItemConditionLabels[key as keyof typeof ItemConditionLabels]))
                             )
                         )
                     ),
@@ -200,21 +197,21 @@ const AddItemPage = () => {
                         React.createElement("p", { className: "mt-1 text-xs text-gray-500 dark:text-gray-400" }, "Sé específico para encontrar un 'match' directo. Ej: \"Playstation 5\", \"Libro Dune tapa dura\".")
                     ),
                     React.createElement("div", null,
-                        React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Imágenes (mín. 1, máx. 5)"),
-                        React.createElement("div", { className: "mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md" },
-                            React.createElement("div", { className: "space-y-1 text-center" },
-                                React.createElement("svg", { className: "mx-auto h-12 w-12 text-gray-400", stroke: "currentColor", fill: "none", viewBox: "0 0 48 48", "aria-hidden": "true" },
-                                    React.createElement("path", { d: "M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" })
+                        React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Imágenes / Vídeo (mín. 1, máx. 5)"),
+                        React.createElement("div", { className: "mt-1 flex flex-col items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md gap-4" },
+                            React.createElement("div", { className: "flex flex-col sm:flex-row gap-4" },
+                                React.createElement("label", { className: `cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus-within:outline-none flex items-center justify-center gap-2` },
+                                    React.createElement("span", { className: "text-lg" }, "📸"),
+                                    "Hacer Foto / Vídeo",
+                                    React.createElement("input", { type: "file", className: "sr-only", accept: "image/*,video/mp4,video/quicktime,video/webm", capture: "environment", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
                                 ),
-                                React.createElement("div", { className: "flex text-sm text-gray-600 dark:text-gray-400" },
-                                    React.createElement("label", { htmlFor: "file-upload", className: `relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium ${theme.textColor} ${theme.hoverTextColor} focus-within:outline-none` },
-                                        React.createElement("span", null, "Sube tus archivos"),
-                                        React.createElement("input", { id: "file-upload", name: "file-upload", type: "file", className: "sr-only", multiple: true, accept: "image/*", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
-                                    ),
-                                    React.createElement("p", { className: "pl-1" }, "o arrástralos aquí")
-                                ),
-                                React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-500" }, "PNG, JPG, GIF hasta 10MB")
-                            )
+                                React.createElement("label", { className: `cursor-pointer px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 focus-within:outline-none flex items-center justify-center gap-2` },
+                                    React.createElement("span", { className: "text-lg" }, "📂"),
+                                    "Galería",
+                                    React.createElement("input", { type: "file", className: "sr-only", multiple: true, accept: "image/*,video/mp4,video/quicktime,video/webm", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
+                                )
+                            ),
+                            React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-500 text-center mt-2" }, "PNG, JPG, GIF o vídeos cortos hasta 10MB")
                         ),
                         images.length > 0 && React.createElement("div", { className: "mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4" },
                             images.map((image, index) => React.createElement("div", { key: index, className: "relative group" },

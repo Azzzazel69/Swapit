@@ -4,7 +4,7 @@ import Input from './Input.tsx';
 import { ICONS, CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
 import { api } from '../services/api.ts';
-import { ItemCondition } from '../types.ts';
+import { ItemCondition, ItemConditionLabels } from '../types.ts';
 
 const EditItemModal = ({ isOpen, onClose, item, onSave }: { isOpen: boolean, onClose: () => void, item: any, onSave: (updatedItem: any) => void }) => {
     const [title, setTitle] = useState('');
@@ -63,6 +63,10 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }: { isOpen: boolean, onC
     };
 
     const handleRemoveImage = (indexToRemove) => {
+        if (images.length <= 1) {
+            setError('Cada artículo debe tener al menos una foto.');
+            return;
+        }
         setImages(images.filter((_, index) => index !== indexToRemove));
     };
 
@@ -82,8 +86,12 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }: { isOpen: boolean, onC
             const updatedItem = await api.updateItem(item.id, { title, description, category, condition, imageUrls: images, wishedItem });
             onSave(updatedItem);
             onClose();
-        } catch (err) {
-            setError(err.message || 'Error al guardar los cambios.');
+        } catch (err: any) {
+            if (err.message === "El contenido no cumple con las normas de la comunidad.") {
+                setError(err.message);
+            } else {
+                setError('Error al guardar los cambios.');
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -125,7 +133,7 @@ const EditItemModal = ({ isOpen, onClose, item, onSave }: { isOpen: boolean, onC
                         React.createElement("label", { htmlFor: "edit-condition", className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Condición"),
                         React.createElement("select" as any, { id: "edit-condition", value: condition, onChange: (e: any) => setCondition(e.target.value), required: true, className: `mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 ${theme.focus} focus:${theme.border} sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100` },
                             React.createElement("option", { value: "", disabled: true }, "-- Selecciona --"),
-                            Object.values(ItemCondition).map(cond => React.createElement("option", { key: cond, value: cond }, cond))
+                            Object.entries(ItemCondition).map(([key, value]) => React.createElement("option", { key: value, value: value }, ItemConditionLabels[key as keyof typeof ItemConditionLabels]))
                         )
                     )
                 ),

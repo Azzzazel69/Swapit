@@ -6,6 +6,7 @@ import ItemCard from '../components/ItemCard.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
+import AdBanner from '../components/AdBanner.tsx';
 import { ICONS, CATEGORIES_WITH_SUBCATEGORIES } from '../constants.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
@@ -27,6 +28,7 @@ const MyItemsPage = () => {
   const [images, setImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const { user } = useAuth();
   const { theme } = useColorTheme();
@@ -36,7 +38,7 @@ const MyItemsPage = () => {
       setLoading(true);
       if (user) {
         const userItems = await api.getUserItems(user.id);
-        setItems(userItems);
+        setItems(userItems.filter((i: any) => i.status !== 'EXCHANGED'));
       }
       setError(null);
     } catch (err) {
@@ -127,22 +129,28 @@ const MyItemsPage = () => {
       setImages([]);
       setShowForm(false);
       await fetchUserItems();
-      showNotification('¡Artículo añadido con éxito!');
-    } catch (err) {
-      setError('Error al crear el artículo.');
+      showNotification('¡Artículo añadido con éxito! Te hemos enviado un correo de confirmación.');
+    } catch (err: any) {
+      setError(err.message || 'Error al crear el artículo.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (typeof window !== 'undefined' && window.confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+    setItemToDelete(itemId);
+  };
+
+  const confirmDelete = async () => {
+    if (itemToDelete) {
         try {
-            await api.deleteItem(itemId);
+            await api.deleteItem(itemToDelete);
             showNotification('Artículo eliminado con éxito.');
             await fetchUserItems();
-        } catch (err) {
+        } catch (err: any) {
             setError(err.message || 'Error al eliminar el artículo.');
+        } finally {
+            setItemToDelete(null);
         }
     }
   };
@@ -206,21 +214,21 @@ const MyItemsPage = () => {
           )
         ),
         React.createElement("div", null,
-          React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Imágenes (mín. 1, máx. 5)"),
-          React.createElement("div", { className: "mt-1 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md" },
-            React.createElement("div", { className: "space-y-1 text-center" },
-              React.createElement("svg", { className: "mx-auto h-12 w-12 text-gray-400", stroke: "currentColor", fill: "none", viewBox: "0 0 48 48", "aria-hidden": "true" },
-                React.createElement("path", { d: "M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" })
-              ),
-              React.createElement("div", { className: "flex text-sm text-gray-600 dark:text-gray-400" },
-                React.createElement("label", { htmlFor: "file-upload", className: `relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium ${theme.textColor} ${theme.hoverTextColor} focus-within:outline-none` },
-                  React.createElement("span", null, "Sube tus archivos"),
-                  React.createElement("input", { id: "file-upload", name: "file-upload", type: "file", className: "sr-only", multiple: true, accept: "image/*", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
+          React.createElement("label", { className: "block text-sm font-medium text-gray-700 dark:text-gray-300" }, "Imágenes / Vídeo (mín. 1, máx. 5)"),
+          React.createElement("div", { className: "mt-1 flex flex-col items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md gap-4" },
+            React.createElement("div", { className: "flex flex-col sm:flex-row gap-4" },
+                React.createElement("label", { className: `cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus-within:outline-none flex items-center justify-center gap-2` },
+                    React.createElement("span", { className: "text-lg" }, "📸"),
+                    "Hacer Foto / Vídeo",
+                    React.createElement("input", { type: "file", className: "sr-only", accept: "image/*,video/mp4,video/quicktime,video/webm", capture: "environment", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
                 ),
-                React.createElement("p", { className: "pl-1" }, "o arrástralos aquí")
-              ),
-              React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-500" }, "PNG, JPG, GIF hasta 10MB")
-            )
+                React.createElement("label", { className: `cursor-pointer px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 focus-within:outline-none flex items-center justify-center gap-2` },
+                    React.createElement("span", { className: "text-lg" }, "📂"),
+                    "Galería",
+                    React.createElement("input", { type: "file", className: "sr-only", multiple: true, accept: "image/*,video/mp4,video/quicktime,video/webm", onChange: handleImageChange, disabled: images.length >= MAX_IMAGES })
+                )
+            ),
+            React.createElement("p", { className: "text-xs text-gray-500 dark:text-gray-500 text-center mt-2" }, "PNG, JPG, GIF o vídeos cortos hasta 10MB")
           ),
           images.length > 0 && React.createElement("div", { className: "mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4" },
             images.map((image, index) => React.createElement("div", { key: index, className: "relative group" },
@@ -242,7 +250,12 @@ const MyItemsPage = () => {
       React.createElement("p", { className: "text-center text-gray-500 dark:text-gray-400" }, "Aún no has añadido ningún artículo.")
     ) : (
       React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
-        items.map((item) => React.createElement(ItemCard, { key: item.id, item: item, isOwnItem: true, onDelete: handleDeleteItem, deletingItemId: null, onToggleFavorite: undefined }))
+        items.map((item, index) => React.createElement(React.Fragment, { key: item.id },
+            React.createElement(ItemCard, { item: item, isOwnItem: true, onDelete: handleDeleteItem, deletingItemId: null, onToggleFavorite: undefined }),
+            index > 0 && (index + 1) % 6 === 0 && (
+                React.createElement(AdBanner, { adSlot: `my-items-ad-${index}` })
+            )
+        ))
       )
     ),
     notification.show && React.createElement("div", {
@@ -253,6 +266,23 @@ const MyItemsPage = () => {
         React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" })
       ),
       React.createElement("span", { className: "font-medium" }, notification.message)
+    ),
+    itemToDelete && React.createElement("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" },
+        React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200" },
+            React.createElement("div", { className: "flex justify-between items-center mb-4" },
+                React.createElement("h2", { className: "text-xl font-bold text-gray-900 dark:text-white" }, "Eliminar Artículo"),
+                React.createElement("button", { onClick: () => setItemToDelete(null), className: "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" },
+                    React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+                        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" })
+                    )
+                )
+            ),
+            React.createElement("p", { className: "text-gray-600 dark:text-gray-400 mb-6" }, "¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer."),
+            React.createElement("div", { className: "flex justify-end gap-3" },
+                React.createElement(Button, { variant: "secondary", onClick: () => setItemToDelete(null), children: "Cancelar" }),
+                React.createElement(Button, { variant: "danger", onClick: confirmDelete, children: "Eliminar" })
+            )
+        )
     )
   );
 };

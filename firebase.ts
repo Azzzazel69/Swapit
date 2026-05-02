@@ -8,8 +8,32 @@ import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from './firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Initialize Firestore with fallback and safety
+let dbInstance;
+try {
+    const dbId = firebaseConfig.firestoreDatabaseId;
+    if (dbId && dbId !== "(default)" && !dbId.startsWith("TODO")) {
+        console.log(`Firebase: Intentando inicializar base de datos específica: ${dbId}`);
+        dbInstance = getFirestore(app, dbId);
+    } else {
+        console.log("Firebase: Usando base de datos Firestore (default)");
+        dbInstance = getFirestore(app);
+    }
+} catch (error) {
+    console.warn("Firebase: Error al inicializar base de datos específica, reintentando con (default):", error);
+    try {
+        dbInstance = getFirestore(app);
+    } catch (secondError) {
+        console.error("Firebase: Error fatal al inicializar Firestore:", secondError);
+        // We still assign it to something to avoid undefined exports if possible
+        dbInstance = getFirestore(app); 
+    }
+}
+
+export const db = dbInstance;
 export const auth = getAuth(app);
+console.log("firebase.ts: Inicialización de Firebase completada");
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 

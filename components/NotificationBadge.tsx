@@ -1,41 +1,43 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api.ts'; 
 import { useAuth } from '../hooks/useAuth.tsx';
+import { useToast } from '../hooks/useToast.tsx';
 
 export default function NotificationBadge() {
   const [unread, setUnread] = useState < number > (0);
   const { user } = useAuth();
   const userId = user?.id;
+  const prevCountRef = useRef<number>(0);
+  const { showToast } = useToast();
 
   useEffect(() => {
-    let mounted = true;
-    let timer: any;
-
-    async function fetchNotifs() {
-      if (!userId) {
-        setUnread(0);
-        return;
-      }
-      try {
-        // DEV-ONLY: replace with real backend
-        const fn = (api as any).getNotificationsForUserDev || (api as any).getNotificationsForUser;
-        if (!fn) return;
-        const notifs = await fn(userId);
-        if (!mounted) return;
-        const count = (notifs || []).filter((n: any) => !n.read).length;
-        setUnread(count);
-      } catch (e) {
-        console.error('Error cargando notificaciones (NotificationBadge)', e);
-      } finally {
-        if(mounted) {
-            timer = setTimeout(fetchNotifs, 3000);
-        }
-      }
+    if (!userId) {
+      setUnread(0);
+      return;
     }
 
-    fetchNotifs();
-    return () => { mounted = false; if (timer) clearTimeout(timer); };
-  }, [userId]);
+    const unsubscribe = api.subscribeToNotifications(userId, (notifs) => {
+      const unreadNotifs = (notifs || []).filter((n: any) => !n.read);
+      const count = unreadNotifs.length;
+      setUnread(count);
+      
+      // If the unread count goes up, show a toast or a visual indicator
+      if (count > prevCountRef.current) {
+         // Sort to get newest first
+         const newest = [...unreadNotifs].sort((a, b) => b.createdAt - a.createdAt)[0];
+         if (newest && newest.title) {
+            showToast(`${newest.title}: ${newest.message || ''}`, 'info');
+         } else {
+            showToast('Tienes nuevas notificaciones', 'info');
+         }
+      }
+      prevCountRef.current = count;
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [userId, showToast]);
 
   if (unread <= 0) return null;
 

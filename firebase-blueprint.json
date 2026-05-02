@@ -42,6 +42,7 @@
         "favorites": { "type": "array", "items": { "type": "string" } },
         "following": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" },
+        "lastSeen": { "type": "string", "format": "date-time" },
         "ratings": {
           "type": "array",
           "items": {
@@ -160,6 +161,16 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "itemId", "type", "timestamp"]
+    },
+    "SystemStatus": {
+      "title": "SystemStatus",
+      "description": "System-wide status information.",
+      "type": "object",
+      "properties": {
+        "seeded": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["seeded"]
     }
   },
   "firestore": {
@@ -190,6 +201,10 @@
     "/swipes/{swipeId}": {
       "schema": { "$ref": "#/entities/Swipe" },
       "description": "Collection of user swipes."
+    },
+    "/system/{docId}": {
+      "schema": { "$ref": "#/entities/SystemStatus" },
+      "description": "System configuration and status."
     }
   }
 }

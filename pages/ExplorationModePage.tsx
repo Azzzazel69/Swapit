@@ -69,9 +69,15 @@ const ExplorationModePage = () => {
         
         playSound('swipe');
         const currentItem = items[currentIndex];
+        
+        // Optimistic UI updates
+        setCurrentImageIndex(0);
+        setCurrentIndex(prev => prev + 1);
+        setTimeout(() => x.set(0), 50);
+
         try {
             const result = await api.swipeItem(currentItem.id, type);
-            if (result.isMatch) {
+            if (result && result.isMatch) {
                 playSound('match');
                 setMatchData({ ...result, item: currentItem });
                 confetti({
@@ -80,11 +86,9 @@ const ExplorationModePage = () => {
                     origin: { y: 0.6 }
                 });
             }
-            x.set(0); // Reset x for next card
-            setCurrentImageIndex(0); // Reset image index for next card
-            setCurrentIndex(prev => prev + 1);
         } catch (err) {
-            showToast("Error al procesar acción", "error");
+            console.error("Swipe API error:", err);
+            showToast("Error de conexión al procesar la acción", "error");
         }
     };
 
@@ -93,24 +97,10 @@ const ExplorationModePage = () => {
         localStorage.setItem('swapit_exploration_tutorial', 'true');
     };
 
-    if (loading) return <div className="flex justify-center items-center h-96"><SwapSpinner /></div>;
-
-    if (currentIndex >= items.length) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[70vh] text-center p-6">
-                <div className="text-6xl mb-4">🌍</div>
-                <h2 className="text-2xl font-black mb-2">¡Has explorado todo por ahora!</h2>
-                <p className="text-gray-500 mb-6">Vuelve más tarde para descubrir nuevos artículos en tu zona.</p>
-                <Button onClick={() => navigate('/')}>Volver al Inicio</Button>
-            </div>
-        );
-    }
-
-    const currentItem = items[currentIndex];
-
     const nextImage = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (currentImageIndex < currentItem.imageUrls.length - 1) {
+        const currentItem = items[currentIndex];
+        if (currentItem && currentItem.imageUrls && currentImageIndex < currentItem.imageUrls.length - 1) {
             setCurrentImageIndex(prev => prev + 1);
         }
     };
@@ -122,8 +112,143 @@ const ExplorationModePage = () => {
         }
     };
 
+    const renderContent = () => {
+        if (loading) return <div className="flex justify-center items-center h-full"><SwapSpinner /></div>;
+
+        if (currentIndex >= items.length) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-center p-6 animate-fade-in">
+                    <div className="text-6xl mb-4 animate-bounce">🌍</div>
+                    <h2 className="text-2xl font-black mb-2 dark:text-white">¡Has explorado todo por ahora!</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">Vuelve más tarde para descubrir nuevos artículos en tu zona o sube algo nuevo para atraer más miradas.</p>
+                    <Button onClick={() => navigate('/')}>Volver al Inicio</Button>
+                </div>
+            );
+        }
+
+        const currentItem = items[currentIndex];
+
+        return (
+            <div className="relative flex-grow perspective-1000">
+                <AnimatePresence>
+                    <motion.div
+                        key={currentItem.id}
+                        style={{ x, rotate }}
+                        drag="x"
+                        dragConstraints={{ left: -1000, right: 1000 }}
+                        dragElastic={0.7}
+                        onDragEnd={(_, info) => {
+                            if (info.offset.x > 150) handleSwipe('LIKE');
+                            else if (info.offset.x < -150) handleSwipe('DISLIKE');
+                            else x.set(0);
+                        }}
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ x: x.get() > 0 ? 1000 : -1000, opacity: 0, transition: { duration: 0.3 } }}
+                        className="absolute inset-0 bg-gray-900 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700 cursor-grab active:cursor-grabbing touch-none"
+                    >
+                        {/* Visual Feedback Overlays */}
+                        <motion.div 
+                            style={{ opacity: likeOpacity }}
+                            className="absolute inset-0 bg-green-500/40 z-30 pointer-events-none flex items-center justify-center"
+                        >
+                            <div className="border-4 border-green-500 text-green-500 font-black text-4xl px-6 py-2 rounded-xl rotate-[-20deg] uppercase bg-white/10 backdrop-blur-sm">
+                                ¡Me gusta!
+                            </div>
+                        </motion.div>
+                        <motion.div 
+                            style={{ opacity: dislikeOpacity }}
+                            className="absolute inset-0 bg-red-500/40 z-30 pointer-events-none flex items-center justify-center"
+                        >
+                            <div className="border-4 border-red-500 text-red-500 font-black text-4xl px-6 py-2 rounded-xl rotate-[20deg] uppercase bg-white/10 backdrop-blur-sm">
+                                Pasar
+                            </div>
+                        </motion.div>
+
+                        {/* Image and Overlays */}
+                        <div className="relative w-full h-full">
+                            <img 
+                                src={currentItem.imageUrls?.[currentImageIndex] || ''} 
+                                className="w-full h-full object-cover select-none pointer-events-none" 
+                                alt={currentItem.title || "Artículo"}
+                            />
+                            
+                            {/* Image Navigation Taps */}
+                            <div className="absolute inset-0 flex z-20">
+                                <div className="w-1/2 h-full cursor-pointer" onClick={prevImage} />
+                                <div className="w-1/2 h-full cursor-pointer" onClick={nextImage} />
+                            </div>
+
+                            {/* Progress Indicators (Dashes) */}
+                            {currentItem.imageUrls?.length > 1 && (
+                                <div className="absolute top-3 left-0 right-0 px-4 flex gap-1.5 z-30">
+                                    {currentItem.imageUrls.map((_, idx) => (
+                                        <div 
+                                            key={idx} 
+                                            className={`h-1 flex-grow rounded-full transition-all ${idx === currentImageIndex ? 'bg-white' : 'bg-white/30'}`}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Information Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none z-10" />
+                            
+                            <div className="absolute bottom-0 left-0 right-0 p-6 text-white z-20">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <img src={currentItem.ownerAvatarUrl} className="w-10 h-10 rounded-full border-2 border-white/50" alt={currentItem.ownerName} />
+                                    <div>
+                                        <span className="font-black text-base block leading-tight">{currentItem.ownerName}</span>
+                                        <span className="text-xs opacity-80 flex items-center gap-1">
+                                            <span>📍</span> {currentItem.ownerLocation?.city || 'Desconocido'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <h3 className="text-3xl font-black mb-2 tracking-tight">{currentItem.title}</h3>
+                                
+                                <p className="text-gray-200 text-sm line-clamp-2 mb-4 max-w-[90%]">
+                                    {currentItem.description}
+                                </p>
+
+                                <div className="flex justify-between items-end">
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-[10px] font-black uppercase text-orange-400 bg-orange-500/20 backdrop-blur-md px-3 py-1.5 rounded-lg border border-orange-500/30 inline-block w-fit">
+                                            Busco: {currentItem.wishedItem || 'Cualquier cosa'}
+                                        </span>
+                                    </div>
+                                    <Link 
+                                        to={`/item/${currentItem.id}`} 
+                                        className="pointer-events-auto bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/20 transition-all"
+                                    >
+                                        Ver más
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        );
+    };
+
     return (
-        <div className="relative max-w-lg mx-auto h-[85vh] flex flex-col pt-2">
+        <div className="relative max-w-lg mx-auto h-[90vh] flex flex-col pt-2">
+            {/* Header to exit exploration mode */}
+            <div className="flex justify-between items-center px-4 mb-4">
+                <Link to="/" className="flex items-center gap-2 group">
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${theme.bg} flex items-center justify-center text-white font-black text-sm shadow-lg group-hover:scale-105 transition-transform`}>
+                        S
+                    </div>
+                    <span className="font-black text-xl tracking-tighter">Swap<span className={theme.textColor}>it</span></span>
+                </Link>
+                <Link to="/" className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </Link>
+            </div>
+
             <AnimatePresence>
                 {showTutorial && (
                     <motion.div 
@@ -175,124 +300,29 @@ const ExplorationModePage = () => {
                 )}
             </AnimatePresence>
 
-            {/* Card Stack */}
-            <div className="relative flex-grow perspective-1000">
-                <motion.div
-                    key={currentItem.id}
-                    style={{ x, rotate }}
-                    drag="x"
-                    dragConstraints={{ left: -1000, right: 1000 }}
-                    dragElastic={0.7}
-                    onDragEnd={(_, info) => {
-                        if (info.offset.x > 150) handleSwipe('LIKE');
-                        else if (info.offset.x < -150) handleSwipe('DISLIKE');
-                        else x.set(0);
-                    }}
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ x: x.get() > 0 ? 1000 : -1000, opacity: 0, transition: { duration: 0.3 } }}
-                    className="absolute inset-0 bg-gray-900 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700 cursor-grab active:cursor-grabbing"
-                >
-                    {/* Visual Feedback Overlays */}
-                    <motion.div 
-                        style={{ opacity: likeOpacity }}
-                        className="absolute inset-0 bg-green-500/40 z-30 pointer-events-none flex items-center justify-center"
+            {renderContent()}
+
+            {/* Controls only show inside renderContent? Actually we can show them always or conditionally */}
+            {currentIndex < items.length && (
+                <div className="flex justify-center gap-8 py-8">
+                    <button 
+                        onClick={() => handleSwipe('DISLIKE')}
+                        className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center text-red-500 border border-gray-100 dark:border-gray-700 hover:scale-110 active:scale-90 transition-all"
                     >
-                        <div className="border-4 border-green-500 text-green-500 font-black text-4xl px-6 py-2 rounded-xl rotate-[-20deg] uppercase bg-white/10 backdrop-blur-sm">
-                            ¡Me gusta!
-                        </div>
-                    </motion.div>
-                    <motion.div 
-                        style={{ opacity: dislikeOpacity }}
-                        className="absolute inset-0 bg-red-500/40 z-30 pointer-events-none flex items-center justify-center"
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <button 
+                        onClick={() => handleSwipe('LIKE')}
+                        className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center text-green-500 border border-gray-100 dark:border-gray-700 hover:scale-110 active:scale-90 transition-all"
                     >
-                        <div className="border-4 border-red-500 text-red-500 font-black text-4xl px-6 py-2 rounded-xl rotate-[20deg] uppercase bg-white/10 backdrop-blur-sm">
-                            Pasar
-                        </div>
-                    </motion.div>
-
-                    {/* Image and Overlays */}
-                    <div className="relative w-full h-full">
-                        <img 
-                            src={currentItem.imageUrls[currentImageIndex]} 
-                            className="w-full h-full object-cover select-none pointer-events-none" 
-                        />
-                        
-                        {/* Image Navigation Taps */}
-                        <div className="absolute inset-0 flex z-20">
-                            <div className="w-1/2 h-full cursor-pointer" onClick={prevImage} />
-                            <div className="w-1/2 h-full cursor-pointer" onClick={nextImage} />
-                        </div>
-
-                        {/* Progress Indicators (Dashes) */}
-                        {currentItem.imageUrls.length > 1 && (
-                            <div className="absolute top-3 left-0 right-0 px-4 flex gap-1.5 z-30">
-                                {currentItem.imageUrls.map((_, idx) => (
-                                    <div 
-                                        key={idx} 
-                                        className={`h-1 flex-grow rounded-full transition-all ${idx === currentImageIndex ? 'bg-white' : 'bg-white/30'}`}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Information Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none z-10" />
-                        
-                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white z-20">
-                            <div className="flex items-center gap-2 mb-3">
-                                <img src={currentItem.ownerAvatarUrl} className="w-10 h-10 rounded-full border-2 border-white/50" />
-                                <div>
-                                    <span className="font-black text-base block leading-tight">{currentItem.ownerName}</span>
-                                    <span className="text-xs opacity-80 flex items-center gap-1">
-                                        <span>📍</span> {currentItem.ownerLocation.city}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <h3 className="text-3xl font-black mb-2 tracking-tight">{currentItem.title}</h3>
-                            
-                            <p className="text-gray-200 text-sm line-clamp-2 mb-4 max-w-[90%]">
-                                {currentItem.description}
-                            </p>
-
-                            <div className="flex justify-between items-end">
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black uppercase text-orange-400 bg-orange-500/20 backdrop-blur-md px-3 py-1.5 rounded-lg border border-orange-500/30 inline-block w-fit">
-                                        Busco: {currentItem.wishedItem || 'Cualquier cosa'}
-                                    </span>
-                                </div>
-                                <Link 
-                                    to={`/item/${currentItem.id}`} 
-                                    className="pointer-events-auto bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/20 transition-all"
-                                >
-                                    Ver más
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex justify-center gap-8 py-8">
-                <button 
-                    onClick={() => handleSwipe('DISLIKE')}
-                    className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center text-red-500 border border-gray-100 dark:border-gray-700 hover:scale-110 active:scale-90 transition-all"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-                <button 
-                    onClick={() => handleSwipe('LIKE')}
-                    className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center text-green-500 border border-gray-100 dark:border-gray-700 hover:scale-110 active:scale-90 transition-all"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
-                    </svg>
-                </button>
-            </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+                        </svg>
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

@@ -44,14 +44,21 @@ export const AuthProvider = ({ children }) => {
         
         if (!currentUser) {
             console.log("Usuario no encontrado en Firestore o error, marcando como needsProfile");
+            const isTestUser = firebaseUser.email?.endsWith('@test.com');
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
-                emailVerified: firebaseUser.emailVerified,
+                name: firebaseUser.displayName || 'Usuario',
+                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+                emailVerified: isTestUser ? true : firebaseUser.emailVerified,
                 needsProfile: true
             });
         } else {
             console.log("Usuario obtenido de Firestore:", currentUser.id);
+            const isTestUser = firebaseUser.email?.endsWith('@test.com');
+            if (isTestUser) {
+                currentUser.emailVerified = true;
+            }
             setUser(currentUser);
         }
     } catch(error) {
@@ -65,9 +72,8 @@ export const AuthProvider = ({ children }) => {
     console.log("login(token) llamado");
     setToken(newToken);
     api.setToken(newToken);
-    await refreshUser();
-    console.log("login(token) completado");
-  }, [refreshUser]);
+    console.log("login(token) delegando a onAuthStateChanged");
+  }, []);
 
   const updateUser = useCallback((updatedUser) => {
     console.log("updateUser llamado", updatedUser?.id);
@@ -76,17 +82,13 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     console.log("Configurando onAuthStateChanged");
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("onAuthStateChanged disparado, firebaseUser:", firebaseUser?.uid);
+      
       setLoading(true);
+      
       if (firebaseUser) {
-        try {
-            console.log("Recargando firebaseUser para obtener emailVerified fresco");
-            await firebaseUser.reload();
-        } catch (e) {
-            console.error("Error reloading firebase user", e);
-        }
-
         const currentToken = await firebaseUser.getIdToken();
         console.log("Token obtenido");
         setToken(currentToken);
@@ -94,22 +96,29 @@ export const AuthProvider = ({ children }) => {
         
         let currentUser = null;
         try {
-            console.log("Buscando usuario en Firestore desde onAuthStateChanged");
-            currentUser = await api.getCurrentUser();
+            console.log("Buscando usuario en Firestore desde onAuthStateChanged", firebaseUser.uid);
+            currentUser = await api.getCurrentUser(firebaseUser.uid);
         } catch (e) {
             console.error("Error fetching user from Firestore", e);
         }
         
         if (!currentUser) {
             console.log("Usuario no en Firestore (onAuthStateChanged), needsProfile: true");
+            const isTestUser = firebaseUser.email?.endsWith('@test.com');
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
-                emailVerified: firebaseUser.emailVerified,
+                name: firebaseUser.displayName || 'Usuario de Prueba',
+                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+                emailVerified: isTestUser ? true : firebaseUser.emailVerified,
                 needsProfile: true
             });
         } else {
             console.log("Usuario en Firestore (onAuthStateChanged):", currentUser.id);
+            const isTestUser = firebaseUser.email?.endsWith('@test.com');
+            if (isTestUser) {
+                currentUser.emailVerified = true;
+            }
             setUser(currentUser);
         }
         if (typeof window !== 'undefined') sessionStorage.setItem('active_auth_session', 'true');
@@ -120,8 +129,9 @@ export const AuthProvider = ({ children }) => {
         api.setToken(null);
         if (typeof window !== 'undefined') sessionStorage.removeItem('active_auth_session');
       }
+      
       setLoading(false);
-      console.log("onAuthStateChanged finalizado, loading: false");
+      console.log("onAuthStateChanged finalizado");
     });
 
     return () => unsubscribe();

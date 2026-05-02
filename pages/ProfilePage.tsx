@@ -13,6 +13,7 @@ import PreferencesModal from '../components/PreferencesModal.tsx';
 import AutocompleteInput from '../components/AutocompleteInput.tsx';
 import LocationSelector from '../components/LocationSelector.tsx';
 import EmptyState from '../components/EmptyState.tsx';
+import AvatarEditorModal from '../components/AvatarEditorModal.tsx';
 import { useToast } from '../hooks/useToast.tsx';
 import { locations } from '../data/locations.ts';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
@@ -138,14 +139,19 @@ const ProfilePage = () => {
 
     const [isEditingInfo, setIsEditingInfo] = useState(false);
     const [isEditingPassword, setIsEditingPassword] = useState(false);
+    const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false);
     const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
     const [showAllRatings, setShowAllRatings] = useState(false);
     
     const [editName, setEditName] = useState('');
     const [editCountry, setEditCountry] = useState('');
     const [editCity, setEditCity] = useState('');
+    const [editProvince, setEditProvince] = useState('');
+    const [editCommunity, setEditCommunity] = useState('');
     const [editPostalCode, setEditPostalCode] = useState('');
     const [editAddress, setEditAddress] = useState('');
+    const [editLat, setEditLat] = useState<number | undefined>(undefined);
+    const [editLng, setEditLng] = useState<number | undefined>(undefined);
     
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -161,10 +167,12 @@ const ProfilePage = () => {
     
     const [isLoading, setIsLoading] = useState(false);
     const [userItems, setUserItems] = useState([]);
+    const [pastExchanges, setPastExchanges] = useState([]);
     const [isItemsLoading, setIsItemsLoading] = useState(true);
     const [isEditable, setIsEditable] = useState(true);
     const [disabledReason, setDisabledReason] = useState(null);
     const [stats, setStats] = useState<any>({});
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     useEffect(() => {
         if (user) {
@@ -191,14 +199,18 @@ const ProfilePage = () => {
         if (!user) return;
         try {
             setIsItemsLoading(true);
-            const items = await api.getUserItems(user.id);
-            const updatedItems = items.map(item => ({
+            const [items, exchs] = await Promise.all([
+                api.getUserItems(user.id),
+                api.getUserPastExchanges(user.id)
+            ]);
+            const updatedItems = items.filter((i: any) => i.status !== 'EXCHANGED').map(item => ({
                 ...item,
                 ownerName: item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : (user.name || 'Usuario'),
                 ownerAvatarUrl: item.ownerAvatarUrl || user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.id,
                 ownerLocation: item.ownerLocation || user.location || null
             }));
             setUserItems(updatedItems);
+            setPastExchanges(exchs || []);
         } catch (error) {
             showToast("Error al cargar tus artículos.", "error");
         } finally {
@@ -216,7 +228,25 @@ const ProfilePage = () => {
         }
     };
 
+    useEffect(() => {
+        if (user) {
+            setEditName(user.name || '');
+            setEditCountry(user.location?.country || 'España');
+            setEditCity(user.location?.city || '');
+            setEditProvince(user.location?.province || '');
+            setEditCommunity(user.location?.community || '');
+            setEditPostalCode(user.location?.postalCode || '');
+            setEditAddress(user.location?.address || '');
+            setEditLat(user.location?.lat);
+            setEditLng(user.location?.lng);
+        }
+    }, [user, isEditingInfo]);
+
     const handleSaveInfo = async () => {
+        if (!editCity || !editProvince) {
+            showToast("Por favor, selecciona una ubicación válida (Ciudad y Provincia).", "error");
+            return;
+        }
         setIsLoading(true);
         try {
             const updatedUser = await api.updateUserProfileData({
@@ -224,10 +254,12 @@ const ProfilePage = () => {
                 location: {
                     country: editCountry,
                     city: editCity,
+                    province: editProvince,
+                    community: editCommunity,
                     postalCode: editPostalCode,
                     address: editAddress,
-                    lat: user.location?.lat,
-                    lng: user.location?.lng
+                    lat: editLat,
+                    lng: editLng
                 }
             });
             updateUser(updatedUser);
@@ -271,13 +303,19 @@ const ProfilePage = () => {
     };
 
     const handleDeleteItem = async (itemId) => {
-        if (window.confirm("¿Estás seguro de eliminar este artículo?")) {
+        setItemToDelete(itemId);
+    };
+
+    const confirmDelete = async () => {
+        if (itemToDelete) {
             try {
-                await api.deleteItem(itemId);
-                setUserItems(prev => prev.filter(i => i.id !== itemId));
+                await api.deleteItem(itemToDelete);
+                setUserItems(prev => prev.filter(i => i.id !== itemToDelete));
                 showToast("Artículo eliminado.", "success");
             } catch (error) {
                 showToast("Error al eliminar artículo.", "error");
+            } finally {
+                setItemToDelete(null);
             }
         }
     };
@@ -299,8 +337,14 @@ const ProfilePage = () => {
             React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-8" },
                 // Avatar Column
                 React.createElement("div", { className: "md:col-span-1" },
-                    React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md text-center" },
-                        React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "w-32 h-32 rounded-full mx-auto object-cover mb-4 shadow-lg border-4 border-white dark:border-gray-700" }),
+                    React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md text-center relative" },
+                        React.createElement("div", { className: "relative inline-block" },
+                            React.createElement("img", { src: user.avatarUrl, alt: "Avatar", className: "w-32 h-32 rounded-full mx-auto object-cover mb-4 shadow-lg border-4 border-white dark:border-gray-700 bg-white" }),
+                            React.createElement("button", {
+                                onClick: () => setIsAvatarEditorOpen(true),
+                                className: `absolute bottom-4 right-0 ${theme.bg} text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform`
+                            }, "✏️")
+                        ),
                         React.createElement("h2", { className: "text-xl font-bold text-gray-900 dark:text-white mb-0" }, user.name),
                         React.createElement("p", { className: "text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4" }, "Miembro desde: ", new Date(user.createdAt || Date.now()).toLocaleDateString()),
                         React.createElement(UserRating, { ratings: user.ratings, stats: stats })
@@ -313,15 +357,19 @@ const ProfilePage = () => {
                         ),
                         React.createElement("div", { className: "space-y-4" },
                             (showAllRatings ? user.ratings : user.ratings.slice(0, 3)).map((r, idx) => (
-                                React.createElement("div", { key: idx, className: "p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700" },
+                                React.createElement("div", { key: idx, className: "p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer", onClick: (e) => {
+                                    e.currentTarget.classList.toggle('expanded-rating');
+                                    const p = e.currentTarget.querySelector('p');
+                                    if(p) p.classList.toggle('line-clamp-2');
+                                }},
                                     React.createElement("div", { className: "flex justify-between items-start mb-1" },
                                         React.createElement("div", { className: "flex items-center gap-2" },
                                             React.createElement("span", { className: `px-2 py-0.5 rounded text-[10px] font-black text-white ${r.rating >= 90 ? 'bg-emerald-500' : r.rating >= 75 ? 'bg-blue-500' : r.rating >= 50 ? 'bg-yellow-500' : 'bg-red-500'}` }, r.rating),
                                             React.createElement("span", { className: "text-[10px] font-bold text-gray-400 uppercase" }, "Puntos")
                                         ),
-                                        React.createElement("span", { className: "text-[10px] text-gray-400" }, new Date(r.date).toLocaleDateString())
+                                        React.createElement("span", { className: "text-[10px] text-gray-400" }, new Date(r.timestamp || r.date).toLocaleDateString())
                                     ),
-                                    React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-xs italic" }, `"${r.comment}"`)
+                                    React.createElement("p", { className: "text-gray-600 dark:text-gray-400 text-xs italic line-clamp-2 transition-all" }, `"${r.comment || 'Sin comentario'}"`)
                                 )
                             ))
                         ),
@@ -362,6 +410,10 @@ const ProfilePage = () => {
                                         onChange: (loc) => {
                                             setEditCountry(loc.country || 'España');
                                             setEditCity(loc.city);
+                                            setEditProvince(loc.province);
+                                            setEditCommunity(loc.community);
+                                            setEditLat(loc.lat);
+                                            setEditLng(loc.lng);
                                             // Actualizamos el estado local para que se guarde al pulsar Guardar
                                             setEditPostalCode(loc.postalCode || editPostalCode);
                                             setEditAddress(loc.address || editAddress);
@@ -397,25 +449,6 @@ const ProfilePage = () => {
                     React.createElement("div", { className: "bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8" },
                         React.createElement("h3", { className: "text-xl font-semibold text-gray-900 dark:text-white mb-4" }, "Estado de Seguridad"),
                         React.createElement("div", { className: "space-y-4" },
-                            React.createElement("div", { className: "flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl" },
-                                React.createElement("div", { className: "flex items-center gap-3" },
-                                    React.createElement("span", { className: "text-xl" }, "🔑"),
-                                    React.createElement("div", null,
-                                        React.createElement("p", { className: "text-sm font-bold dark:text-white" }, "Contraseña"),
-                                        React.createElement("p", { className: "text-[10px] text-gray-500" }, "Actualiza tu seguridad")
-                                    )
-                                ),
-                                React.createElement(Button, { 
-                                    size: "sm", 
-                                    variant: "secondary", 
-                                    onClick: () => {
-                                        api.resetPassword(user.email)
-                                            .then(() => showToast("Email de restablecimiento enviado", "success"))
-                                            .catch(err => showToast(err.message, "error"));
-                                    },
-                                    children: "Cambiar"
-                                })
-                            ),
                             React.createElement("div", { className: "flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl" },
                                 React.createElement("div", { className: "flex items-center gap-3" },
                                     React.createElement("span", { className: "text-xl" }, "📧"),
@@ -521,6 +554,43 @@ const ProfilePage = () => {
                                 isOwnItem: true,
                                 onDelete: handleDeleteItem
                             })
+                        ))
+                    )
+                )
+            ),
+
+            React.createElement("div", { className: "mt-12 mb-8 bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700" },
+                React.createElement("div", { className: "flex justify-between items-center mb-6" },
+                    React.createElement("h2", { className: "text-xl font-black text-gray-900 dark:text-white flex items-center gap-2" }, 
+                        React.createElement("span", { className: "p-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-lg" }, "🤝"), 
+                        "Historial de Transacciones"
+                    )
+                ),
+                isItemsLoading ? (
+                    React.createElement("div", { className: "flex justify-center py-10" }, React.createElement(SwapSpinner, null))
+                ) : pastExchanges.length === 0 ? (
+                    React.createElement(EmptyState, {
+                        icon: "🤝",
+                        title: "Aún no hay transacciones",
+                        message: "Aquí aparecerá un registro público de todos tus intercambios (completados o no) para mayor transparencia.",
+                        actionButton: null
+                    })
+                ) : (
+                    React.createElement("div", { className: "flex flex-col gap-4" },
+                        pastExchanges.map(ex => (
+                            React.createElement("div", { key: ex.id, className: "bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 hover:shadow-md transition-shadow" },
+                                React.createElement("div", { className: "flex-1 text-center md:text-left" },
+                                    React.createElement("p", { className: "font-bold text-gray-800 dark:text-gray-200 text-sm" }, 
+                                        ex.ownerId === user?.id ? `Transacción de tu inventario` : `Transacción iniciada por ti`
+                                    ),
+                                    React.createElement("p", { className: "text-xs text-gray-500 mt-1 uppercase tracking-wide font-bold" }, `Fecha: ${new Date(ex.updatedAt?.toDate ? ex.updatedAt.toDate() : ex.updatedAt).toLocaleDateString()}`)
+                                ),
+                                React.createElement("div", null,
+                                    ex.status === 'COMPLETED' && React.createElement("span", { className: "bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest shadow-sm" }, "COMPLETADO"),
+                                    ex.status === 'REJECTED' && React.createElement("span", { className: "bg-red-100 text-red-800 px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest shadow-sm" }, "RECHAZADO"),
+                                    ex.status === 'CANCELLED' && React.createElement("span", { className: "bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest shadow-sm" }, "CANCELADO")
+                                )
+                            )
                         ))
                     )
                 )
@@ -645,7 +715,45 @@ const ProfilePage = () => {
                         )
                     )
                 )
-            )
+            ),
+            
+            itemToDelete && React.createElement("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" },
+                React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200" },
+                    React.createElement("div", { className: "flex justify-between items-center mb-4" },
+                        React.createElement("h2", { className: "text-xl font-bold text-gray-900 dark:text-white" }, "Eliminar Artículo"),
+                        React.createElement("button", { onClick: () => setItemToDelete(null), className: "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" },
+                            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
+                                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M6 18L18 6M6 6l12 12" })
+                            )
+                        )
+                    ),
+                    React.createElement("p", { className: "text-gray-600 dark:text-gray-400 mb-6" }, "¿Estás seguro de eliminar este artículo? Esta acción no se puede deshacer."),
+                    React.createElement("div", { className: "flex justify-end gap-3" },
+                        React.createElement(Button, { variant: "secondary", onClick: () => setItemToDelete(null), children: "Cancelar" }),
+                        React.createElement(Button, { variant: "danger", onClick: confirmDelete, children: "Eliminar" })
+                    )
+                )
+            ),
+            
+            // Avatar Editor Modal
+            isAvatarEditorOpen && React.createElement(AvatarEditorModal, {
+                isOpen: isAvatarEditorOpen,
+                onClose: () => setIsAvatarEditorOpen(false),
+                initialUrl: user.avatarUrl,
+                onSave: async (newAvatarUrl) => {
+                    try {
+                        const updated = await api.updateUserProfileData({ avatarUrl: newAvatarUrl });
+                        if (updated) {
+                            updateUser(updated);
+                        } else {
+                            updateUser({ ...user, avatarUrl: newAvatarUrl });
+                        }
+                        showToast('Avatar actualizado correctamente', 'success');
+                    } catch (e: any) {
+                        showToast(`Error al actualizar avatar: ${e.message || 'Error desconocido'}`, 'error');
+                    }
+                }
+            })
         )
     );
 };
