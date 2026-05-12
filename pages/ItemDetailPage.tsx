@@ -40,6 +40,9 @@ const ItemDetailPage = () => {
           setItem(fetched);
           setSelectedImage(fetched.imageUrls[0]);
           viewHistoryService.addItem(fetched);
+          if (user && fetched.userId !== user.id) {
+            api.incrementViewCount(itemId).catch(console.error);
+          }
         }
       } catch (err) { showToast("Error al cargar detalles", "error"); }
       finally { setLoading(false); }

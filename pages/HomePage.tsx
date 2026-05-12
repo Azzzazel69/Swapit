@@ -143,12 +143,11 @@ const HomePage = () => {
 
   const fetchItems = async (p = 1, append = false) => {
     try {
-      if (!append) setLoading(true);
-      const res = await api.getHomePageData(user?.id);
-      setData(prev => ({
-          ...res,
-          exploreItems: append ? [...prev.exploreItems, ...res.exploreItems] : res.exploreItems
-      }));
+      if (!append) {
+        setLoading(true);
+        const res = await api.getHomePageData(user?.id);
+        setData(res);
+      }
       setPage(p);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
@@ -199,12 +198,12 @@ const HomePage = () => {
   const renderCurrentView = () => {
       if (viewMode === 'landing') {
           return React.createElement(React.Fragment, null,
-            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
-            React.createElement(ItemGroup, { title: "Tus Favoritos", icon: "❤️", items: filtered.favs, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
-            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
-            React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true })
+            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: "Tus Favoritos", icon: "❤️", items: filtered.favs.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true })
           );
       }
 
@@ -227,55 +226,61 @@ const HomePage = () => {
           });
       }
 
-      return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true });
+      return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true });
   };
 
-  return React.createElement("div", { className: "pb-32 w-full" },
-    React.createElement("div", { className: "mb-6 flex flex-col gap-4 w-full" },
-      React.createElement("div", { className: "flex items-center gap-2 w-full" },
-        // Botón Filtros
-        React.createElement("button", {
-            className: "flex items-center justify-center w-12 h-12 min-w-[3rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
-            onClick: () => {} // Futuro
-        },
-            ICONS.filter
-        ),
-        
-        // Buscador
-        React.createElement("div", { className: "relative flex-grow h-12" },
-            React.createElement("input", {
-                type: "search",
-                className: "w-full h-full pl-4 pr-12 text-base bg-gray-100/80 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 shadow-sm transition-all dark:text-white placeholder-gray-400",
-                placeholder: "Buscar artículos...",
-                value: searchQuery,
-                onChange: (e) => setSearchQuery(e.target.value)
-            }),
-            React.createElement("div", { className: "absolute right-3 top-0 h-full flex items-center pointer-events-none text-gray-400" },
-                ICONS.search
-            )
-        ),
-        
-        // Botón Columnas
-        React.createElement("button", {
-            className: "flex flex-col items-center justify-center w-12 h-12 min-w-[3rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
-            onClick: toggleColumns,
-            title: "Cambiar vista de grid"
-        },
-            React.createElement("svg", { width: "22", height: "22", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", className: "transition-all" },
-                React.createElement(GridIconContent, { columns: columnLayout })
-            )
-        )
-      )
-    ),
+    const hasMore = viewMode === 'landing' 
+        ? filtered.explore.length > page * PAGE_SIZE
+        : (viewMode === 'cerca' ? filtered.near.length > page * PAGE_SIZE 
+        : (viewMode === 'favoritos' ? filtered.favs.length > page * PAGE_SIZE 
+        : filtered.explore.length > page * PAGE_SIZE));
 
-    renderCurrentView(),
-    
-    data.exploreItems.length < data.totalExploreItems && viewMode !== 'landing' && React.createElement("div", { className: "flex justify-center mt-8" },
-        React.createElement(Button, { onClick: () => fetchItems(page + 1, true), children: "Cargar más contenido" })
-    ),
-    
-    /* Floating Action Dock removed from here and moved to App.tsx */
-  );
-};
+    return React.createElement("div", { className: "pb-32 w-full" },
+      React.createElement("div", { className: "mb-6 flex flex-col gap-4 w-full" },
+        React.createElement("div", { className: "flex items-center gap-2 w-full" },
+          // Botón Filtros
+          React.createElement("button", {
+              className: "flex items-center justify-center w-12 h-12 min-w-[3rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
+              onClick: () => {} // Futuro
+          },
+              ICONS.filter
+          ),
+          
+          // Buscador
+          React.createElement("div", { className: "relative flex-grow h-12" },
+              React.createElement("input", {
+                  type: "search",
+                  className: "w-full h-full pl-4 pr-12 text-base bg-gray-100/80 dark:bg-gray-800 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 shadow-sm transition-all dark:text-white placeholder-gray-400",
+                  placeholder: "Buscar artículos...",
+                  value: searchQuery,
+                  onChange: (e) => setSearchQuery(e.target.value)
+              }),
+              React.createElement("div", { className: "absolute right-3 top-0 h-full flex items-center pointer-events-none text-gray-400" },
+                  ICONS.search
+              )
+          ),
+          
+          // Botón Columnas
+          React.createElement("button", {
+              className: "flex flex-col items-center justify-center w-12 h-12 min-w-[3rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
+              onClick: toggleColumns,
+              title: "Cambiar vista de grid"
+          },
+              React.createElement("svg", { width: "22", height: "22", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", className: "transition-all" },
+                  React.createElement(GridIconContent, { columns: columnLayout })
+              )
+          )
+        )
+      ),
+  
+      renderCurrentView(),
+      
+      hasMore && React.createElement("div", { className: "flex justify-center mt-8" },
+          React.createElement(Button, { onClick: () => fetchItems(page + 1, true), children: "Cargar más contenido" })
+      ),
+      
+      /* Floating Action Dock removed from here and moved to App.tsx */
+    );
+  };
 
 export default HomePage;

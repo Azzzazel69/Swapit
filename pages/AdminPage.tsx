@@ -32,7 +32,7 @@ const UserRow = ({ user, currentUser, onBan, onUnban, onRoleChange, onDelete }: 
     return (
         React.createElement("div", { className: `flex flex-col p-4 border-b last:border-0 border-gray-100 dark:border-gray-700 transition-colors ${isManaging ? 'bg-gray-50 dark:bg-gray-800' : ''}` },
             React.createElement("div", { className: "flex flex-col md:flex-row md:items-center justify-between gap-4" },
-                React.createElement(Link, { to: `/profile/${user.id}`, className: "flex items-center gap-3 min-w-0 hover:bg-gray-50 dark:hover:bg-gray-800 p-1 rounded-lg transition-colors" },
+                React.createElement(Link, { to: `/user/${user.id}`, className: "flex items-center gap-3 min-w-0 hover:bg-gray-50 dark:hover:bg-gray-800 p-1 rounded-lg transition-colors" },
                     React.createElement("img", { src: user.avatarUrl, className: "w-12 h-12 rounded-full flex-shrink-0 object-cover shadow-sm bg-gray-100" }),
                     React.createElement("div", { className: "min-w-0 flex-1" },
                         React.createElement("div", { className: "flex items-center gap-2" },
@@ -93,7 +93,7 @@ const ItemRow = ({ item, onDelete }: { item: any, onDelete: (id: string) => void
                 React.createElement(Link, { to: `/item/${item.id}`, className: "font-bold text-gray-900 dark:text-white truncate hover:underline" }, item.title),
                 React.createElement("div", { className: "flex items-center gap-1 mt-0.5" },
                     React.createElement("span", { className: "text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-bold" }, item.category),
-                    React.createElement("span", { className: "text-[10px] text-gray-500 truncate" }, "por ", React.createElement(Link, { to: `/profile/${item.userId}`, className: "hover:underline" }, item.ownerName || 'Usuario Desconocido'))
+                    React.createElement("span", { className: "text-[10px] text-gray-500 truncate" }, "por ", React.createElement(Link, { to: `/user/${item.userId}`, className: "hover:underline" }, item.ownerName || 'Usuario Desconocido'))
                 )
             )
         ),
@@ -274,12 +274,11 @@ const AdminPage = () => {
         requestConfirm("¿Estás seguro de que quieres forzar el sembrado de datos? Esto creará usuarios y artículos de prueba si no existen.", async () => {
             setLoading(true);
             try {
-                const { seedAllData } = await import('../services/seedData.ts');
-                await seedAllData();
+                await api.seedDemoDatabase();
                 showToast("Datos sembrados correctamente", "success");
                 await fetchData();
             } catch (e) {
-                showToast("Error al sembrar datos", "error");
+                showToast("Error al sembrar datos: " + e.message, "error");
             } finally {
                 setLoading(false);
             }

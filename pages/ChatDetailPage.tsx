@@ -22,7 +22,7 @@ const ItemCardSmall = ({ item }: { item: any }) => {
     return React.createElement("div", { className: "flex items-center gap-3 p-2 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all hover:shadow-md" },
         React.createElement("div", { className: "w-12 h-12 rounded-md overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800" },
             React.createElement("img", { 
-                src: item.images?.[0] || DEFAULT_AVATAR_NEUTRAL, 
+                src: item.imageUrls?.[0] || DEFAULT_AVATAR_NEUTRAL, 
                 alt: item.title,
                 className: "w-full h-full object-cover",
                 referrerPolicy: "no-referrer"
@@ -131,7 +131,7 @@ const ChatDetailPage = () => {
             setChat(newChat);
         });
         const unsubExchange = api.subscribeToExchange(exchangeId, (newExchange) => {
-            setExchange(newExchange);
+            setExchange(prev => prev ? { ...prev, ...newExchange } : newExchange);
         });
         return () => {
             unsubChat();

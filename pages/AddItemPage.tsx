@@ -7,11 +7,13 @@ import Input from '../components/Input.tsx';
 import { CATEGORIES_WITH_SUBCATEGORIES, ICONS } from '../constants.tsx';
 import { api } from '../services/api.ts';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { useToast } from '../hooks/useToast.tsx';
 import { ItemCondition, ItemConditionLabels } from '../types.ts';
 
 const AddItemPage = () => {
     const navigate = useNavigate();
     const { theme } = useColorTheme();
+    const { showToast } = useToast();
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -82,9 +84,11 @@ const AddItemPage = () => {
             // Simulación de envío de correo
             console.log("SIMULACIÓN: Enviando correo de confirmación de publicación a", (api as any)._getCurrentUserEmail?.() || 'usuario');
             if (newItem.moderationStatus === 'PENDING') {
-                navigate('/profile', { state: { message: '¡Artículo subido! Está en revisión por seguridad y aparecerá pronto.', variant: 'warning' } });
+                showToast('¡Artículo subido! Está en revisión por seguridad y aparecerá pronto.', 'warning');
+                navigate('/profile');
             } else {
-                navigate('/profile', { state: { message: '¡Artículo añadido con éxito! Te hemos enviado un correo de confirmación.' } });
+                showToast('¡Artículo añadido con éxito! Te hemos enviado un correo de confirmación.', 'success');
+                navigate(`/item/${newItem.id}`);
             }
         } catch (err: any) {
             console.error("DEBUG Item creation error:", err);

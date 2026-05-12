@@ -5,9 +5,19 @@
 export const ExchangeStatus = {
   Pending: 'PENDING',
   Accepted: 'ACCEPTED',
+  MeetingAccepted: 'MEETING_ACCEPTED',
   Rejected: 'REJECTED',
   Completed: 'COMPLETED',
   Cancelled: 'CANCELLED',
+};
+
+export const ItemStatus = {
+  Available: 'AVAILABLE',
+  Swapped: 'SWAPPED',
+  Hidden: 'HIDDEN',
+  Deleted: 'DELETED',
+  Exchanged: 'EXCHANGED',
+  Reserved: 'RESERVED',
 };
 
 export const ItemCondition = {

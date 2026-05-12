@@ -108,7 +108,7 @@ class ApiClient {
       console.log('ApiClient: Admin temporal autenticado:', user?.email, 'UID:', user?.uid);
 
       const collections = ['items', 'exchanges', 'chats', 'notifications', 'swipes', 'reports', 'users', 'trust_verifications'];
-      const userAdminEmail = 'azzazel69@gmail.com';
+      const adminUsersQuery = query(collection(tempDb, 'users'), where('role', 'in', ['SUPER_ADMIN', 'ADMIN']));
 
       for (const colName of collections) {
         try {
@@ -120,7 +120,7 @@ class ApiClient {
             // Skip deleting the current admin user or the main admin email
             if (colName === 'users') {
               const data = d.data();
-              if (d.id === user?.uid || data.email === adminEmail || data.email === userAdminEmail || data.email === baseAdminEmail || (data.email && data.email.endsWith('_v5@test.com'))) {
+              if (d.id === user?.uid || data.email === adminEmail || data.email === baseAdminEmail || (data.email && data.email.endsWith('_v5@test.com'))) {
                 console.log(`ApiClient: Saltando borrado de usuario protegido/demo: ${data.email || d.id}`);
                 continue;
               }
@@ -166,14 +166,14 @@ class ApiClient {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data() as any;
-          if ((data.email === 'azzazel69@gmail.com' || data.email?.includes('admin')) && data.role !== 'SUPER_ADMIN') {
+          if ((data.email?.includes('admin')) && data.role !== 'SUPER_ADMIN') {
             await updateDoc(docRef, { role: 'SUPER_ADMIN' });
             data.role = 'SUPER_ADMIN';
           }
           return { id: snap.id, ...data };
         } else {
           // Si el usuario es el admin pero el doc no existe (se borró por accidente), lo recreamos
-          if (auth.currentUser?.email === 'azzazel69@gmail.com' || auth.currentUser?.email?.includes('admin')) {
+          if (auth.currentUser?.email?.includes('admin')) {
              console.log("Recreando doc de admin que fue eliminado...");
              const userDoc = {
                name: auth.currentUser?.displayName || 'Admin',
@@ -429,7 +429,7 @@ class ApiClient {
                emailVerified: true,
                phoneVerified: true,
                identityVerified: true,
-               role: (isAdminEmail || email === 'azzazel69@gmail.com') ? 'SUPER_ADMIN' : 'USER',
+               role: isAdminEmail ? 'SUPER_ADMIN' : 'USER',
                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
             };
             
@@ -648,7 +648,7 @@ class ApiClient {
         phone: userData.phone || null,
         emailVerified: auth.currentUser?.emailVerified || false,
         phoneVerified: userData.phoneVerified || false, 
-        role: userData.email === 'azzazel69@gmail.com' || userData.email.includes('admin') ? 'SUPER_ADMIN' : 'USER',
+        role: userData.email?.includes('admin') ? 'SUPER_ADMIN' : 'USER',
         avatarUrl: finalAvatarUrl,
         location: userData.location || null,
         preferences: userData.preferences || [],
@@ -904,6 +904,14 @@ class ApiClient {
 
   async deleteItem(itemId): Promise<any> {
     try { await deleteDoc(doc(db, 'items', itemId)); } catch (e) { handleFirestoreError(e, OperationType.DELETE, 'items'); }
+  }
+
+  async incrementViewCount(itemId): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'items', itemId), { viewCount: increment(1) });
+    } catch (e) {
+      console.warn('Error al incrementar viewCount:', e);
+    }
   }
 
   async getItemById(id): Promise<any> {
@@ -1219,7 +1227,9 @@ class ApiClient {
                 ownerId: itemOwnerId,
                 requesterId: uid,
                 requestedItemId: itemId,
-                offeredItemId: matchedItemId,
+                offeredItemIds: [matchedItemId],
+                offeredOtherItems: [],
+                cashPlus: 0,
                 status: 'PENDING',
                 createdAt: new Date().toISOString(),
                 lastMessage: '¡Es un match! Empezad a hablar sobre el intercambio.',
@@ -1553,9 +1563,20 @@ class ApiClient {
   }
 
   async deleteExchanges(selectedIds): Promise<any> {
+    const uid = this._getCurrentUserId();
     try {
       const batch = writeBatch(db);
-      selectedIds.forEach(id => batch.delete(doc(db, 'exchanges', id)));
+      for (const id of selectedIds) {
+        const exSnap = await getDoc(doc(db, 'exchanges', id));
+        if (exSnap.exists()) {
+           const data = exSnap.data();
+           if (data.ownerId === uid || data.requesterId === uid) {
+             batch.delete(doc(db, 'exchanges', id));
+           } else {
+             throw new Error("No tienes permiso para borrar este intercambio");
+           }
+        }
+      }
       await batch.commit();
     } catch (e) { handleFirestoreError(e, OperationType.DELETE, 'exchanges'); }
   }
@@ -1618,13 +1639,8 @@ class ApiClient {
     const exRef = doc(db, 'exchanges', exchangeId);
     return onSnapshot(exRef, async (docSnap) => {
       if (docSnap.exists()) {
-        try {
-          const details = await this.getChatAndExchangeDetails(exchangeId);
-          callback(details.exchange);
-        } catch (e) {
-          const exchangeData = { id: docSnap.id, ...(docSnap.data() as any) };
-          callback(exchangeData);
-        }
+         const exchangeData = { id: docSnap.id, ...(docSnap.data() as any) };
+         callback(exchangeData);
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'exchanges');
@@ -1725,6 +1741,11 @@ class ApiClient {
       if (exchange.offeredItemId) {
         batch.update(doc(db, 'items', exchange.offeredItemId), { status: 'EXCHANGED' });
       }
+      if (exchange.offeredItemIds && Array.isArray(exchange.offeredItemIds)) {
+        for (const itemId of exchange.offeredItemIds) {
+          batch.update(doc(db, 'items', itemId), { status: 'EXCHANGED' });
+        }
+      }
       
       // Add rating to target user
       const targetUserRef = doc(db, 'users', targetUserId);
@@ -1753,7 +1774,11 @@ class ApiClient {
     } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'exchanges'); }
   }
   async getSmartMeetingSuggestions(lat: number, lng: number): Promise<any> {
-    throw new Error("Not implemented: getSmartMeetingSuggestions");
+    return [
+      { name: "Cafetería Central", lat: lat + 0.001, lng: lng + 0.001, type: "Establecimiento público y seguro" },
+      { name: "Estación Cercanías", lat: lat - 0.002, lng: lng + 0.0015, type: "Muy transitado y vigilado" },
+      { name: "Centro Comercial", lat: lat + 0.0015, lng: lng - 0.002, type: "Mucha afluencia, cámaras de seguridad" }
+    ];
   }
 
   // Moderation
@@ -1825,14 +1850,24 @@ class ApiClient {
     });
   }
 
-  async getNotificationsForUserDev(uid): Promise<any> {
+  async getNotificationsForUser(uid): Promise<any> {
     try {
       const snap = await getDocs(query(collection(db, 'notifications'), where('userId', '==', uid)));
       return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
     } catch (e) { handleFirestoreError(e, OperationType.LIST, 'notifications'); }
   }
 
-  async markAllNotificationsReadDev(uid): Promise<any> {
+  async updateLastSeen(): Promise<void> {
+    const uid = this._getCurrentUserId();
+    if (!uid) return;
+    try {
+      await updateDoc(doc(db, 'users', uid), { lastSeen: new Date().toISOString() });
+    } catch (e) {
+      console.warn('Silent issue updating last seen:', e);
+    }
+  }
+
+  async markAllNotificationsRead(uid): Promise<any> {
     try {
       const snap = await getDocs(query(collection(db, 'notifications'), where('userId', '==', uid), where('read', '==', false)));
       const batch = writeBatch(db);

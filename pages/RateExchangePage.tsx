@@ -69,7 +69,7 @@ const RateExchangePage = () => {
         return React.createElement("div", { className: "text-center" }, "Intercambio no encontrado.");
     }
     
-    const otherUser = currentUser.id === exchange.owner.id ? exchange.requester : exchange.owner;
+    const otherUser = currentUser.id === exchange.ownerId ? exchange.requester : exchange.owner;
     
     const getRatingLabel = (val) => {
         const label = RATING_LABELS.find(l => val <= l.max);

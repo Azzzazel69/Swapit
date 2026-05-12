@@ -43,6 +43,7 @@ const ExchangeCard = (props: any) => {
     const statusColor = {
         [ExchangeStatus.Pending]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
         [ExchangeStatus.Accepted]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+        [ExchangeStatus.MeetingAccepted]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
         [ExchangeStatus.Rejected]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
         [ExchangeStatus.Completed]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
         [ExchangeStatus.Cancelled]: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200',
@@ -51,6 +52,7 @@ const ExchangeCard = (props: any) => {
     const statusText = {
         [ExchangeStatus.Pending]: 'Pendiente',
         [ExchangeStatus.Accepted]: 'Aceptado',
+        [ExchangeStatus.MeetingAccepted]: 'Reunión Acordada',
         [ExchangeStatus.Rejected]: 'Rechazado',
         [ExchangeStatus.Completed]: 'Completado',
         [ExchangeStatus.Cancelled]: 'Cancelado',
@@ -119,7 +121,7 @@ const ExchangesPage = () => {
     if (!user) return;
     try {
       setLoading(true);
-      await (api as any).markAllNotificationsReadDev(user.id);
+      await api.markAllNotificationsRead(user.id);
       setError(null);
     } catch (err) {
       setError('Error al cargar notificaciones.');

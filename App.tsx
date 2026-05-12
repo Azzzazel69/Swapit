@@ -70,7 +70,7 @@ const AppContent = () => {
     const location = useLocation();
     const { user } = useAuth();
     const { theme } = useColorTheme();
-    const [isFabOpen, setIsFabOpen] = useState(false);
+    // Fab open state removed
     
     // Determinamos si es una página de "flujo ininterrumpido" (Mapa o Chat) para quitar paddings y footer
     const isFullScreenPage = location.pathname.startsWith('/meeting-map') || location.pathname.startsWith('/chat') || location.pathname.startsWith('/exploration');
@@ -190,6 +190,12 @@ const AppRoutes = () => {
   );
 };
 
+export const isUserFullyOnboarded = (user) => {
+  if (!user) return false;
+  const isTestUser = user.email?.endsWith('@test.com') || user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN';
+  return isTestUser || !!(user.emailVerified && user.phoneVerified && user.location?.city && user.location?.province && user.preferences?.length > 0);
+};
+
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
@@ -198,10 +204,9 @@ const ProtectedRoute = ({ children }) => {
     return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
   }
 
-  const isTestUser = user.email?.endsWith('@test.com') || user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN';
-  const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.location.city && user.location.province && user.preferences?.length > 0);
+  const fullyOnboarded = isUserFullyOnboarded(user);
 
-  if (!isFullyOnboarded) {
+  if (!fullyOnboarded) {
     const missingSteps = [];
     if (!user.emailVerified) missingSteps.push("Email no verificado");
     if (!user.phoneVerified) missingSteps.push("Teléfono no verificado");
@@ -233,10 +238,9 @@ const OnboardingGuard = ({ children }) => {
         return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
     }
 
-    const isTestUser = user.email?.endsWith('@test.com') || user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN';
-    const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.location.city && user.location.province && user.preferences?.length > 0);
+    const fullyOnboarded = isUserFullyOnboarded(user);
 
-    if (isFullyOnboarded) {
+    if (fullyOnboarded) {
         console.log("OnboardingGuard: User already fully onboarded, redirecting to home");
         return React.createElement(Navigate, { replace: true, to: "/" });
     }

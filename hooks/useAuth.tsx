@@ -44,21 +44,16 @@ export const AuthProvider = ({ children }) => {
         
         if (!currentUser) {
             console.log("Usuario no encontrado en Firestore o error, marcando como needsProfile");
-            const isTestUser = firebaseUser.email?.endsWith('@test.com');
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
                 name: firebaseUser.displayName || 'Usuario',
                 avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
-                emailVerified: isTestUser ? true : firebaseUser.emailVerified,
+                emailVerified: firebaseUser.emailVerified,
                 needsProfile: true
             });
         } else {
             console.log("Usuario obtenido de Firestore:", currentUser.id);
-            const isTestUser = firebaseUser.email?.endsWith('@test.com');
-            if (isTestUser) {
-                currentUser.emailVerified = true;
-            }
             setUser(currentUser);
         }
     } catch(error) {
@@ -104,21 +99,16 @@ export const AuthProvider = ({ children }) => {
         
         if (!currentUser) {
             console.log("Usuario no en Firestore (onAuthStateChanged), needsProfile: true");
-            const isTestUser = firebaseUser.email?.endsWith('@test.com');
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
                 name: firebaseUser.displayName || 'Usuario de Prueba',
                 avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
-                emailVerified: isTestUser ? true : firebaseUser.emailVerified,
+                emailVerified: firebaseUser.emailVerified,
                 needsProfile: true
             });
         } else {
             console.log("Usuario en Firestore (onAuthStateChanged):", currentUser.id);
-            const isTestUser = firebaseUser.email?.endsWith('@test.com');
-            if (isTestUser) {
-                currentUser.emailVerified = true;
-            }
             setUser(currentUser);
         }
         if (typeof window !== 'undefined') sessionStorage.setItem('active_auth_session', 'true');

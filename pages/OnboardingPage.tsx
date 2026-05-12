@@ -215,24 +215,28 @@ const OnboardingPage = () => {
             return;
         }
         setIsLoading(true); setError('');
-        setTimeout(async () => {
-            if (user?.needsProfile) {
-                setIsPhoneVerified(true);
-                setStep('location');
-            } else {
-                try {
+        try {
+            const verified = await api.verifyPhoneCode(code);
+            if (verified) {
+                if (user?.needsProfile) {
+                    setIsPhoneVerified(true);
+                    setStep('location');
+                } else {
                     await api.updateUserProfileData({
                         phone: `${countryCode}${phone}`,
                         phoneVerified: true
                     });
                     await refreshUser();
-                } catch (err: any) {
-                    setError(err.message);
                 }
+                showToast("Teléfono verificado con éxito", "success");
+            } else {
+                setError("Código incorrecto");
             }
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
             setIsLoading(false);
-            showToast("Teléfono verificado con éxito", "success");
-        }, 1200);
+        }
     };
 
     const handleSaveLocation = async (e) => {
