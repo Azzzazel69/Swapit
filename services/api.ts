@@ -171,6 +171,24 @@ class ApiClient {
             data.role = 'SUPER_ADMIN';
           }
           return { id: snap.id, ...data };
+        } else {
+          // Si el usuario es el admin pero el doc no existe (se borró por accidente), lo recreamos
+          if (auth.currentUser?.email === 'azzazel69@gmail.com' || auth.currentUser?.email?.includes('admin')) {
+             console.log("Recreando doc de admin que fue eliminado...");
+             const userDoc = {
+               name: auth.currentUser?.displayName || 'Admin',
+               email: auth.currentUser?.email,
+               emailVerified: true,
+               phoneVerified: true,
+               role: 'SUPER_ADMIN',
+               avatarUrl: auth.currentUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${auth.currentUser?.email}`,
+               createdAt: new Date().toISOString(),
+               status: 'ACTIVE',
+               needsProfile: false
+             };
+             await setDoc(docRef, userDoc);
+             return { id: uid, ...userDoc };
+          }
         }
         return null;
       } catch (e: any) { 
@@ -330,7 +348,14 @@ class ApiClient {
                   ownerName: u.name,
                   ownerAvatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
                   ownerLocation: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
-                  imageUrls: [`https://picsum.photos/seed/${itemData.title.replace(/\s/g, '')}/800/600`],
+                  imageUrls: [
+                    itemData.title.toLowerCase().includes('vestido') ? 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&q=80' :
+                    itemData.title.toLowerCase().includes('iphone') ? 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80' :
+                    itemData.title.toLowerCase().includes('silla') ? 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=800&q=80' :
+                    itemData.title.toLowerCase().includes('vinilo') ? 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80' :
+                    itemData.title.toLowerCase().includes('bicicleta') ? 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=800&q=80' :
+                    `https://picsum.photos/seed/${itemData.title.replace(/\s/g, '')}/800/600`
+                  ],
                   wishedItem: itemData.wishedItem,
                   status: 'AVAILABLE',
                   moderationStatus: 'APPROVED',
@@ -394,18 +419,25 @@ class ApiClient {
             const cred = await createUserWithEmailAndPassword(auth, email, password);
             console.log(`ApiClient: Demo user ${email} created successfully.`);
             
-            // Create the profile in Firestore as well for this user
+            const userDocRef = doc(db, 'users', cred.user.uid);
+            const userSnap = await getDoc(userDocRef);
+            
             const isAdminEmail = email.includes('admin') || email.includes('seeder');
-            await setDoc(doc(db, 'users', cred.user.uid), {
-              name: email.split('@')[0].split('_')[0],
-              email: email,
-              emailVerified: true,
-              phoneVerified: true,
-              identityVerified: true,
-              role: (isAdminEmail || email === 'azzazel69@gmail.com') ? 'SUPER_ADMIN' : 'USER',
-              createdAt: new Date(),
-              avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
-            }, { merge: true });
+            const userData = {
+               name: email.split('@')[0].split('_')[0],
+               email: email,
+               emailVerified: true,
+               phoneVerified: true,
+               identityVerified: true,
+               role: (isAdminEmail || email === 'azzazel69@gmail.com') ? 'SUPER_ADMIN' : 'USER',
+               avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
+            };
+            
+            if (!userSnap.exists()) {
+                (userData as any).createdAt = new Date().toISOString();
+            }
+            
+            await setDoc(userDocRef, userData, { merge: true });
 
             return { token: await cred.user.getIdToken() };
           } catch (createErr: any) {
@@ -479,6 +511,25 @@ class ApiClient {
     // causing extreme timeouts (60s+). Firestore can handle up to 1MB per document,
     // and these resized images are highly compressed (~30kb).
     return imageStr;
+  }
+
+  async checkPhoneInUse(phone: string): Promise<boolean> {
+    try {
+      const q = query(collection(db, 'users'), where('phone', '==', phone));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const currentUserId = auth.currentUser?.uid;
+        const currentUserEmail = auth.currentUser?.email;
+        const otherUsers = snap.docs.filter(d => 
+          d.id !== currentUserId && d.data().email !== currentUserEmail
+        );
+        return otherUsers.length > 0;
+      }
+      return false;
+    } catch (e) {
+      console.error("Error checking phone", e);
+      return false; 
+    }
   }
 
   async register(name, email, password, avatarUrl, location): Promise<any> {
@@ -727,7 +778,20 @@ class ApiClient {
   async deleteUserAdmin(uid: string): Promise<void> {
     try {
       const db = getFirestore();
-      await deleteDoc(doc(db, 'users', uid));
+      
+      const itemsQuery = query(collection(db, 'items'), where('userId', '==', uid));
+      const itemsSnap = await getDocs(itemsQuery);
+      
+      const batch = writeBatch(db);
+      
+      itemsSnap.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      
+      batch.delete(doc(db, 'users', uid));
+      
+      await batch.commit();
+      
     } catch (e: any) { 
       console.error("Delete user failed! ", e);
       handleFirestoreError(e, OperationType.DELETE, 'users'); 
@@ -1020,7 +1084,7 @@ class ApiClient {
         nearItems: nearItems, 
         favoriteItems: favoriteItems, 
         popularItems: popularItems, 
-        totalExploreItems: unswipedItems.length 
+        totalExploreItems: itemsWithMatchInfo.length 
       };
     } catch (e) { 
       console.error("Critical error in getHomePageData:", e);

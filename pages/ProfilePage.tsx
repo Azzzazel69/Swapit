@@ -331,7 +331,12 @@ const ProfilePage = () => {
         React.createElement("div", { className: "max-w-4xl mx-auto py-8" },
             React.createElement("div", { className: "flex items-center justify-between mb-8" },
                 React.createElement("h1", { className: "text-3xl font-bold text-gray-900 dark:text-white" }, "Mi Perfil"),
-                React.createElement(Button, { variant: "danger", size: "sm", onClick: logout, children: "Cerrar Sesión" })
+                React.createElement("div", { className: "flex gap-2" },
+                    (user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN') && React.createElement(Link, { to: "/admin" }, 
+                        React.createElement(Button, { variant: "primary", size: "sm", children: "Panel Admin" })
+                    ),
+                    React.createElement(Button, { variant: "danger", size: "sm", onClick: logout, children: "Cerrar Sesión" })
+                )
             ),
 
             React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-8" },

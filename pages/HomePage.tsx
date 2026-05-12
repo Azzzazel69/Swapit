@@ -17,7 +17,13 @@ const PAGE_SIZE = 12;
 const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "", showAds = false }) => {
     const { theme } = useColorTheme();
     if (!items || items.length === 0) return null;
-    const gridLayoutClasses = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4' };
+    const gridLayoutClasses = { 
+        'auto': 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+        1: 'grid-cols-1', 
+        2: 'grid-cols-2', 
+        3: 'grid-cols-3', 
+        4: 'grid-cols-4' 
+    };
 
     return (
         React.createElement("div", { id: id, className: "mb-12 animate-fade-in-up scroll-mt-20" },
@@ -95,6 +101,12 @@ const GridIconContent = ({ columns }) => {
         React.createElement("rect", { x: "9.5", y: "3", width: "5", height: "18", rx: "1", strokeWidth: "2" }),
         React.createElement("rect", { x: "17", y: "3", width: "5", height: "18", rx: "1", strokeWidth: "2" })
     );
+    if (columns === 4) return React.createElement(React.Fragment, null,
+        React.createElement("rect", { x: "2", y: "3", width: "3.5", height: "18", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "7", y: "3", width: "3.5", height: "18", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "12", y: "3", width: "3.5", height: "18", rx: "1", strokeWidth: "2" }),
+        React.createElement("rect", { x: "17", y: "3", width: "3.5", height: "18", rx: "1", strokeWidth: "2" })
+    );
     return React.createElement(React.Fragment, null,
         React.createElement("rect", { x: "3", y: "3", width: "8", height: "8", rx: "1", strokeWidth: "2" }),
         React.createElement("rect", { x: "13", y: "3", width: "8", height: "8", rx: "1", strokeWidth: "2" }),
@@ -122,7 +134,7 @@ const HomePage = () => {
   const { theme } = useColorTheme();
   
   const [viewMode, setViewMode] = useState('landing');
-  const [columnLayout, setColumnLayout] = useState(2);
+  const [columnLayout, setColumnLayout] = useState('auto');
   const [data, setData] = useState({ exploreItems: [], directMatches: [], recommended: [], nearItems: [], favoriteItems: [], popularItems: [], totalExploreItems: 0 });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -160,7 +172,11 @@ const HomePage = () => {
   };
 
   const toggleColumns = () => {
-      setColumnLayout(prev => (prev >= 4 ? 1 : prev + 1));
+      setColumnLayout(prev => {
+          if (prev === 'auto') return 1;
+          if (prev >= 4) return 'auto';
+          return prev + 1;
+      });
   };
 
   const filtered = useMemo(() => ({
@@ -219,7 +235,7 @@ const HomePage = () => {
       React.createElement("div", { className: "flex items-center gap-2 w-full" },
         // Botón Filtros
         React.createElement("button", {
-            className: "flex items-center justify-center w-12 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
+            className: "flex items-center justify-center w-12 h-12 min-w-[3rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
             onClick: () => {} // Futuro
         },
             ICONS.filter
@@ -236,6 +252,17 @@ const HomePage = () => {
             }),
             React.createElement("div", { className: "absolute right-3 top-0 h-full flex items-center pointer-events-none text-gray-400" },
                 ICONS.search
+            )
+        ),
+        
+        // Botón Columnas
+        React.createElement("button", {
+            className: "flex flex-col items-center justify-center w-12 h-12 min-w-[3rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm hover:scale-105 transition-all text-gray-500",
+            onClick: toggleColumns,
+            title: "Cambiar vista de grid"
+        },
+            React.createElement("svg", { width: "22", height: "22", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", className: "transition-all" },
+                React.createElement(GridIconContent, { columns: columnLayout })
             )
         )
       )

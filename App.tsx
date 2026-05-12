@@ -198,7 +198,7 @@ const ProtectedRoute = ({ children }) => {
     return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
   }
 
-  const isTestUser = user.email?.endsWith('@test.com');
+  const isTestUser = user.email?.endsWith('@test.com') || user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN';
   const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.location.city && user.location.province && user.preferences?.length > 0);
 
   if (!isFullyOnboarded) {
@@ -218,7 +218,7 @@ const ProtectedRoute = ({ children }) => {
 
 const AdminRoute = ({ children }) => {
   const { user } = useAuth();
-  const isStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR';
+  const isStaff = user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR' || user?.role === 'ADMIN';
   if (!user || !isStaff) {
     return React.createElement(Navigate, { to: "/", replace: true });
   }
@@ -233,7 +233,7 @@ const OnboardingGuard = ({ children }) => {
         return React.createElement(Navigate, { to: "/login", state: { from: location }, replace: true });
     }
 
-    const isTestUser = user.email?.endsWith('@test.com');
+    const isTestUser = user.email?.endsWith('@test.com') || user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN';
     const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.location.city && user.location.province && user.preferences?.length > 0);
 
     if (isFullyOnboarded) {

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api.ts';
 import Button from '../components/Button.tsx';
 import Input from '../components/Input.tsx';
@@ -177,17 +177,34 @@ const OnboardingPage = () => {
         finally { setIsLoading(false); }
     };
 
-    const handleSendPhoneCode = (e) => {
+    const handleSendPhoneCode = async (e) => {
         e.preventDefault();
         if (!phone || phone.length < 9) {
             setError("Introduce un número de teléfono válido.");
             return;
         }
         setIsLoading(true); setError('');
+        
+        const fullPhone = `${countryCode}${phone}`;
+        const isRegistered = await api.checkPhoneInUse(fullPhone);
+        
+        if (isRegistered) {
+            setError(
+                <span>
+                    Ese número de teléfono ya está registrado en otra cuenta. ¿Es tuyo?{' '}
+                    <Link to="/login" className="font-medium text-blue-500 hover:underline">
+                        Inicia sesión aquí
+                    </Link>
+                </span>
+            );
+            setIsLoading(false);
+            return;
+        }
+        
         setTimeout(() => {
             setCodeSent(true);
             setIsLoading(false);
-            showToast("Código SMS enviado a " + countryCode + phone, "success");
+            showToast("Código SMS enviado a " + fullPhone, "success");
         }, 1200);
     };
 

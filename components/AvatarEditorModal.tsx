@@ -24,6 +24,8 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
         mouth: 'smile',
         skinColor: 'ffdbb4'
     });
+    const [activeTab, setActiveTab] = useState('virtual');
+    const [uploadedImage, setUploadedImage] = useState(null);
 
     useEffect(() => {
         if (!initialUrl) return;
@@ -41,9 +43,17 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
                     mouth: params.get('mouth') || 'smile',
                     skinColor: params.get('skinColor') || 'ffdbb4'
                 });
+            } else if (!initialUrl.includes('gc=')) {
+                // Not dicebear, not the generic svg. It's a real photo.
+                setUploadedImage(initialUrl);
+                setActiveTab('upload');
             }
         } catch (e) {
-            // keep defaults
+            // keep defaults or fallback
+            if (initialUrl && !initialUrl.includes('api.dicebear.com') && !initialUrl.includes('gc=')) {
+                 setUploadedImage(initialUrl);
+                 setActiveTab('upload');
+            }
         }
     }, [initialUrl]);
 
@@ -60,7 +70,11 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
     };
 
     const handleSave = () => {
-        onSave(generateUrl());
+        if (activeTab === 'upload') {
+            onSave(uploadedImage || initialUrl);
+        } else {
+            onSave(generateUrl());
+        }
         onClose();
     };
 
@@ -90,40 +104,95 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
                         {ICONS.close}
                     </button>
                 </div>
+                
+                <div className="flex border-b dark:border-gray-700 text-sm font-bold bg-white dark:bg-gray-800">
+                    <button 
+                        className={`flex-1 py-3 transition-colors ${activeTab === 'virtual' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        onClick={() => setActiveTab('virtual')}
+                    >
+                        Avatar Virtual
+                    </button>
+                    <button 
+                        className={`flex-1 py-3 transition-colors ${activeTab === 'upload' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        onClick={() => setActiveTab('upload')}
+                    >
+                        Subir Foto
+                    </button>
+                </div>
+
                 <div className="p-6 overflow-y-auto max-h-[70vh]">
-                    <div className="flex justify-center mb-6">
-                        <img src={generateUrl()} className="w-40 h-40 rounded-full border-4 border-gray-100 shadow-md bg-white" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <OptionSelect label="Peinado" name="top" optionsArray={AVATAR_OPTIONS.top} />
-                        <OptionSelect label="Color Pelo" name="hairColor" optionsArray={AVATAR_OPTIONS.hairColor} />
-                        <OptionSelect label="Ojos" name="eyes" optionsArray={AVATAR_OPTIONS.eyes} />
-                        <OptionSelect label="Boca" name="mouth" optionsArray={AVATAR_OPTIONS.mouth} />
-                        <OptionSelect label="Ropa" name="clothing" optionsArray={AVATAR_OPTIONS.clothing} />
-                        <OptionSelect label="Piel" name="skinColor" optionsArray={AVATAR_OPTIONS.skinColor} />
-                        <OptionSelect label="Gafas/Acc..." name="accessories" optionsArray={AVATAR_OPTIONS.accessories} />
-                        <OptionSelect label="Barba/Bigote" name="facialHair" optionsArray={AVATAR_OPTIONS.facialHair} />
-                    </div>
-                    <div className="mt-4 flex justify-center">
-                        <button 
-                            className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200"
-                            onClick={() => {
-                                const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
-                                setOptions({
-                                    top: randomItem(AVATAR_OPTIONS.top),
-                                    hairColor: randomItem(AVATAR_OPTIONS.hairColor),
-                                    accessories: Math.random() > 0.5 ? randomItem(AVATAR_OPTIONS.accessories) : '',
-                                    facialHair: Math.random() > 0.7 ? randomItem(AVATAR_OPTIONS.facialHair) : '',
-                                    clothing: randomItem(AVATAR_OPTIONS.clothing),
-                                    eyes: randomItem(AVATAR_OPTIONS.eyes),
-                                    mouth: randomItem(AVATAR_OPTIONS.mouth),
-                                    skinColor: randomItem(AVATAR_OPTIONS.skinColor)
-                                });
-                            }}
-                        >
-                            🎲 Aleatorio
-                        </button>
-                    </div>
+                    {activeTab === 'virtual' ? (
+                        <>
+                            <div className="flex justify-center mb-6">
+                                <img src={generateUrl()} className="w-40 h-40 rounded-full border-4 border-gray-100 shadow-md bg-white overflow-hidden" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <OptionSelect label="Peinado" name="top" optionsArray={AVATAR_OPTIONS.top} />
+                                <OptionSelect label="Color Pelo" name="hairColor" optionsArray={AVATAR_OPTIONS.hairColor} />
+                                <OptionSelect label="Ojos" name="eyes" optionsArray={AVATAR_OPTIONS.eyes} />
+                                <OptionSelect label="Boca" name="mouth" optionsArray={AVATAR_OPTIONS.mouth} />
+                                <OptionSelect label="Ropa" name="clothing" optionsArray={AVATAR_OPTIONS.clothing} />
+                                <OptionSelect label="Piel" name="skinColor" optionsArray={AVATAR_OPTIONS.skinColor} />
+                                <OptionSelect label="Gafas/Acc..." name="accessories" optionsArray={AVATAR_OPTIONS.accessories} />
+                                <OptionSelect label="Barba/Bigote" name="facialHair" optionsArray={AVATAR_OPTIONS.facialHair} />
+                            </div>
+                            <div className="mt-4 flex justify-center">
+                                <button 
+                                    className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-200"
+                                    onClick={() => {
+                                        const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+                                        setOptions({
+                                            top: randomItem(AVATAR_OPTIONS.top),
+                                            hairColor: randomItem(AVATAR_OPTIONS.hairColor),
+                                            accessories: Math.random() > 0.5 ? randomItem(AVATAR_OPTIONS.accessories) : '',
+                                            facialHair: Math.random() > 0.7 ? randomItem(AVATAR_OPTIONS.facialHair) : '',
+                                            clothing: randomItem(AVATAR_OPTIONS.clothing),
+                                            eyes: randomItem(AVATAR_OPTIONS.eyes),
+                                            mouth: randomItem(AVATAR_OPTIONS.mouth),
+                                            skinColor: randomItem(AVATAR_OPTIONS.skinColor)
+                                        });
+                                    }}
+                                >
+                                    🎲 Aleatorio
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-4">
+                            {uploadedImage ? (
+                                <img src={uploadedImage} className="w-40 h-40 rounded-full object-cover border-4 border-gray-100 shadow-md bg-white mb-6" />
+                            ) : (
+                                <div className="w-40 h-40 rounded-full bg-gray-100 dark:bg-gray-700 border-4 border-gray-200 dark:border-gray-600 shadow-inner flex items-center justify-center mb-6">
+                                    <span className="text-gray-400 opacity-50 block transform scale-150">{ICONS.camera}</span>
+                                </div>
+                            )}
+                            
+                            <label className="cursor-pointer bg-blue-500 text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg active:scale-95 transform">
+                                Seleccionar nueva foto
+                                <input 
+                                    type="file" 
+                                    accept="image/jpeg,image/png,image/webp" 
+                                    className="hidden" 
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            const file = e.target.files[0];
+                                            if (file.size > 2 * 1024 * 1024) {
+                                                alert("La imagen es demasiado grande. Máximo 2MB.");
+                                                return;
+                                            }
+                                            const reader = new FileReader();
+                                            reader.onload = (event) => setUploadedImage(event.target.result);
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }} 
+                                />
+                            </label>
+                            
+                            <p className="text-xs text-gray-400 mt-4 text-center px-4">
+                                Esta foto será visible para todos los usuarios.
+                            </p>
+                        </div>
+                    )}
                 </div>
                 <div className="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose}>Cancelar</Button>

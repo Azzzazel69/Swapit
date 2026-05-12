@@ -113,7 +113,16 @@ const RegisterPage = () => {
           <p className="mt-2 text-center text-sm text-gray-500">Empieza a intercambiar hoy mismo</p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && <div className="text-red-500 text-sm text-center p-3 bg-red-100 dark:bg-red-900/50 rounded-lg">{error}</div>}
+          {error && (
+              <div className="text-red-500 text-sm text-center p-3 bg-red-100 dark:bg-red-900/50 rounded-lg flex flex-col gap-2">
+                  <span>{error}</span>
+                  {error.includes('Ya existe un usuario con este correo') && (
+                      <Link to="/forgot-password" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
+                          ¿Quieres recuperar tu contraseña?
+                      </Link>
+                  )}
+              </div>
+          )}
           
           <div className="flex flex-col gap-y-5">
             <Input id="name" label="Nombre o nombre de usuario" name="name" type="text" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" />

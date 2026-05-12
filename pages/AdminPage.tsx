@@ -65,9 +65,12 @@ const UserRow = ({ user, currentUser, onBan, onUnban, onRoleChange, onDelete }: 
                     )
                 ),
                 React.createElement("div", { className: "flex items-center gap-2 flex-wrap" },
-                    user.role !== 'SUPER_ADMIN' && user.id !== currentUser.id && (
+                    user.id !== currentUser.id && (currentUser.role === 'SUPER_ADMIN' || user.role !== 'SUPER_ADMIN') && (
                         user.isBanned ? (
-                            React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => onUnban(user.id), children: "Reactivar Usuario" })
+                            React.createElement(React.Fragment, null,
+                                React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => onUnban(user.id), children: "Reactivar" }),
+                                (currentUser.role === 'SUPER_ADMIN' || !isTargetStaff) && React.createElement(Button, { size: "sm", variant: "danger", onClick: () => onDelete(user.id), children: "Eliminar Definitivamente" })
+                            )
                         ) : (
                             (currentUser.role === 'SUPER_ADMIN' || !isTargetStaff) && 
                             React.createElement(React.Fragment, null,
@@ -219,10 +222,14 @@ const AdminPage = () => {
     };
 
     const handleDeleteUser = async (uid) => {
-        requestConfirm("¿Estás seguro de que quieres eliminar definitivamente a este usuario de la base de datos?", async () => {
+        if (uid === currentUser?.id) {
+            showToast('No puedes eliminar tu propia sesión activa desde el panel de administrador.', 'error');
+            return;
+        }
+        requestConfirm("¿Estás seguro de que quieres eliminar la base de datos de este usuario? Ten en cuenta que para eliminar su cuenta de autenticación (Login) debes hacerlo desde Firebase Console manualmente debido a restricciones de seguridad.", async () => {
             try {
                 await api.deleteUserAdmin(uid);
-                showToast('Usuario eliminado.', 'success');
+                showToast('Datos de usuario eliminados.', 'success');
                 fetchData();
             } catch (e) {
                 showToast(e.message, 'error');

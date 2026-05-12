@@ -26,7 +26,7 @@ const Header = () => {
             </Link>
           </div>
 
-          <div className="ml-auto flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 gap-1 font-medium">
+          <div className="ml-auto flex items-center justify-end text-sm text-gray-600 dark:text-gray-300 gap-2 font-medium">
              {!isAuthPage && user?.location?.city ? (
                  <>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -36,6 +36,11 @@ const Header = () => {
                     <span>{user.location.city}</span>
                  </>
              ) : null}
+             {!isAuthPage && user && (user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN') && (
+                 <Link to="/admin" className="ml-2 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md text-[10px] font-black uppercase tracking-wider hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                     Admin
+                 </Link>
+             )}
           </div>
 
         </div>
