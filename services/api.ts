@@ -66,7 +66,7 @@ class ApiClient {
   }
 
   async clearDatabase(): Promise<void> {
-    console.log('ApiClient: Iniciando limpieza aislada...');
+
     const baseAdminEmail = 'admin_seeder_v5@test.com';
     const adminPassword = '123456';
 
@@ -77,7 +77,7 @@ class ApiClient {
     const tempDb = getFirestore(tempApp, firebaseConfig.firestoreDatabaseId);
 
     try {
-      console.log('ApiClient: Autenticando admin temporal...');
+
       let adminUid = '';
       let adminEmail = baseAdminEmail;
       
@@ -105,23 +105,23 @@ class ApiClient {
       }
 
       const user = tempAuth.currentUser;
-      console.log('ApiClient: Admin temporal autenticado:', user?.email, 'UID:', user?.uid);
+
 
       const collections = ['items', 'exchanges', 'chats', 'notifications', 'swipes', 'reports', 'users', 'trust_verifications'];
       const adminUsersQuery = query(collection(tempDb, 'users'), where('role', 'in', ['SUPER_ADMIN', 'ADMIN']));
 
       for (const colName of collections) {
         try {
-          console.log(`ApiClient: Limpiando colección ${colName}...`);
+
           const snap = await getDocs(collection(tempDb, colName));
-          console.log(`ApiClient: Encontrados ${snap.size} documentos en ${colName}`);
+
           
           for (const d of snap.docs) {
             // Skip deleting the current admin user or the main admin email
             if (colName === 'users') {
               const data = d.data();
               if (d.id === user?.uid || data.email === adminEmail || data.email === baseAdminEmail || (data.email && data.email.endsWith('_v5@test.com'))) {
-                console.log(`ApiClient: Saltando borrado de usuario protegido/demo: ${data.email || d.id}`);
+
                 continue;
               }
             }
@@ -136,13 +136,13 @@ class ApiClient {
       
       // Clear Local Storage History
       if (typeof window !== 'undefined' && window.localStorage) {
-        console.log("ApiClient: Limpiando historial de vista local...");
+
         window.localStorage.removeItem('swapit_view_history');
         window.localStorage.removeItem('swapit_db_seeded');
       }
       
       await setDoc(doc(tempDb, 'system', 'status'), { seeded: false, updatedAt: new Date() }, { merge: true });
-      console.log('ApiClient: Limpieza completada con éxito.');
+
     } catch (err: any) {
       console.error('ApiClient: Error en limpieza aislada:', err);
       throw err;
@@ -174,7 +174,7 @@ class ApiClient {
         } else {
           // Si el usuario es el admin pero el doc no existe (se borró por accidente), lo recreamos
           if (auth.currentUser?.email?.includes('admin')) {
-             console.log("Recreando doc de admin que fue eliminado...");
+
              const userDoc = {
                name: auth.currentUser?.displayName || 'Admin',
                email: auth.currentUser?.email,
@@ -208,7 +208,7 @@ class ApiClient {
   async seedDemoDatabase(): Promise<void> {
     if (this._isSeeding) return;
     this.setSeeding(true);
-    console.log('ApiClient: Iniciando regeneración aislada...');
+
 
     const baseAdminEmail = 'admin_seeder_v5@test.com';
     const adminPassword = '123456';
@@ -220,7 +220,7 @@ class ApiClient {
     const tempDb = getFirestore(tempApp, firebaseConfig.firestoreDatabaseId);
 
     try {
-      console.log('ApiClient: Autenticando admin temporal...');
+
       let adminUid = '';
       let adminEmail = baseAdminEmail;
 
@@ -232,7 +232,7 @@ class ApiClient {
         // Si no existe o credenciales inválidas, intentar crearlo
         if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
           try {
-            console.log(`ApiClient: Creando cuenta de admin base: ${adminEmail}`);
+
             const cred = await createUserWithEmailAndPassword(tempAuth, adminEmail, adminPassword);
             adminUid = cred.user.uid;
           } catch (createErr: any) {
@@ -251,7 +251,7 @@ class ApiClient {
       }
 
       const user = tempAuth.currentUser;
-      console.log('ApiClient: Admin temporal autenticado:', user?.email, 'UID:', user?.uid);
+
 
       if (!adminUid) throw new Error("Failed to obtain admin UID for seeding.");
 
@@ -280,11 +280,11 @@ class ApiClient {
 
       for (const u of demoUsers) {
         try {
-          console.log(`ApiClient: Procesando usuario ${u.email}...`);
+
           let uid = '';
           
           // 1. SIEMPRE intentar crear o conectarse al usuario de Auth
-          console.log(`ApiClient: ${u.email} comprobando en Firebase Auth...`);
+
           const userAppName = `user-seed-${u.email.replace(/[@.]/g, '-')}`;
           const userApp = initializeApp(firebaseConfig, userAppName);
           const userAuth = getAuth(userApp);
@@ -335,7 +335,7 @@ class ApiClient {
             if (u.items) {
               for (const itemData of u.items) {
                 const itemId = `item-${u.email.split('_')[0]}-${itemData.title.toLowerCase().replace(/\s/g, '-')}`;
-                console.log(`ApiClient: Creando item ${itemId} para ${u.email}...`);
+
                 
                 await setDoc(doc(tempDb, 'items', itemId), {
                   title: itemData.title,
@@ -382,7 +382,7 @@ class ApiClient {
         window.localStorage.setItem('swapit_db_seeded', 'true');
       }
       
-      console.log('ApiClient: Regeneración completada con éxito.');
+
     } catch (err: any) {
       console.error('ApiClient: Error en regeneración aislada:', err);
       throw err;
@@ -398,14 +398,14 @@ class ApiClient {
       
       // If already logged in as this user, just return the token
       if (auth.currentUser?.email === email) {
-        console.log(`Already logged in as ${email}, skipping sign-in.`);
+
         return { token: await auth.currentUser.getIdToken() };
       }
 
-      console.log(`Signing in as ${email}...`);
+
       try {
         const cred = await signInWithEmailAndPassword(auth, email, password);
-        console.log("Login successful, UID:", cred.user.uid);
+
         
         // Small delay to let Auth state propagate
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -414,10 +414,10 @@ class ApiClient {
       } catch (e: any) {
         // Auto-seed for demo users if login fails
         if ((e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') && email.endsWith('@test.com')) {
-          console.log(`ApiClient: Demo user ${email} not found, attempting to create...`);
+
           try {
             const cred = await createUserWithEmailAndPassword(auth, email, password);
-            console.log(`ApiClient: Demo user ${email} created successfully.`);
+
             
             const userDocRef = doc(db, 'users', cred.user.uid);
             const userSnap = await getDoc(userDocRef);
@@ -903,7 +903,14 @@ class ApiClient {
   }
 
   async deleteItem(itemId): Promise<any> {
-    try { await deleteDoc(doc(db, 'items', itemId)); } catch (e) { handleFirestoreError(e, OperationType.DELETE, 'items'); }
+    const uid = this._getCurrentUserId();
+    if (!uid) throw new Error("No autenticado");
+    try {
+      const itemSnap = await getDoc(doc(db, 'items', itemId));
+      if (!itemSnap.exists()) throw new Error("Artículo no encontrado");
+      if (itemSnap.data().userId !== uid) throw new Error("No tienes permiso para borrar este artículo");
+      await deleteDoc(doc(db, 'items', itemId));
+    } catch (e) { handleFirestoreError(e, OperationType.DELETE, 'items'); }
   }
 
   async incrementViewCount(itemId): Promise<void> {
@@ -917,7 +924,7 @@ class ApiClient {
   async getItemById(id): Promise<any> {
     if (!id) throw new Error('ID de item no proporcionado');
     try {
-      console.log(`ApiClient: Obteniendo item por ID: ${id}`);
+
       const snap = await getDoc(doc(db, 'items', id));
       if (snap.exists()) {
         const item = { id: snap.id, ...(snap.data() as any) };
@@ -1388,7 +1395,11 @@ class ApiClient {
     
     try {
       const itemSnap = await getDoc(doc(db, 'items', data.requestedItemId));
-      const ownerId = itemSnap.data()?.userId;
+      const requestedItem = itemSnap.data();
+      if (requestedItem?.status === 'RESERVED' || requestedItem?.status === 'EXCHANGED') {
+        throw new Error("El artículo ya no está disponible para intercambio.");
+      }
+      const ownerId = requestedItem?.userId;
       
       if (ownerId === uid) {
         throw new Error("No puedes proponer un intercambio por tu propio artículo.");
@@ -1449,6 +1460,29 @@ class ApiClient {
       if (!exSnap.exists()) throw new Error('Exchange not found');
       
       const exchangeData = exSnap.data() as any;
+      if (exchangeData.ownerId !== uid && exchangeData.requesterId !== uid) {
+        throw new Error('No estás autorizado para modificar este intercambio');
+      }
+      
+      const isOwner = exchangeData.ownerId === uid;
+      const newStatus = String(status).toUpperCase();
+      
+      // Permitir sólo transiciones válidas según rol
+      if (newStatus === 'ACCEPTED' && !isOwner) {
+        throw new Error('Solo el propietario puede aceptar el intercambio');
+      }
+      if (newStatus === 'REJECTED' && !isOwner) {
+        throw new Error('Solo el propietario puede rechazar la solicitud de intercambio');
+      }
+      if (newStatus === 'CANCELLED') {
+        if (exchangeData.status === 'PENDING' && isOwner) {
+          throw new Error('Como propietario debes Rechazar (REJECT) el intercambio en lugar de Cancelarlo.');
+        }
+        if (exchangeData.status === 'COMPLETED' || exchangeData.status === 'CANCELLED' || exchangeData.status === 'REJECTED') {
+          throw new Error('No puedes cancelar un intercambio que ya está finalizado.');
+        }
+      }
+      
       const partnerId = exchangeData.ownerId === uid ? exchangeData.requesterId : exchangeData.ownerId;
       
       const batch = writeBatch(db);
@@ -1720,8 +1754,16 @@ class ApiClient {
       if (!exSnap.exists()) throw new Error('Exchange not found');
       const exchange = exSnap.data() as any;
       
+      if (exchange.status !== 'ACCEPTED' && exchange.status !== 'MEETING_ACCEPTED' && exchange.status !== 'COMPLETED') {
+        throw new Error('El intercambio no está en un estado válido para valorar');
+      }
+      
       if (exchange.ratedBy && exchange.ratedBy.includes(uid)) {
         throw new Error('Ya has valorado este intercambio');
+      }
+      
+      if (exchange.ownerId === exchange.requesterId) {
+        throw new Error('No puedes valorarte a ti mismo');
       }
       
       const targetUserId = exchange.ownerId === uid ? exchange.requesterId : exchange.ownerId;
@@ -1784,6 +1826,9 @@ class ApiClient {
   // Moderation
   async reportContent(id, type, reason, isAuto = false): Promise<any> {
     const uid = this._getCurrentUserId();
+    if (uid === id || (!isAuto && uid === id)) {
+      throw new Error('No puedes reportar tu propio contenido');
+    }
     try {
       await addDoc(collection(db, 'reports'), {
         reporterId: uid, targetId: id, targetType: type, reason, status: 'PENDING', createdAt: new Date().toISOString()

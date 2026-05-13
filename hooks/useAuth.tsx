@@ -23,16 +23,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    console.log("refreshUser iniciado");
+
     try {
         const firebaseUser = auth.currentUser;
         if (!firebaseUser) {
-            console.log("No hay firebaseUser en refreshUser");
+
             setUser(null);
             return;
         }
 
-        console.log("Obteniendo usuario de Firestore para UID:", firebaseUser.uid);
+
         let currentUser = null;
         try {
             currentUser = await api.getCurrentUser();
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
         }
         
         if (!currentUser) {
-            console.log("Usuario no encontrado en Firestore o error, marcando como needsProfile");
+
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
                 needsProfile: true
             });
         } else {
-            console.log("Usuario obtenido de Firestore:", currentUser.id);
+
             setUser(currentUser);
         }
     } catch(error) {
@@ -64,41 +64,41 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = useCallback(async (newToken, rememberMe = false) => {
-    console.log("login(token) llamado");
+
     setToken(newToken);
     api.setToken(newToken);
-    console.log("login(token) delegando a onAuthStateChanged");
+
   }, []);
 
   const updateUser = useCallback((updatedUser) => {
-    console.log("updateUser llamado", updatedUser?.id);
+
     setUser(updatedUser);
   }, []);
 
   useEffect(() => {
-    console.log("Configurando onAuthStateChanged");
+
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("onAuthStateChanged disparado, firebaseUser:", firebaseUser?.uid);
+
       
       setLoading(true);
       
       if (firebaseUser) {
         const currentToken = await firebaseUser.getIdToken();
-        console.log("Token obtenido");
+
         setToken(currentToken);
         api.setToken(currentToken);
         
         let currentUser = null;
         try {
-            console.log("Buscando usuario en Firestore desde onAuthStateChanged", firebaseUser.uid);
+
             currentUser = await api.getCurrentUser(firebaseUser.uid);
         } catch (e) {
             console.error("Error fetching user from Firestore", e);
         }
         
         if (!currentUser) {
-            console.log("Usuario no en Firestore (onAuthStateChanged), needsProfile: true");
+
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
@@ -108,12 +108,12 @@ export const AuthProvider = ({ children }) => {
                 needsProfile: true
             });
         } else {
-            console.log("Usuario en Firestore (onAuthStateChanged):", currentUser.id);
+
             setUser(currentUser);
         }
         if (typeof window !== 'undefined') sessionStorage.setItem('active_auth_session', 'true');
       } else {
-        console.log("Usuario deslogueado (onAuthStateChanged)");
+
         setUser(null);
         setToken(null);
         api.setToken(null);
@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       setLoading(false);
-      console.log("onAuthStateChanged finalizado");
+
     });
 
     return () => unsubscribe();
