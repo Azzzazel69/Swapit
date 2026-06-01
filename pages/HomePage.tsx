@@ -14,7 +14,17 @@ import { ICONS } from '../constants.tsx';
 
 const PAGE_SIZE = 12;
 
-const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "", showAds = false }) => {
+interface ItemGroupProps {
+    title: string;
+    icon: string;
+    items: any[];
+    onToggleFavorite: (id: string) => void;
+    columns?: number | 'auto';
+    id?: string;
+    showAds?: boolean;
+}
+
+const ItemGroup = ({ title, icon, items, onToggleFavorite, columns = 2, id = "", showAds = false }: ItemGroupProps) => {
     const { theme } = useColorTheme();
     if (!items || items.length === 0) return null;
     const gridLayoutClasses = { 
@@ -90,7 +100,7 @@ const ViewSelectorCompact = ({ mode, setMode }) => {
     );
 };
 
-const GridIconContent = ({ columns }) => {
+const GridIconContent = ({ columns }: { columns: number | 'auto' }) => {
     if (columns === 1) return React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "1", strokeWidth: "2" });
     if (columns === 2) return React.createElement(React.Fragment, null, 
         React.createElement("rect", { x: "3", y: "3", width: "8", height: "18", rx: "1", strokeWidth: "2" }),
@@ -134,7 +144,7 @@ const HomePage = () => {
   const { theme } = useColorTheme();
   
   const [viewMode, setViewMode] = useState('landing');
-  const [columnLayout, setColumnLayout] = useState('auto');
+  const [columnLayout, setColumnLayout] = useState<number | 'auto'>('auto');
   const [data, setData] = useState({ exploreItems: [], directMatches: [], recommended: [], nearItems: [], favoriteItems: [], popularItems: [], totalExploreItems: 0 });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -173,8 +183,8 @@ const HomePage = () => {
   const toggleColumns = () => {
       setColumnLayout(prev => {
           if (prev === 'auto') return 1;
-          if (prev >= 4) return 'auto';
-          return prev + 1;
+          if (typeof prev === 'number' && prev >= 4) return 'auto';
+          return (prev as number) + 1;
       });
   };
 

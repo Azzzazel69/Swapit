@@ -170,6 +170,15 @@ class ApiClient {
             await updateDoc(docRef, { role: 'SUPER_ADMIN' });
             data.role = 'SUPER_ADMIN';
           }
+          if (data.name === 'Usuario de Prueba' && data.email?.endsWith('@test.com')) {
+             let displayName = data.email.split('@')[0].split('_')[0];
+             if (data.email === 'pedro_troll_v5@test.com') displayName = 'Pedro Troll';
+             else displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+             const newAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
+             await updateDoc(docRef, { name: displayName, avatarUrl: newAvatar });
+             data.name = displayName;
+             data.avatarUrl = newAvatar;
+          }
           return { id: snap.id, ...data };
         } else {
           // Si el usuario es el admin pero el doc no existe (se borró por accidente), lo recreamos
@@ -182,6 +191,24 @@ class ApiClient {
                phoneVerified: true,
                role: 'SUPER_ADMIN',
                avatarUrl: auth.currentUser?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${auth.currentUser?.email}`,
+               createdAt: new Date().toISOString(),
+               status: 'ACTIVE',
+               needsProfile: false
+             };
+             await setDoc(docRef, userDoc);
+             return { id: uid, ...userDoc };
+          } else if (auth.currentUser?.email?.endsWith('@test.com')) {
+             let displayName = auth.currentUser.email.split('@')[0].split('_')[0];
+             if (auth.currentUser.email === 'pedro_troll_v5@test.com') displayName = 'Pedro Troll';
+             else displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+
+             const userDoc = {
+               name: displayName,
+               email: auth.currentUser.email,
+               emailVerified: true,
+               phoneVerified: true,
+               role: 'USER',
+               avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`,
                createdAt: new Date().toISOString(),
                status: 'ACTIVE',
                needsProfile: false
@@ -270,12 +297,36 @@ class ApiClient {
 
       // 3. Demo Users & Items
       const demoUsers = [
-        { email: 'ana_v5@test.com', name: 'Ana García', role: 'USER', preferences: ['Moda', 'Hogar'], items: [{ title: 'Vestido de fiesta', category: 'Moda', wishedItem: 'Zapatos', condition: 'New' }] },
-        { email: 'carlos_v5@test.com', name: 'Carlos Pérez', role: 'USER', preferences: ['Electrónica', 'Deportes'], items: [{ title: 'iPhone 13', category: 'Electrónica', wishedItem: 'Samsung S22', condition: 'Good' }] },
-        { email: 'laura_v5@test.com', name: 'Laura Ruiz', role: 'USER', preferences: ['Muebles', 'Decoración'], items: [{ title: 'Silla ergonómica', category: 'Muebles', wishedItem: 'Escritorio', condition: 'Good' }] },
-        { email: 'juan_v5@test.com', name: 'Juan Gómez', role: 'USER', preferences: ['Libros', 'Coleccionismo'], items: [{ title: 'Colección de vinilos', category: 'Otros', wishedItem: 'Bicicleta', condition: 'Good' }] },
-        { email: 'maria_v5@test.com', name: 'María López', role: 'USER', preferences: ['Deportes', 'Moda'], items: [{ title: 'Bicicleta de montaña', category: 'Deportes', wishedItem: 'Cámara réflex', condition: 'Acceptable' }] },
-        { email: 'pedro_troll_v5@test.com', name: 'Pedro Troll', role: 'USER', preferences: ['Spam', 'Molestar'], items: [{ title: 'ITEM DE SPAM 1', category: 'Otros', wishedItem: 'NADA', condition: 'Acceptable' }] }
+        { email: 'ana_v5@test.com', name: 'Ana García', role: 'USER', preferences: ['Moda', 'Hogar'], location: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' }, items: [
+            { title: 'Vestido de fiesta', category: 'Moda', wishedItem: 'Zapatos', condition: 'New', imageUrls: ['https://loremflickr.com/600/600/dress,clothing'] },
+            { title: 'Zapatos de tacón', category: 'Moda', wishedItem: 'Bolso', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/heels,shoes'] },
+            { title: 'Lámpara de pie vintage', category: 'Hogar', wishedItem: 'Mesa auxiliar', condition: 'Acceptable', imageUrls: ['https://loremflickr.com/600/600/lamp'] }
+        ] },
+        { email: 'carlos_v5@test.com', name: 'Carlos Pérez', role: 'USER', preferences: ['Electrónica', 'Deportes'], location: { lat: 41.3851, lng: 2.1734, address: 'Barcelona, España', city: 'Barcelona', province: 'Barcelona' }, items: [
+            { title: 'iPhone 13', category: 'Electrónica', wishedItem: 'Samsung S22', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/iphone'] },
+            { title: 'PlayStation 4', category: 'Videojuegos', wishedItem: 'Nintendo Switch', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/playstation,console'] },
+            { title: 'Raqueta de tenis', category: 'Deportes', wishedItem: 'Zapatillas de tenis', condition: 'Acceptable', imageUrls: ['https://loremflickr.com/600/600/tennisracket'] }
+        ] },
+        { email: 'laura_v5@test.com', name: 'Laura Ruiz', role: 'USER', preferences: ['Muebles', 'Decoración'], location: { lat: 39.4699, lng: -0.3763, address: 'Valencia, España', city: 'Valencia', province: 'Valencia' }, items: [
+            { title: 'Silla ergonómica', category: 'Muebles', wishedItem: 'Escritorio', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/officechair'] },
+            { title: 'Mesa de centro de roble', category: 'Muebles', wishedItem: 'Estantería', condition: 'New', imageUrls: ['https://loremflickr.com/600/600/coffeetable'] },
+            { title: 'Espejo decorativo', category: 'Hogar', wishedItem: 'Lámpara', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/mirror'] }
+        ] },
+        { email: 'juan_v5@test.com', name: 'Juan Gómez', role: 'USER', preferences: ['Libros', 'Coleccionismo'], location: { lat: 37.3891, lng: -5.9845, address: 'Sevilla, España', city: 'Sevilla', province: 'Sevilla' }, items: [
+            { title: 'Colección de vinilos clásicos', category: 'Otros', wishedItem: 'Tocadiscos', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/vinyl'] },
+            { title: 'Libros de fantasía', category: 'Libros', wishedItem: 'Otros libros', condition: 'Acceptable', imageUrls: ['https://loremflickr.com/600/600/books'] },
+            { title: 'Cámara analógica antigua', category: 'Coleccionismo', wishedItem: 'Reloj vintage', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/vintagecamera'] }
+        ] },
+        { email: 'maria_v5@test.com', name: 'María López', role: 'USER', preferences: ['Deportes', 'Moda'], location: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' }, items: [
+            { title: 'Bicicleta de montaña', category: 'Deportes', wishedItem: 'Cámara réflex', condition: 'Acceptable', imageUrls: ['https://loremflickr.com/600/600/mountainbike'] },
+            { title: 'Cinta de correr', category: 'Deportes', wishedItem: 'Bicicleta elíptica', condition: 'Good', imageUrls: ['https://loremflickr.com/600/600/treadmill'] },
+            { title: 'Chaqueta de cuero', category: 'Moda', wishedItem: 'Botas', condition: 'New', imageUrls: ['https://loremflickr.com/600/600/leatherjacket'] }
+        ] },
+        { email: 'pedro_troll_v5@test.com', name: 'Pedro Troll', role: 'USER', preferences: ['Spam', 'Molestar'], location: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' }, items: [
+            { title: 'ITEM DE SPAM 1', category: 'Otros', wishedItem: 'NADA', condition: 'Acceptable', imageUrls: ['https://loremflickr.com/600/600/trash'] },
+            { title: 'NO COMPRES ESTO', category: 'Otros', wishedItem: 'DINERO', condition: 'Broken', imageUrls: ['https://loremflickr.com/600/600/junk'] },
+            { title: 'AAAAAA BBB C', category: 'Electrónica', wishedItem: 'Piedra', condition: 'Acceptable', imageUrls: ['https://loremflickr.com/600/600/error'] }
+        ] }
       ];
 
       for (const u of demoUsers) {
@@ -324,7 +375,7 @@ class ApiClient {
               identityVerified: false,
               role: u.role,
               avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
-              location: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
+              location: u.location || { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
               preferences: u.preferences,
               createdAt: new Date(),
               status: 'ACTIVE',
@@ -347,8 +398,8 @@ class ApiClient {
                   userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
                   ownerName: u.name,
                   ownerAvatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
-                  ownerLocation: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
-                  imageUrls: [
+                  ownerLocation: u.location || { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
+                  imageUrls: itemData.imageUrls || [
                     itemData.title.toLowerCase().includes('vestido') ? 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&q=80' :
                     itemData.title.toLowerCase().includes('iphone') ? 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80' :
                     itemData.title.toLowerCase().includes('silla') ? 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=800&q=80' :
@@ -361,7 +412,7 @@ class ApiClient {
                   moderationStatus: 'APPROVED',
                   createdAt: new Date(),
                   updatedAt: new Date(),
-                  location: { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
+                  location: u.location || { lat: 40.4168, lng: -3.7038, address: 'Madrid, España', city: 'Madrid', province: 'Madrid' },
                   viewCount: Math.floor(Math.random() * 100),
                   likes: Math.floor(Math.random() * 20),
                   flagged: false,
@@ -423,8 +474,12 @@ class ApiClient {
             const userSnap = await getDoc(userDocRef);
             
             const isAdminEmail = email.includes('admin') || email.includes('seeder');
+            let displayName = email.split('@')[0].split('_')[0];
+            if (email === 'pedro_troll_v5@test.com') displayName = 'Pedro Troll';
+            else displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+
             const userData = {
-               name: email.split('@')[0].split('_')[0],
+               name: displayName,
                email: email,
                emailVerified: true,
                phoneVerified: true,
@@ -537,7 +592,6 @@ class ApiClient {
       if (typeof window !== 'undefined') sessionStorage.setItem('active_auth_session', 'true');
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Send verification email immediately
       try {
         const actionCodeSettings = typeof window !== 'undefined' ? {
           url: window.location.origin + '/login',
@@ -582,8 +636,8 @@ class ApiClient {
 
     return {
       ...item,
-      ownerName: item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : (ownerData.name || 'Usuario'),
-      ownerAvatarUrl: item.ownerAvatarUrl || ownerData.avatarUrl || DEFAULT_AVATAR_NEUTRAL,
+      ownerName: ownerData.name || (item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : 'Usuario'),
+      ownerAvatarUrl: ownerData.avatarUrl || item.ownerAvatarUrl || DEFAULT_AVATAR_NEUTRAL,
       ownerLocation: finalLocation,
       location: item.location || finalLocation,
       ownerRating: this._calculateUserStats(ownerData).averageRating || 0
@@ -595,6 +649,15 @@ class ApiClient {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const data = snap.data() as any;
+        if (data.name === 'Usuario de Prueba' && data.email?.endsWith('@test.com')) {
+           let displayName = data.email.split('@')[0].split('_')[0];
+           if (data.email === 'pedro_troll_v5@test.com') displayName = 'Pedro Troll';
+           else displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+           const newAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
+           await updateDoc(doc(db, 'users', uid), { name: displayName, avatarUrl: newAvatar });
+           data.name = displayName;
+           data.avatarUrl = newAvatar;
+        }
         const items = await this.getUserItems(uid);
         const updatedItems = items.map(item => this._enrichItemWithOwnerInfo(item, data));
         return { id: snap.id, ...data, items: updatedItems };
@@ -610,6 +673,44 @@ class ApiClient {
         data.avatarUrl = await this._uploadImageIfBase64(data.avatarUrl, `users/${uid}/avatar`);
       }
       await updateDoc(doc(db, 'users', uid as string), data);
+      
+      // Update denormalized user data in all their items
+      try {
+        if (data.avatarUrl || data.name || data.location) {
+           const itemsQuery = query(collection(db, 'items'), where('userId', '==', uid));
+           const itemsSnap = await getDocs(itemsQuery);
+           const batch = writeBatch(db);
+           
+           const itemUpdates: any = {};
+           if (data.name) itemUpdates.ownerName = data.name;
+           if (data.avatarUrl) itemUpdates.ownerAvatarUrl = data.avatarUrl;
+           if (data.location) itemUpdates.ownerLocation = data.location;
+           
+           itemsSnap.docs.forEach(itemDoc => {
+             batch.update(itemDoc.ref, itemUpdates);
+           });
+           
+           // Also update exchanges
+           const exchAsOwnerQ = query(collection(db, 'exchanges'), where('ownerId', '==', uid));
+           const exchAsOwnerSnap = await getDocs(exchAsOwnerQ);
+           const ownerExchUpdates: any = {};
+           if (data.name) ownerExchUpdates.ownerName = data.name;
+           if (data.avatarUrl) ownerExchUpdates.ownerAvatarUrl = data.avatarUrl;
+           exchAsOwnerSnap.docs.forEach(doc => batch.update(doc.ref, ownerExchUpdates));
+           
+           const exchAsRequesterQ = query(collection(db, 'exchanges'), where('requesterId', '==', uid));
+           const exchAsRequesterSnap = await getDocs(exchAsRequesterQ);
+           const reqExchUpdates: any = {};
+           if (data.name) reqExchUpdates.requesterName = data.name;
+           if (data.avatarUrl) reqExchUpdates.requesterAvatarUrl = data.avatarUrl;
+           exchAsRequesterSnap.docs.forEach(doc => batch.update(doc.ref, reqExchUpdates));
+
+           await batch.commit();
+        }
+      } catch (err) {
+        console.warn("Failed to update user items in batch", err);
+      }
+      
       return await this.getCurrentUser();
     } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'users'); }
   }
@@ -626,6 +727,19 @@ class ApiClient {
     const uid = this._getCurrentUserId();
     try {
       await updateDoc(doc(db, 'users', uid as string), { location: loc });
+      
+      try {
+         const itemsQuery = query(collection(db, 'items'), where('userId', '==', uid));
+         const itemsSnap = await getDocs(itemsQuery);
+         const batch = writeBatch(db);
+         itemsSnap.docs.forEach(itemDoc => {
+           batch.update(itemDoc.ref, { ownerLocation: loc });
+         });
+         await batch.commit();
+      } catch (err) {
+        console.warn("Failed to update user items in batch", err);
+      }
+      
       return await this.getCurrentUser();
     } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'users'); }
   }
@@ -702,8 +816,42 @@ class ApiClient {
     throw new Error('Usuario no autenticado');
   }
 
-  async sendPhoneVerificationCode(phone): Promise<any> { return { success: true }; }
-  async verifyPhoneCode(code): Promise<any> { return true; }
+  async sendPhoneVerificationCode(phone: string): Promise<any> { 
+    const { RecaptchaVerifier, linkWithPhoneNumber } = await import('firebase/auth');
+    if (!auth.currentUser) throw new Error("No usuario logueado.");
+    
+    if (!(window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible'
+        });
+      } catch (e) {
+        console.error("Recaptcha error:", e);
+      }
+    }
+    
+    const appVerifier = (window as any).recaptchaVerifier;
+    try {
+        // Enlazar el teléfono a la cuenta de email
+      const confirmationResult = await linkWithPhoneNumber(auth.currentUser, phone, appVerifier);
+      (window as any).confirmationResult = confirmationResult;
+      return { success: true };
+    } catch (e: any) {
+      console.error(e);
+      throw new Error(e.message || 'Error al enviar el SMS.');
+    }
+  }
+
+  async verifyPhoneCode(code: string): Promise<any> { 
+    const confirmationResult = (window as any).confirmationResult;
+    if (!confirmationResult) throw new Error("No se ha enviado ningún código.");
+    try {
+      await confirmationResult.confirm(code);
+      return true;
+    } catch (e: any) {
+      throw new Error("Código inválido o ha expirado.");
+    }
+  }
   async canEditProfile(): Promise<any> { return { canEdit: true, reason: null }; }
   async updateUserPassword(currentPassword: string, newPassword: string): Promise<any> {
     const user = auth.currentUser;
@@ -777,15 +925,13 @@ class ApiClient {
   
   async deleteUserAdmin(uid: string): Promise<void> {
     try {
-      const db = getFirestore();
-      
       const itemsQuery = query(collection(db, 'items'), where('userId', '==', uid));
       const itemsSnap = await getDocs(itemsQuery);
       
       const batch = writeBatch(db);
       
-      itemsSnap.docs.forEach(doc => {
-        batch.delete(doc.ref);
+      itemsSnap.docs.forEach(itemDoc => {
+        batch.delete(itemDoc.ref);
       });
       
       batch.delete(doc(db, 'users', uid));
@@ -928,7 +1074,7 @@ class ApiClient {
       const snap = await getDoc(doc(db, 'items', id));
       if (snap.exists()) {
         const item = { id: snap.id, ...(snap.data() as any) };
-        if (item.userId && (!item.ownerName || item.ownerName === 'Usuario' || !item.ownerLocation || !item.ownerLocation.city)) {
+        if (item.userId) {
           try {
             const uSnap = await getDoc(doc(db, 'users', item.userId));
             if (uSnap.exists()) {
@@ -954,6 +1100,13 @@ class ApiClient {
     } catch (e) { handleFirestoreError(e, OperationType.LIST, 'items'); }
   }
 
+  /**
+   * Obtiene los datos para la página principal.
+   * TODO: Implementar paginación real de Firestore (cursores con startAfter)
+   * Actualmente se utiliza un limit(100) estático y el botón de "Cargar más"
+   * recarga los datos desde el cliente o reejecuta la misma consulta, 
+   * lo cual no pagina verdaderamente los resultados en el backend.
+   */
   async getHomePageData(params: any = {}): Promise<any> {
     const userId = this._getCurrentUserId();
     try {
@@ -970,10 +1123,10 @@ class ApiClient {
           return tB - tA;
         });
         
-        // Fetch missing user data for items that don't have denormalized owner info
-        const itemsMissingOwner = allItems.filter(i => !i.ownerName || i.ownerName === 'Usuario');
-        if (itemsMissingOwner.length > 0) {
-          const uniqueUserIds = [...new Set(itemsMissingOwner.map(i => i.userId))];
+        // Always fetch the latest user data for items to ensure avatars/names remain highly synced
+        const itemsToEnrich = allItems;
+        if (itemsToEnrich.length > 0) {
+          const uniqueUserIds = [...new Set(itemsToEnrich.map(i => i.userId))];
           const usersData: Record<string, any> = {};
           
           // Chunk uniqueUserIds into arrays of max 30 to respect Firestore 'in' query limits
@@ -1042,24 +1195,95 @@ class ApiClient {
       // 4. Filter out own items
       const otherItems = allItems.filter(i => i.userId !== userId);
 
-      // 5. Categorize
-      
-      const checkMatch = (item: any, myItems: any[]) => {
+      // 5. Intelligent Matching via Backend (Gemini API)
+      let aiMatches: Record<string, string> = {};
+      let aiFailed = false;
+      if (userItems.length > 0 && otherItems.length > 0) {
+        try {
+          // Send simplified version of items to save bandwidth and token size
+          const payload = {
+             userItems: userItems.map(i => ({ id: i.id, title: i.title, category: i.category, description: i.description })),
+             otherItems: otherItems.map(i => ({ id: i.id, wishedItem: i.wishedItem }))
+          };
+          const response = await fetch('/api/batch-check-match', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify(payload)
+          });
+          if (response.ok) {
+             const data = await response.json();
+             aiMatches = data.matches || {};
+             if (data.aiFailed) aiFailed = true;
+          } else {
+             aiFailed = true;
+          }
+        } catch (matchErr) {
+          console.error("Failed to fetch AI matches", matchErr);
+          aiFailed = true;
+        }
+      }
+
+      const checkMatchFallback = (item: any, myItems: any[]) => {
         if (!item.wishedItem || typeof item.wishedItem !== 'string') return null;
-        const searchTerms = item.wishedItem.toLowerCase().split(/[\s,]+/).filter(t => t.length >= 3);
+        
+        const stopWords = new Set([
+          'con', 'sin', 'para', 'por', 'como', 'muy', 'mas', 'que', 'del',
+          'busco', 'quiero', 'necesito', 'cambio', 'gustaria', 'algun', 'alguna',
+          'cualquier', 'cualquiera', 'preferiblemente', 'buscando', 'tiene', 'tenga',
+          'uno', 'una', 'unos', 'unas', 'este', 'esta', 'ese', 'esa', 'buen', 'bueno', 'buena',
+          'excelente', 'estado', 'perfecto', 'interesa', 'interesan'
+        ]);
+
+        const normalizeStr = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        const searchTerms = normalizeStr(item.wishedItem)
+          .split(/[\s,]+/)
+          .filter(t => t.length >= 3 && !stopWords.has(t));
+        
         if (searchTerms.length === 0) return null;
         
         const matchingItem = myItems.find(ui => {
-          const title = (ui.title || "").toLowerCase();
-          const cat = (ui.category || "").toLowerCase();
-          return searchTerms.some(term => title.includes(term) || cat.includes(term));
+          const title = normalizeStr(ui.title || "");
+          const cat = normalizeStr(ui.category || "");
+          const desc = normalizeStr(ui.description || "");
+
+          const searchArea = `${title} ${cat} ${desc}`;
+
+          // Evitar falsos positivos directos de antonimos con una heuristica simple
+          const hasBig = searchTerms.some(t => ['grande', 'amplio', 'enorme'].includes(t));
+          const hasSmall = searchTerms.some(t => ['pequeno', 'chico', 'mini'].includes(t));
+          const itemHasBig = ['grande', 'amplio', 'enorme'].some(t => searchArea.includes(t));
+          const itemHasSmall = ['pequeno', 'chico', 'mini'].some(t => searchArea.includes(t));
+
+          if (hasBig && itemHasSmall) return false;
+          if (hasSmall && itemHasBig) return false;
+
+          const hasNew = searchTerms.some(t => ['nuevo', 'nueva', 'precintado', 'estrenar'].includes(t));
+          const hasOld = searchTerms.some(t => ['viejo', 'vieja', 'usado', 'roto', 'desgaste'].includes(t));
+          const itemHasNew = ['nuevo', 'nueva', 'precintado', 'estrenar'].some(t => searchArea.includes(t));
+          const itemHasOld = ['viejo', 'vieja', 'usado', 'roto', 'desgaste'].some(t => searchArea.includes(t));
+
+          if (hasNew && itemHasOld) return false;
+          if (hasOld && itemHasNew) return false;
+
+          const matchingTerms = searchTerms.filter(term => title.includes(term) || cat.includes(term));
+          
+          const matchRatio = matchingTerms.length / searchTerms.length;
+          
+          return matchRatio >= 0.6;
         });
+
         return matchingItem ? matchingItem.id : null;
       };
 
       // Apply isMatch to all items
       const itemsWithMatchInfo = otherItems.map(item => {
-        const matchingItemId = checkMatch(item, userItems);
+        let matchingItemId = null;
+        if (!aiFailed) {
+            matchingItemId = aiMatches[item.id] || null;
+        } else {
+            matchingItemId = checkMatchFallback(item, userItems);
+        }
         return {
           ...item,
           isMatch: !!matchingItemId,
@@ -1143,10 +1367,10 @@ class ApiClient {
       // Shuffle items for a more dynamic experience
       filteredItems = filteredItems.sort(() => Math.random() - 0.5);
 
-      // Fetch user data for items missing ownerName
-      const itemsMissingOwner = filteredItems.filter(i => !i.ownerName || i.ownerName === 'Usuario');
-      if (itemsMissingOwner.length > 0) {
-          const uniqueUserIds = [...new Set(itemsMissingOwner.map(i => i.userId))];
+      // Always fetch the latest user data for items to ensure avatars are up to date
+      const itemsToEnrich = filteredItems;
+      if (itemsToEnrich.length > 0) {
+          const uniqueUserIds = [...new Set(itemsToEnrich.map(i => i.userId))];
           const usersData: Record<string, any> = {};
           
           await Promise.all(uniqueUserIds.map(async (userId) => {
@@ -1165,9 +1389,9 @@ class ApiClient {
             if (u) {
               return {
                 ...item,
-                ownerName: item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : (u.name || 'Usuario'),
-                ownerAvatarUrl: item.ownerAvatarUrl || u.avatarUrl || DEFAULT_AVATAR_NEUTRAL,
-                ownerLocation: item.ownerLocation || u.location || null
+                ownerName: u.name || (item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : 'Usuario'),
+                ownerAvatarUrl: u.avatarUrl || item.ownerAvatarUrl || DEFAULT_AVATAR_NEUTRAL,
+                ownerLocation: u.location || item.ownerLocation || null
               };
             }
             return item;
@@ -1421,7 +1645,9 @@ class ApiClient {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         ownerName: ownerSnap.data()?.name || 'Usuario',
+        ownerAvatarUrl: ownerSnap.data()?.avatarUrl || null,
         requesterName: (user as any)?.name || 'Usuario',
+        requesterAvatarUrl: (user as any)?.avatarUrl || null,
         lastMessage: data.message || 'Hola, me interesa este intercambio.',
         lastMessageAt: serverTimestamp(),
         unreadCount: 1
@@ -1563,7 +1789,35 @@ class ApiClient {
     try {
       const q = query(collection(db, 'exchanges'), or(where('ownerId', '==', uid), where('requesterId', '==', uid)));
       const s = await getDocs(q);
-      const exchanges = s.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      let exchanges = s.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      
+      const partnerIds = [...new Set(exchanges.map(ex => ex.ownerId === uid ? ex.requesterId : ex.ownerId))];
+      const usersData: Record<string, any> = {};
+      try {
+        await Promise.all(partnerIds.map(async (pId) => {
+           if (pId) {
+               const uSnap = await getDoc(doc(db, 'users', pId));
+               if (uSnap.exists()) {
+                   usersData[pId] = uSnap.data();
+               }
+           }
+        }));
+        exchanges = exchanges.map(ex => {
+            const partnerId = ex.ownerId === uid ? ex.requesterId : ex.ownerId;
+            const u = usersData[partnerId];
+            if (u) {
+                return {
+                    ...ex,
+                    ownerAvatarUrl: ex.ownerId === partnerId ? (u.avatarUrl || ex.ownerAvatarUrl) : ex.ownerAvatarUrl,
+                    requesterAvatarUrl: ex.requesterId === partnerId ? (u.avatarUrl || ex.requesterAvatarUrl) : ex.requesterAvatarUrl,
+                };
+            }
+            return ex;
+        });
+      } catch (e) {
+          console.error("Error enriching exchanges with user data", e);
+      }
+      
       const pastExchanges = exchanges.filter(ex => ['COMPLETED', 'REJECTED', 'CANCELLED'].includes(ex.status));
       return pastExchanges.sort((a, b) => {
          const tA = a.updatedAt?.toDate()?.getTime() || a.createdAt?.toDate()?.getTime() || 0;
@@ -1578,7 +1832,34 @@ class ApiClient {
     try {
       const q = query(collection(db, 'exchanges'), or(where('ownerId', '==', uid), where('requesterId', '==', uid)));
       const s = await getDocs(q);
-      const exchanges = s.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      let exchanges = s.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      
+      const partnerIds = [...new Set(exchanges.map(ex => ex.ownerId === uid ? ex.requesterId : ex.ownerId))];
+      const usersData: Record<string, any> = {};
+      try {
+        await Promise.all(partnerIds.map(async (pId) => {
+           if (pId) {
+               const uSnap = await getDoc(doc(db, 'users', pId));
+               if (uSnap.exists()) {
+                   usersData[pId] = uSnap.data();
+               }
+           }
+        }));
+        exchanges = exchanges.map(ex => {
+            const partnerId = ex.ownerId === uid ? ex.requesterId : ex.ownerId;
+            const u = usersData[partnerId];
+            if (u) {
+                return {
+                    ...ex,
+                    ownerAvatarUrl: ex.ownerId === partnerId ? (u.avatarUrl || ex.ownerAvatarUrl) : ex.ownerAvatarUrl,
+                    requesterAvatarUrl: ex.requesterId === partnerId ? (u.avatarUrl || ex.requesterAvatarUrl) : ex.requesterAvatarUrl,
+                };
+            }
+            return ex;
+        });
+      } catch (e) {
+          console.error("Error enriching exchanges with user data", e);
+      }
       return exchanges;
     } catch (e) { handleFirestoreError(e, OperationType.LIST, 'exchanges'); }
   }
@@ -1590,8 +1871,37 @@ class ApiClient {
       or(where('ownerId', '==', uid), where('requesterId', '==', uid))
     );
     
-    return onSnapshot(q, (snap) => {
-      const exchanges = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+    return onSnapshot(q, async (snap) => {
+      let exchanges = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      
+      // Fetch latest user data for partners to keep avatars fresh
+      const partnerIds = [...new Set(exchanges.map(ex => ex.ownerId === uid ? ex.requesterId : ex.ownerId))];
+      const usersData: Record<string, any> = {};
+      try {
+        await Promise.all(partnerIds.map(async (pId) => {
+           if (pId) {
+               const uSnap = await getDoc(doc(db, 'users', pId));
+               if (uSnap.exists()) {
+                   usersData[pId] = uSnap.data();
+               }
+           }
+        }));
+        exchanges = exchanges.map(ex => {
+            const partnerId = ex.ownerId === uid ? ex.requesterId : ex.ownerId;
+            const u = usersData[partnerId];
+            if (u) {
+                return {
+                    ...ex,
+                    ownerAvatarUrl: ex.ownerId === partnerId ? (u.avatarUrl || ex.ownerAvatarUrl) : ex.ownerAvatarUrl,
+                    requesterAvatarUrl: ex.requesterId === partnerId ? (u.avatarUrl || ex.requesterAvatarUrl) : ex.requesterAvatarUrl,
+                };
+            }
+            return ex;
+        });
+      } catch (e) {
+          console.error("Error enriching exchanges with user data", e);
+      }
+
       callback(exchanges);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'exchanges'));
   }
@@ -1824,14 +2134,51 @@ class ApiClient {
   }
 
   // Moderation
-  async reportContent(id, type, reason, isAuto = false): Promise<any> {
+  async reportContent(id: string, type: string, reason: string, details: string = '', isAuto = false): Promise<any> {
     const uid = this._getCurrentUserId();
-    if (uid === id || (!isAuto && uid === id)) {
+    if (uid === id) {
       throw new Error('No puedes reportar tu propio contenido');
     }
+    
+    // Comprobar si ya ha sido reportado
+    // Los artículos solo se pueden reportar una vez por usuario. 
+    // Los usuarios pueden ser reportados múltiples veces (por motivos distintos).
+    
+    if (type === 'ITEM') {
+        const existingSnap = await getDocs(query(
+          collection(db, 'reports'),
+          where('reporterId', '==', uid),
+          where('targetId', '==', id),
+          where('targetType', '==', 'ITEM')
+        ));
+        
+        if (!existingSnap.empty) {
+          throw new Error('Ya has reportado este artículo anteriormente.');
+        }
+    } else if (type === 'USER') {
+         const existingSnap = await getDocs(query(
+          collection(db, 'reports'),
+          where('reporterId', '==', uid),
+          where('targetId', '==', id),
+          where('targetType', '==', 'USER'),
+          where('reason', '==', reason)
+        ));
+        
+        if (!existingSnap.empty) {
+          throw new Error('Ya has reportado a este usuario por este mismo motivo.');
+        }   
+    }
+    
     try {
       await addDoc(collection(db, 'reports'), {
-        reporterId: uid, targetId: id, targetType: type, reason, status: 'PENDING', createdAt: new Date().toISOString()
+        reporterId: uid, 
+        targetId: id, 
+        targetType: type, 
+        reason,
+        details,
+        isAuto,
+        status: 'PENDING', 
+        createdAt: new Date().toISOString()
       });
     } catch (e) { handleFirestoreError(e, OperationType.CREATE, 'reports'); }
   }
@@ -1839,7 +2186,59 @@ class ApiClient {
   async getModerationQueue(): Promise<any> {
     try {
       const snap = await getDocs(query(collection(db, 'reports'), where('status', '==', 'PENDING')));
-      return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      const reports = [];
+      for (const d of snap.docs) {
+        const data = d.data();
+        let reporterName = 'Desconocido';
+        let preview = 'Contenido eliminado o inaccesible';
+        let targetOwnerId = null;
+        let targetOwnerName = 'Desconocido';
+        let targetImage = null;
+        
+        try {
+          if (data.reporterId) {
+             const userDoc = await getDoc(doc(db, 'users', data.reporterId));
+             if (userDoc.exists()) reporterName = userDoc.data().name || userDoc.data().email || 'Usuario';
+          }
+          
+          if (data.targetType === 'ITEM') {
+             const itemDoc = await getDoc(doc(db, 'items', data.targetId));
+             if (itemDoc.exists()) {
+                const itemData = itemDoc.data();
+                preview = itemData.title;
+                targetImage = itemData.images?.[0] || null;
+                targetOwnerId = itemData.userId;
+                
+                if (targetOwnerId) {
+                   const ownerDoc = await getDoc(doc(db, 'users', targetOwnerId));
+                   if (ownerDoc.exists()) {
+                      targetOwnerName = ownerDoc.data().name || ownerDoc.data().email;
+                   }
+                }
+             }
+          }
+        } catch(e) {
+          console.error("Error fetching report details", e);
+        }
+        
+        reports.push({ 
+            id: d.id, 
+            date: data.createdAt,
+            type: data.targetType,
+            reason: data.reason,
+            details: data.details || '',
+            targetId: data.targetId,
+            preview,
+            reporterName,
+            reporterId: data.reporterId,
+            targetOwnerId,
+            targetOwnerName,
+            targetImage,
+            isAuto: data.isAuto || false,
+            ...data
+        });
+      }
+      return reports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (e) { handleFirestoreError(e, OperationType.LIST, 'reports'); }
   }
 
@@ -1900,16 +2299,6 @@ class ApiClient {
       const snap = await getDocs(query(collection(db, 'notifications'), where('userId', '==', uid)));
       return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
     } catch (e) { handleFirestoreError(e, OperationType.LIST, 'notifications'); }
-  }
-
-  async updateLastSeen(): Promise<void> {
-    const uid = this._getCurrentUserId();
-    if (!uid) return;
-    try {
-      await updateDoc(doc(db, 'users', uid), { lastSeen: new Date().toISOString() });
-    } catch (e) {
-      console.warn('Silent issue updating last seen:', e);
-    }
   }
 
   async markAllNotificationsRead(uid): Promise<any> {

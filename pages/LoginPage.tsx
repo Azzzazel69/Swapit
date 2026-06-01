@@ -264,7 +264,7 @@ const LoginPage = () => {
             </div>
             
             <div className="mt-8">
-                <DevTools />
+                {import.meta.env.DEV && <DevTools />}
             </div>
         </div>
       </div>

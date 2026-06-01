@@ -253,13 +253,13 @@ const ChatDetailPage = () => {
         }
     };
 
-    const handleReportSubmit = async (reason) => {
+    const handleReportSubmit = async (reason, details) => {
         if (!reportTarget) return;
         try {
-            await api.reportContent(reportTarget.id, reportTarget.type, reason);
+            await api.reportContent(reportTarget.id, reportTarget.type, reason, details);
             showToast("Reporte enviado con éxito", "success");
         } catch (err) {
-            showToast("Error al enviar reporte", "error");
+            showToast(err instanceof Error ? err.message : "Error al enviar reporte", "error");
         } finally {
             setReportTarget(null);
         }

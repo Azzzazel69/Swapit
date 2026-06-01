@@ -1,14 +1,31 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useColorTheme } from '../hooks/useColorTheme.tsx';
+import { api } from '../services/api.ts';
 
 const Header = () => {
   const { user } = useAuth();
   const { theme } = useColorTheme();
   const location = useLocation();
+  const [pendingAlerts, setPendingAlerts] = useState(0);
 
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+  const isAdmin = user && (user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN');
+
+  useEffect(() => {
+    if (isAdmin) {
+      const fetchAlerts = async () => {
+        try {
+          const stats = await api.getAdminStats();
+          setPendingAlerts(stats.pendingAlerts || 0);
+        } catch (e) { }
+      };
+      fetchAlerts();
+      const interval = setInterval(fetchAlerts, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin]);
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700">
@@ -36,9 +53,15 @@ const Header = () => {
                     <span>{user.location.city}</span>
                  </>
              ) : null}
-             {!isAuthPage && user && (user.role === 'SUPER_ADMIN' || user.role === 'MODERATOR' || user.role === 'ADMIN') && (
-                 <Link to="/admin" className="ml-2 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md text-[10px] font-black uppercase tracking-wider hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+             {!isAuthPage && isAdmin && (
+                 <Link to="/admin" className="ml-2 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md text-[10px] font-black uppercase tracking-wider hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-1">
                      Admin
+                     {pendingAlerts > 0 && (
+                       <span className="relative flex h-2 w-2 ml-1">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                       </span>
+                     )}
                  </Link>
              )}
           </div>

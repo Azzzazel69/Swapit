@@ -56,8 +56,6 @@ const OnboardingPage = () => {
 
             if (!user.emailVerified) {
                 setStep('email');
-            } else if (!isPhoneVerified) {
-                setStep('phone');
             } else if (!locationData || !postalCode) {
                 // Try to load from localStorage if not already loaded
                 if (!locationData) {
@@ -80,7 +78,7 @@ const OnboardingPage = () => {
 
         // Check if fully onboarded
         const isTestUser = user.email?.endsWith('@test.com');
-        const isFullyOnboarded = isTestUser || (user.emailVerified && user.phoneVerified && user.location && user.preferences?.length > 0);
+        const isFullyOnboarded = isTestUser || (user.emailVerified && user.location && user.preferences?.length > 0);
         
         if (isFullyOnboarded) {
             setStep('complete');
@@ -89,8 +87,6 @@ const OnboardingPage = () => {
             }, 1500);
         } else if (!user.emailVerified) {
             setStep('email');
-        } else if (!user.phoneVerified && !isTestUser) {
-            setStep('phone');
         } else if (!user.location || !user.location.province) {
             setStep('location');
         } else {
@@ -277,7 +273,7 @@ const OnboardingPage = () => {
                     email: user.email,
                     location: { ...locationData, postalCode, address },
                     preferences: preferences,
-                    phone: `${countryCode}${phone}`,
+                    phone: phone ? `${countryCode}${phone}` : null,
                     phoneVerified: true
                 });
                 
@@ -331,8 +327,9 @@ const OnboardingPage = () => {
                     <div className="animate-fade-in-up">
                         <h3 className="text-xl font-bold mb-2">Paso 2: Verifica tu Teléfono</h3>
                         <p className="mb-6 text-gray-600 dark:text-gray-400">
-                            Para evitar bots y mantener a salvo a la comunidad, necesitamos un número de teléfono válido.
+                            Para evitar bots y mantener a salvo a la comunidad, necesitamos un número de teléfono válido. Se enviará un SMS real. Asegúrate de poner tu número real.
                         </p>
+                        <div id="recaptcha-container" className="mb-4"></div>
                         {!codeSent ? (
                             <form onSubmit={handleSendPhoneCode} className="space-y-4">
                                 <div className="flex gap-2">
@@ -363,9 +360,7 @@ const OnboardingPage = () => {
                         ) : (
                             <form onSubmit={handleVerifyPhoneCode} className="space-y-4">
                                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Introduce el código que hemos enviado al {countryCode} {phone}
-                                    <br/>
-                                    <span className="text-xs text-blue-500 font-bold block mt-1">(Simulación: Usa '1234')</span>
+                                    Introduce el código que hemos enviado al {countryCode} {phone} (via SMS).
                                 </p>
                                 <Input 
                                     id="code" 

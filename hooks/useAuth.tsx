@@ -99,11 +99,13 @@ export const AuthProvider = ({ children }) => {
         
         if (!currentUser) {
 
+            // For fallback, use the displayName, or split the email, instead of "Usuario de Prueba"
+            const fallbackName = firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Usuario');
             setUser({
                 id: firebaseUser.uid,
                 email: firebaseUser.email,
-                name: firebaseUser.displayName || 'Usuario de Prueba',
-                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+                name: fallbackName,
+                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fallbackName}`,
                 emailVerified: firebaseUser.emailVerified,
                 needsProfile: true
             });

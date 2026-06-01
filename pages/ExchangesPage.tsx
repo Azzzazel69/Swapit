@@ -73,8 +73,10 @@ const ExchangeCard = (props: any) => {
                     })
                 ),
                 
-                React.createElement("div", { className: "w-12 h-12 flex-shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl overflow-hidden" },
-                    exchange.status === ExchangeStatus.Pending && isOwner ? "✋" : "👤"
+                React.createElement("div", { className: "w-12 h-12 flex-shrink-0 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl overflow-hidden shadow-sm" },
+                    exchange.status === ExchangeStatus.Pending && isOwner ? 
+                    React.createElement("span", null, "✋") : 
+                    React.createElement("img", { src: (isOwner ? exchange.requesterAvatarUrl : exchange.ownerAvatarUrl) || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + partnerName, className: "w-full h-full object-cover" })
                 ),
 
                 React.createElement("div", { className: "flex-grow flex flex-col justify-center min-w-0" },

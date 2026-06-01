@@ -116,6 +116,27 @@ const DevTools = () => {
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
             LIMPIEZA TOTAL y Regenerar
           </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start gap-2 text-teal-600 border-teal-200 hover:bg-teal-50 dark:hover:bg-teal-900/10"
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                await api.seedDemoDatabase();
+                showToast("Datos de prueba actualizados", "success");
+              } catch(e: any) {
+                showToast(e.message, "error");
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            isLoading={isLoading}
+          >
+            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            Actualizar Demos (Sin borrar BD)
+          </Button>
           
           <Button 
             variant="outline" 

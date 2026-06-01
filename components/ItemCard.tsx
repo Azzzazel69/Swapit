@@ -15,13 +15,13 @@ const formatTimeAgo = (dateStr) => {
     return `${Math.floor(diffInSeconds / 86400)}d`;
 };
 
-const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns = 2, deletingItemId }: { item: any, onToggleFavorite?: (id: string) => void, onDelete?: (id: string) => void, isOwnItem?: boolean, columns?: number, deletingItemId?: string | null }) => {
+const ItemCard = ({ item, onToggleFavorite, onDelete, isOwnItem = false, columns = 2, deletingItemId }: { item: any, onToggleFavorite?: (id: string) => void, onDelete?: (id: string) => void, isOwnItem?: boolean, columns?: number | 'auto', deletingItemId?: string | null }) => {
   const { theme } = useColorTheme();
   
   // Definimos niveles de densidad lógica para clases condicionales de JS
   const isCompact = columns === 3;
-  const isMini = columns >= 4;
-  const isHighDensity = columns >= 3;
+  const isMini = typeof columns === 'number' && columns >= 4;
+  const isHighDensity = typeof columns === 'number' && columns >= 3;
 
   const conditionClasses = {
     [ItemCondition.New]: 'bg-green-500',

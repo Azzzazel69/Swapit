@@ -28,7 +28,7 @@ const REPORT_REASONS = {
     ]
 };
 
-const ReportModal = ({ isOpen, onClose, onSubmit, title, type = 'ITEM' }: { isOpen: boolean, onClose: () => void, onSubmit: (reason: string) => Promise<void>, title: string, type?: string }) => {
+const ReportModal = ({ isOpen, onClose, onSubmit, title, type = 'ITEM' }: { isOpen: boolean, onClose: () => void, onSubmit: (reason: string, details?: string) => Promise<void>, title: string, type?: string }) => {
     const [selectedReason, setSelectedReason] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -39,11 +39,12 @@ const ReportModal = ({ isOpen, onClose, onSubmit, title, type = 'ITEM' }: { isOp
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const finalReason = selectedReason === 'Otro' ? customReason : selectedReason;
+        const finalReason = selectedReason;
         if (!finalReason.trim()) return;
+        if (selectedReason === 'Otro' && !customReason.trim()) return;
         
         setIsLoading(true);
-        await onSubmit(finalReason);
+        await onSubmit(finalReason, customReason);
         setIsLoading(false);
         onClose();
         setSelectedReason('');
@@ -76,14 +77,14 @@ const ReportModal = ({ isOpen, onClose, onSubmit, title, type = 'ITEM' }: { isOp
                         ))
                     ),
 
-                    selectedReason === 'Otro' && React.createElement("div" as any, { className: "animate-fade-in-up" },
+                    React.createElement("div" as any, { className: "animate-fade-in-up" },
                         React.createElement("textarea" as any, {
                             className: "w-full p-3 border-2 border-gray-100 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm",
                             rows: 3,
-                            placeholder: "Describe el problema detalladamente...",
+                            placeholder: selectedReason === 'Otro' ? "Describe el problema detalladamente... (Obligatorio)" : "Añade detalles adicionales (Opcional)...",
                             value: customReason,
                             onChange: (e: any) => setCustomReason(e.target.value),
-                            required: true
+                            required: selectedReason === 'Otro'
                         })
                     ),
 

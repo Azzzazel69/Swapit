@@ -164,11 +164,11 @@ const UserProfilePage = () => {
         } catch (e) { showToast(e.message, "error"); }
     };
 
-    const handleReportUser = async (reason) => {
+   const handleReportUser = async (reason, details) => {
         try {
-            await api.reportContent(userId, 'USER', reason);
+            await api.reportContent(userId, 'USER', reason, details);
             showToast("Reporte enviado con éxito", "success");
-        } catch (e) { showToast("Error al enviar reporte", "error"); }
+        } catch (e) { showToast(e instanceof Error ? e.message : "Error al enviar reporte", "error"); }
     };
 
     if (loading) return React.createElement(SwapSpinner, { size: "lg" });
@@ -235,9 +235,9 @@ const UserProfilePage = () => {
                             }),
                             React.createElement("button", {
                                 onClick: () => setIsReportModalOpen(true),
-                                className: "p-2 text-gray-400 hover:text-red-500 transition-colors",
+                                className: "p-2 text-sm font-bold text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1",
                                 title: "Reportar Usuario"
-                            }, "🚩")
+                            }, React.createElement("span", null, "🚩"), "Reportar Usuario")
                         )
                     )
                 ),

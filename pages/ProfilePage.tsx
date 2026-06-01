@@ -205,9 +205,9 @@ const ProfilePage = () => {
             ]);
             const updatedItems = items.filter((i: any) => i.status !== 'EXCHANGED').map(item => ({
                 ...item,
-                ownerName: item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : (user.name || 'Usuario'),
-                ownerAvatarUrl: item.ownerAvatarUrl || user.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.id,
-                ownerLocation: item.ownerLocation || user.location || null
+                ownerName: user.name || (item.ownerName && item.ownerName !== 'Usuario' ? item.ownerName : 'Usuario'),
+                ownerAvatarUrl: user.avatarUrl || item.ownerAvatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.id,
+                ownerLocation: user.location || item.ownerLocation || null
             }));
             setUserItems(updatedItems);
             setPastExchanges(exchs || []);

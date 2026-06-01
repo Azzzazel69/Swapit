@@ -408,38 +408,56 @@ const AdminPage = () => {
                             React.createElement("p", { className: "text-gray-500" }, "No hay reportes ni detecciones automáticas pendientes.")
                         )
                     ) : (
-                        queue.map(item => (
-                            React.createElement("div", { key: item.id, className: `bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border-l-8 ${item.isAuto ? 'border-orange-500' : 'border-red-600'} flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-fade-in-up hover:shadow-md transition-shadow` },
-                                React.createElement("div", { className: "flex-grow min-w-0" },
+                        queue.map(item => {
+                            const icon = item.isAuto ? '🤖' : (item.type === 'ITEM' ? '📦' : '👤');
+                            const typeLabel = item.isAuto ? 'IA DETECT' : (item.type === 'ITEM' ? 'REPORTE ARTÍCULO' : 'REPORTE USUARIO');
+
+                            return React.createElement("div", { key: item.id, className: `bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl shadow-sm border-l-8 ${item.isAuto ? 'border-orange-500' : 'border-red-600'} flex flex-col md:flex-row justify-between items-start gap-6 animate-fade-in-up hover:shadow-md transition-shadow` },
+                                React.createElement("div", { className: "flex-grow min-w-0 w-full md:w-auto" },
                                     React.createElement("div", { className: "flex items-center gap-2 mb-2" },
-                                        React.createElement("span", { className: `px-2 py-0.5 rounded text-[10px] font-black uppercase ${item.isAuto ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}` },
-                                            item.isAuto ? '🤖 IA DETECT' : '👤 USER REPORT'
+                                        React.createElement("span", { className: `px-2 py-0.5 rounded text-[10px] items-center gap-1 flex font-black uppercase ${item.isAuto ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}` },
+                                            React.createElement("span", null, icon),
+                                            typeLabel
                                         ),
                                         React.createElement("span", { className: "text-[10px] text-gray-400 font-bold" }, new Date(item.date).toLocaleString())
                                     ),
-                                    React.createElement("h3", { className: "text-xl font-bold mb-1 dark:text-white truncate" }, item.preview),
-                                    React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg break-words" }, `"${item.reason}"`),
-                                    item.type === 'TRUST_VERIFICATION' && React.createElement("div", { className: "mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800" },
-                                        React.createElement("p", { className: "text-xs font-bold text-blue-800 dark:text-blue-300 mb-1" }, "Perfil Social: ", React.createElement("a", { href: item.data?.socialLink, target: "_blank", className: "underline" }, item.data?.socialLink)),
-                                        React.createElement("p", { className: "text-[10px] text-gray-500 mt-1" }, "Verifica que el perfil coincida con el nombre del usuario.")
-                                    ),
-                                    React.createElement("p", { className: "text-xs text-gray-400 mt-2 truncate" }, "Informado por: ", React.createElement("span", { className: "font-bold text-gray-600 dark:text-gray-300" }, item.reporterName))
-                                ),
-                                React.createElement("div", { className: "flex gap-2 w-full md:w-auto flex-shrink-0" },
-                                    item.type === 'TRUST_VERIFICATION' ? (
-                                        React.createElement(React.Fragment, null,
-                                            React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => handleResolve(item.id, item.type, 'REJECT'), children: "Rechazar" }),
-                                            React.createElement(Button, { size: "sm", variant: "primary", onClick: () => handleResolve(item.id, item.type, 'APPROVE'), children: "Aprobar" })
+                                    
+                                    item.type === 'ITEM' ? (
+                                        React.createElement("div", { className: "flex items-center gap-3 mb-3 bg-gray-50 dark:bg-gray-750 p-2 rounded-xl" },
+                                            item.targetImage ? React.createElement("img", { src: item.targetImage, alt: "target", className: "w-12 h-12 object-cover rounded-lg" }) : null,
+                                            React.createElement("div", { className: "flex-grow min-w-0" },
+                                                React.createElement(Link, { to: `/item/${item.targetId}`, className: "text-base font-bold dark:text-white truncate block hover:underline text-blue-600 dark:text-blue-400" }, item.preview),
+                                                React.createElement("p", { className: "text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1" }, 
+                                                    React.createElement("span", { className: "font-semibold" }, "Publicado por: "), 
+                                                    item.targetOwnerName
+                                                )
+                                            )
                                         )
                                     ) : (
-                                        React.createElement(React.Fragment, null,
-                                            React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => handleResolve(item.id, item.type, 'APPROVE'), children: "Ignorar" }),
-                                            React.createElement(Button, { size: "sm", variant: "danger", onClick: () => handleResolve(item.id, item.type, 'DELETE'), children: "Eliminar" })
+                                        React.createElement("div", { className: "mb-3" },
+                                            React.createElement("h3", { className: "text-lg font-bold dark:text-white truncate flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" }, 
+                                                "ID Usuario: " + item.targetId
+                                            ),
+                                            React.createElement("p", { className: "text-xs text-gray-500" }, item.preview)
                                         )
+                                    ),
+                                    
+                                    React.createElement("div", { className: "bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/40 p-3 rounded-lg" },
+                                        React.createElement("p", { className: "text-sm text-gray-800 dark:text-gray-200 font-bold mb-1" }, "Motivo: ", React.createElement("span", { className: "font-normal" }, item.reason)),
+                                        item.details ? React.createElement("p", { className: "text-sm text-gray-600 dark:text-gray-400 italic break-words" }, `"${item.details}"`) : null
+                                    ),
+                                    
+                                    React.createElement("p", { className: "text-xs text-gray-400 mt-3 truncate flex items-center gap-1" }, 
+                                        "🚩 Informado por: ", 
+                                        React.createElement("span", { className: "font-bold text-gray-600 dark:text-gray-300" }, item.reporterName)
                                     )
+                                ),
+                                React.createElement("div", { className: "flex flex-col gap-2 w-full md:w-32 flex-shrink-0" },
+                                    React.createElement(Button, { size: "sm", variant: "secondary", onClick: () => handleResolve(item.id, item.type, 'APPROVE'), className: "w-full text-xs", children: "Ignorar (OK)" }),
+                                    React.createElement(Button, { size: "sm", variant: "danger", onClick: () => handleResolve(item.id, item.type, 'DELETE'), className: "w-full text-xs", children: "Eliminar (Target)" })
                                 )
-                            )
-                        ))
+                            );
+                        })
                     )
                 )
             ),

@@ -86,12 +86,12 @@ const ItemDetailPage = () => {
       onClose: () => setIsReportModalOpen(false), 
       title: "Reportar Artículo", 
       type: "ITEM", 
-      onSubmit: async (r) => {
+      onSubmit: async (r, customReason) => {
         try {
-          await api.reportContent(item.id, 'ITEM', r);
+          await api.reportContent(item.id, 'ITEM', r, customReason);
           showToast("Reporte enviado", "success");
         } catch (err) {
-          showToast("Error al enviar reporte", "error");
+          showToast(err instanceof Error ? err.message : "Error al enviar reporte", "error");
         }
       } 
     }),
@@ -118,7 +118,7 @@ const ItemDetailPage = () => {
         !isOwnItem && React.createElement("button", {
             onClick: () => setIsReportModalOpen(true),
             className: "text-xs font-bold text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
-        }, React.createElement("span", null, "🚩"), "Reportar")
+        }, React.createElement("span", null, "🚩"), "Reportar Artículo")
     ),
 
     React.createElement("div", { className: "bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700" },

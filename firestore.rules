@@ -58,17 +58,8 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        (
-          (request.auth.token.email == "admin_seeder_v5@test.com") ||
-          (request.auth.token.email == "admin_swapit_v5@test.com") ||
-          (request.auth.token.email != null && request.auth.token.email.matches("admin_seeder_.*@test\\.com")) ||
-          (request.auth.token.email != null && request.auth.token.email.matches("admin_swapit_.*@test\\.com")) ||
-          ('email' in request.auth.token.firebase.identities && request.auth.token.firebase.identities.email[0] == "admin_seeder_v5@test.com") ||
-          ('email' in request.auth.token.firebase.identities && request.auth.token.firebase.identities.email[0] == "admin_swapit_v5@test.com") ||
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'])
-        );
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'];
     }
 
     function hasRequiredFields(fields) {
@@ -227,7 +218,7 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.reporterId == request.auth.uid);
       allow create: if isAuthenticated() && 
                       request.resource.data.reporterId == request.auth.uid && 
                       isValidReport(request.resource.data);

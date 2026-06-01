@@ -163,7 +163,7 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
                                 <img src={uploadedImage} className="w-40 h-40 rounded-full object-cover border-4 border-gray-100 shadow-md bg-white mb-6" />
                             ) : (
                                 <div className="w-40 h-40 rounded-full bg-gray-100 dark:bg-gray-700 border-4 border-gray-200 dark:border-gray-600 shadow-inner flex items-center justify-center mb-6">
-                                    <span className="text-gray-400 opacity-50 block transform scale-150">{ICONS.camera}</span>
+                                    <span className="text-gray-400 opacity-50 block transform scale-150 text-4xl">📷</span>
                                 </div>
                             )}
                             
@@ -181,7 +181,35 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
                                                 return;
                                             }
                                             const reader = new FileReader();
-                                            reader.onload = (event) => setUploadedImage(event.target.result);
+                                            reader.onload = (event) => {
+                                                const img = new Image();
+                                                img.onload = () => {
+                                                    const canvas = document.createElement('canvas');
+                                                    const MAX_SIZE = 420;
+                                                    let width = img.width;
+                                                    let height = img.height;
+
+                                                    if (width > height) {
+                                                        if (width > MAX_SIZE) {
+                                                            height *= MAX_SIZE / width;
+                                                            width = MAX_SIZE;
+                                                        }
+                                                    } else {
+                                                        if (height > MAX_SIZE) {
+                                                            width *= MAX_SIZE / height;
+                                                            height = MAX_SIZE;
+                                                        }
+                                                    }
+
+                                                    canvas.width = width;
+                                                    canvas.height = height;
+                                                    var ctx = canvas.getContext("2d");
+                                                    ctx.drawImage(img, 0, 0, width, height);
+
+                                                    setUploadedImage(canvas.toDataURL("image/webp", 0.7));
+                                                };
+                                                img.src = event.target.result;
+                                            };
                                             reader.readAsDataURL(file);
                                         }
                                     }} 
