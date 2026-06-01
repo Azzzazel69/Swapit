@@ -283,11 +283,7 @@ const HomePage = () => {
         )
       ),
   
-      renderCurrentView(),
-      
-      hasMore && React.createElement("div", { className: "flex justify-center mt-8" },
-          React.createElement(Button, { onClick: () => fetchItems(page + 1, true), children: "Cargar más contenido" })
-      ),
+      renderCurrentView()
       
       /* Floating Action Dock removed from here and moved to App.tsx */
     );

@@ -23,6 +23,51 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.post("/api/moderate", async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text || text.trim() === "") return res.json({ passed: true });
+
+      if (!process.env.GEMINI_API_KEY) {
+        console.warn("No GEMINI_API_KEY for moderation. Failing closed (PENDING).");
+        return res.json({ passed: false, reason: "Pendiente de revisión manual (Sistema AI no disponible)" });
+      }
+
+      const prompt = `Analiza el siguiente texto y determina si infringe alguna de las normas de la comunidad:
+1. Insultos malintencionados o acoso
+2. Contenido sobre drogas ilegales
+3. Contenido sobre armas
+4. Contenido sexual explícito
+
+Ten en cuenta que en España, ciertas groserías se usan coloquialmente de forma amigable (ej. "joder").
+Si el tono es puramente coloquial e inofensivo, apruébalo. Si es un insulto directo o viola una norma, recházalo identificando la norma infringida.
+
+Responde ÚNICAMENTE con un JSON válido usando esta estructura exacta (no uses Markdown en tu respuesta):
+{"passed": true, "reason": ""} o {"passed": false, "reason": "Motivo corto"}
+
+Texto: "${text}"`;
+
+      const ai = getAiClient();
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: { temperature: 0 }
+      });
+
+      const resultText = response.text?.trim() || "";
+      const jsonStr = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const json = JSON.parse(jsonStr);
+      
+      res.json({
+        passed: json.passed !== false,
+        reason: json.reason || ""
+      });
+    } catch (error: any) {
+      console.error("Moderation AI error:", error.message || error);
+      res.json({ passed: false, reason: "Error de moderación AI (bloqueado por seguridad)" });
+    }
+  });
+
   app.post("/api/batch-check-match", async (req, res) => {
     try {
       const { otherItems, userItems } = req.body;

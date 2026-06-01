@@ -208,7 +208,9 @@ const AvatarEditorModal = ({ isOpen, onClose, initialUrl, onSave }) => {
 
                                                     setUploadedImage(canvas.toDataURL("image/webp", 0.7));
                                                 };
-                                                img.src = event.target.result;
+                                                if (typeof event.target?.result === 'string') {
+                                                    img.src = event.target.result;
+                                                }
                                             };
                                             reader.readAsDataURL(file);
                                         }

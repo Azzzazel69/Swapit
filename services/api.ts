@@ -166,10 +166,6 @@ class ApiClient {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const data = snap.data() as any;
-          if ((data.email?.includes('admin')) && data.role !== 'SUPER_ADMIN') {
-            await updateDoc(docRef, { role: 'SUPER_ADMIN' });
-            data.role = 'SUPER_ADMIN';
-          }
           if (data.name === 'Usuario de Prueba' && data.email?.endsWith('@test.com')) {
              let displayName = data.email.split('@')[0].split('_')[0];
              if (data.email === 'pedro_troll_v5@test.com') displayName = 'Pedro Troll';
@@ -181,8 +177,8 @@ class ApiClient {
           }
           return { id: snap.id, ...data };
         } else {
-          // Si el usuario es el admin pero el doc no existe (se borró por accidente), lo recreamos
-          if (auth.currentUser?.email?.includes('admin')) {
+          // Solo recreamos un SUPER_ADMIN si es la cuenta seeder exacta
+          if (auth.currentUser?.email === 'admin_seeder_v5@test.com') {
 
              const userDoc = {
                name: auth.currentUser?.displayName || 'Admin',
@@ -762,7 +758,7 @@ class ApiClient {
         phone: userData.phone || null,
         emailVerified: auth.currentUser?.emailVerified || false,
         phoneVerified: userData.phoneVerified || false, 
-        role: userData.email?.includes('admin') ? 'SUPER_ADMIN' : 'USER',
+        role: 'USER',
         avatarUrl: finalAvatarUrl,
         location: userData.location || null,
         preferences: userData.preferences || [],
@@ -866,7 +862,32 @@ class ApiClient {
       throw new Error(e.message || "Error updating password");
     }
   }
-  async toggleFollowUser(uid): Promise<any> { return { success: true, isFollowing: false }; }
+  async toggleFollowUser(userIdToFollow: string): Promise<any> {
+    const uid = this._getCurrentUserId();
+    if (!uid) throw new Error('No autenticado');
+    if (uid === userIdToFollow) throw new Error('No puedes seguirte a ti mismo');
+    
+    try {
+      const currentUserRef = doc(db, 'users', uid);
+      
+      const snap = await getDoc(currentUserRef);
+      if (!snap.exists()) throw new Error('Usuario no encontrado');
+      
+      const following = snap.data()?.following || [];
+      const isFollowing = following.includes(userIdToFollow);
+      
+      if (isFollowing) {
+        await updateDoc(currentUserRef, { following: arrayRemove(userIdToFollow) });
+      } else {
+        await updateDoc(currentUserRef, { following: arrayUnion(userIdToFollow) });
+      }
+      
+      return { success: true, isFollowing: !isFollowing };
+    } catch (e) { 
+      console.error(e);
+      return { success: false, isFollowing: false }; 
+    }
+  }
   async requestTrustVerification(platform: string, username: string): Promise<any> {
     const uid = this._getCurrentUserId();
     if (!uid) throw new Error('No autenticado');
@@ -901,14 +922,13 @@ class ApiClient {
       
       if (!snap.exists()) throw new Error('No hay una solicitud pendiente');
       
-      // In a real app, we would scrape the profile here.
-      // For this demo, we'll simulate a successful check after a short delay.
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Verification should be done in backend
+      await updateDoc(docRef, { status: 'PENDING' });
+      await updateDoc(doc(db, 'users', uid), { identityVerificationStatus: 'PENDING' });
       
-      await updateDoc(docRef, { status: 'VERIFIED', verifiedAt: new Date().toISOString() });
-      await updateDoc(doc(db, 'users', uid), { identityVerified: true, identityVerificationStatus: 'VERIFIED' });
-      
-      return { success: true };
+      const userRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userRef);
+      return { id: uid, ...userSnap.data() };
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, 'trust_verifications');
     }
@@ -1333,15 +1353,24 @@ class ApiClient {
 
   async toggleFavorite(itemId): Promise<any> {
     const uid = this._getCurrentUserId();
+    if (!uid) return;
     try {
       const userRef = doc(db, 'users', uid as string);
+      const itemRef = doc(db, 'items', itemId);
       const snap = await getDoc(userRef);
       const favs = snap.data()?.favorites || [];
-      if (favs.includes(itemId)) {
-        await updateDoc(userRef, { favorites: arrayRemove(itemId) });
+      const isFavorite = favs.includes(itemId);
+      
+      const batch = writeBatch(db);
+      if (isFavorite) {
+        batch.update(userRef, { favorites: arrayRemove(itemId) });
+        batch.update(itemRef, { favoriteCount: increment(-1) });
       } else {
-        await updateDoc(userRef, { favorites: arrayUnion(itemId) });
+        batch.update(userRef, { favorites: arrayUnion(itemId) });
+        batch.update(itemRef, { favoriteCount: increment(1) });
       }
+      await batch.commit();
+
       return await this.getItemById(itemId);
     } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'users'); }
   }
