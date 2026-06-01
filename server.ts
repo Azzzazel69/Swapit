@@ -16,7 +16,22 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '64kb' })); // Mitiga payloads gigantes que puedan tumbar el backend
+
+  // Limite IPs rudimentario en memoria (para no añadir Redis ni deps complejas)
+  const ipStore = new Map<string, { count: number, resetAt: number }>();
+  app.use("/api", (req, res, next) => {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    let stats = ipStore.get(ip);
+    if (!stats || stats.resetAt < now) {
+      stats = { count: 0, resetAt: now + 60000 };
+    }
+    stats.count++;
+    ipStore.set(ip, stats);
+    if (stats.count > 60) return res.status(429).json({ error: "Too many requests" });
+    next();
+  });
 
   // API routes FIRST
   app.get("/api/health", (req, res) => {
@@ -26,7 +41,10 @@ async function startServer() {
   app.post("/api/moderate", async (req, res) => {
     try {
       const { text } = req.body;
+      if (typeof text !== 'string') return res.status(400).json({ passed: false, reason: "Payload inválido" });
       if (!text || text.trim() === "") return res.json({ passed: true });
+
+      const safeText = text.slice(0, 3000); // 3000 chars limit (prevents abuse)
 
       if (!process.env.GEMINI_API_KEY) {
         console.warn("No GEMINI_API_KEY for moderation. Failing closed (PENDING).");
@@ -45,7 +63,8 @@ Si el tono es puramente coloquial e inofensivo, apruébalo. Si es un insulto dir
 Responde ÚNICAMENTE con un JSON válido usando esta estructura exacta (no uses Markdown en tu respuesta):
 {"passed": true, "reason": ""} o {"passed": false, "reason": "Motivo corto"}
 
-Texto: "${text}"`;
+Texto a revisar:
+${JSON.stringify(safeText)}`;
 
       const ai = getAiClient();
       const response = await ai.models.generateContent({
@@ -56,12 +75,18 @@ Texto: "${text}"`;
 
       const resultText = response.text?.trim() || "";
       const jsonStr = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
-      const json = JSON.parse(jsonStr);
       
-      res.json({
-        passed: json.passed !== false,
-        reason: json.reason || ""
-      });
+      let passed = false;
+      let reason = "Error procesando validación";
+      try {
+        const json = JSON.parse(jsonStr);
+        passed = json.passed !== false;
+        reason = json.reason || "";
+      } catch (err) {
+        console.warn("Could not parse moderation response", resultText);
+      }
+      
+      res.json({ passed, reason });
     } catch (error: any) {
       console.error("Moderation AI error:", error.message || error);
       res.json({ passed: false, reason: "Error de moderación AI (bloqueado por seguridad)" });
@@ -71,6 +96,14 @@ Texto: "${text}"`;
   app.post("/api/batch-check-match", async (req, res) => {
     try {
       const { otherItems, userItems } = req.body;
+      
+      if (!Array.isArray(otherItems) || !Array.isArray(userItems)) {
+         return res.status(400).json({ matchMap: {} });
+      }
+      
+      if (otherItems.length > 200 || userItems.length > 50) {
+         return res.status(400).json({ error: "Payload too large", matchMap: {} });
+      }
 
       if (!otherItems || !otherItems.length || !userItems || !userItems.length) {
         return res.json({ matches: {} });

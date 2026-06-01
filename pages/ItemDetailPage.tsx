@@ -140,7 +140,7 @@ const ItemDetailPage = () => {
                         ),
                         React.createElement("h1", { className: "text-3xl font-black text-gray-900 dark:text-white leading-tight" }, item.title)
                     ),
-                    !isOwnItem && React.createElement("button", { onClick: () => api.toggleFavorite(item.id).then(setItem), className: "p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 hover:scale-110 transition-transform shadow-sm" }, item.isFavorited ? "❤️" : "🤍")
+                    !isOwnItem && React.createElement("button", { onClick: () => api.toggleFavorite(item.id).then((res) => { if (res && res.item) setItem(res.item); }), className: "p-3 rounded-2xl bg-gray-100 dark:bg-gray-700 hover:scale-110 transition-transform shadow-sm" }, item.isFavorited ? "❤️" : "🤍")
                 ),
                 
                 React.createElement("p", { className: "text-gray-600 dark:text-gray-300 mb-4 text-lg" }, item.description),
@@ -193,7 +193,7 @@ const ItemDetailPage = () => {
             className: "flex-grow max-w-sm py-4 px-6 bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-bold text-lg rounded-2xl shadow-lg transition-transform active:scale-[0.98]" 
         }, "Proponer Trueque"),
         React.createElement("button", {
-            onClick: () => api.toggleFavorite(item.id).then(setItem),
+            onClick: () => api.toggleFavorite(item.id).then((res) => { if (res && res.item) setItem(res.item); }),
             className: "p-4 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:bg-slate-50 transition-colors"
         }, item.isFavorited ? "❤️" : "🤍")
     )

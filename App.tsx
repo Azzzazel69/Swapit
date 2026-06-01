@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
@@ -19,22 +19,23 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import TermsOfServicePage from './pages/TermsOfServicePage.tsx';
 import CookiePolicyPage from './pages/CookiePolicyPage.tsx';
 import { useColorTheme } from './hooks/useColorTheme.tsx';
-import ChatDetailPage from './pages/ChatDetailPage.tsx';
 import UserProfilePage from './pages/UserProfilePage.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
 import CookieBanner from './components/CookieBanner.tsx';
 import BottomNav from './components/BottomNav.tsx';
 import AddItemPage from './pages/AddItemPage.tsx';
 import RateExchangePage from './pages/RateExchangePage.tsx';
-import AdminPage from './pages/AdminPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
-import MeetingMapPage from './pages/MeetingMapPage.tsx';
-import ExplorationModePage from './pages/ExplorationModePage.tsx';
 import { initializePushNotifications } from './services/pushNotifications.ts';
 import { api } from './services/api.ts';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+
+const AdminPage = lazy(() => import('./pages/AdminPage.tsx'));
+const ChatDetailPage = lazy(() => import('./pages/ChatDetailPage.tsx'));
+const MeetingMapPage = lazy(() => import('./pages/MeetingMapPage.tsx'));
+const ExplorationModePage = lazy(() => import('./pages/ExplorationModePage.tsx'));
 
 console.log("Checking components:", { AuthProvider, ColorThemeProvider, ConfettiProvider, ToastProvider, Header, HomePage, LoginPage, RegisterPage, ExchangesPage, ProfilePage, SwapSpinner, ItemDetailPage, OnboardingPage, ForgotPasswordPage, TermsOfServicePage, CookiePolicyPage, ChatDetailPage, UserProfilePage, OfflineBanner, CookieBanner, AddItemPage, RateExchangePage, AdminPage, VerifyEmailPage, MeetingMapPage, ExplorationModePage });
 
@@ -162,31 +163,33 @@ const AppRoutes = () => {
     );
   }
 
-  return React.createElement(Routes, null,
-    React.createElement(Route, { path: "/login", element: !user ? React.createElement(LoginPage, null) : React.createElement(Navigate, { to: "/" }) }),
-    React.createElement(Route, { path: "/register", element: !user ? React.createElement(RegisterPage, null) : React.createElement(Navigate, { to: "/" }) }),
-    React.createElement(Route, { path: "/forgot-password", element: !user ? React.createElement(ForgotPasswordPage, null) : React.createElement(Navigate, { to: "/" }) }),
-    React.createElement(Route, { path: "/verify-email", element: React.createElement(VerifyEmailPage, null) }),
-    React.createElement(Route, { path: "/verify-email/:token", element: React.createElement(VerifyEmailPage, null) }),
-    React.createElement(Route, { path: "/onboarding", element: React.createElement(OnboardingGuard, null, React.createElement(OnboardingPage, null)) }),
-    
-    React.createElement(Route, { path: "/terms-of-service", element: React.createElement(TermsOfServicePage, null) }),
-    React.createElement(Route, { path: "/cookie-policy", element: React.createElement(CookiePolicyPage, null) }),
+  return React.createElement(Suspense, { fallback: React.createElement(SwapSpinner, null) },
+    React.createElement(Routes, null,
+      React.createElement(Route, { path: "/login", element: !user ? React.createElement(LoginPage, null) : React.createElement(Navigate, { to: "/" }) }),
+      React.createElement(Route, { path: "/register", element: !user ? React.createElement(RegisterPage, null) : React.createElement(Navigate, { to: "/" }) }),
+      React.createElement(Route, { path: "/forgot-password", element: !user ? React.createElement(ForgotPasswordPage, null) : React.createElement(Navigate, { to: "/" }) }),
+      React.createElement(Route, { path: "/verify-email", element: React.createElement(VerifyEmailPage, null) }),
+      React.createElement(Route, { path: "/verify-email/:token", element: React.createElement(VerifyEmailPage, null) }),
+      React.createElement(Route, { path: "/onboarding", element: React.createElement(OnboardingGuard, null, React.createElement(OnboardingPage, null)) }),
+      
+      React.createElement(Route, { path: "/terms-of-service", element: React.createElement(TermsOfServicePage, null) }),
+      React.createElement(Route, { path: "/cookie-policy", element: React.createElement(CookiePolicyPage, null) }),
 
-    React.createElement(Route, { path: "/", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(HomePage, null))) }),
-    React.createElement(Route, { path: "/add-item", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(AddItemPage, null))) }),
-    React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ItemDetailPage, null))) }),
-    React.createElement(Route, { path: "/exploration", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ExplorationModePage, null))) }),
-    React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ExchangesPage, null))) }),
-    React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ChatDetailPage, null))) }),
-    React.createElement(Route, { path: "/meeting-map/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(MeetingMapPage, null))) }),
-    React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(RateExchangePage, null))) }),
-    React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ProfilePage, null))) }),
-    React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(UserProfilePage, null))) }),
-    
-    React.createElement(Route, { path: "/admin", element: React.createElement(AdminRoute, null, React.createElement(ErrorBoundary, null, React.createElement(AdminPage, null))) }),
+      React.createElement(Route, { path: "/", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(HomePage, null))) }),
+      React.createElement(Route, { path: "/add-item", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(AddItemPage, null))) }),
+      React.createElement(Route, { path: "/item/:itemId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ItemDetailPage, null))) }),
+      React.createElement(Route, { path: "/exploration", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ExplorationModePage, null))) }),
+      React.createElement(Route, { path: "/exchanges", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ExchangesPage, null))) }),
+      React.createElement(Route, { path: "/chat/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ChatDetailPage, null))) }),
+      React.createElement(Route, { path: "/meeting-map/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(MeetingMapPage, null))) }),
+      React.createElement(Route, { path: "/rate-exchange/:exchangeId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(RateExchangePage, null))) }),
+      React.createElement(Route, { path: "/profile", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(ProfilePage, null))) }),
+      React.createElement(Route, { path: "/user/:userId", element: React.createElement(ProtectedRoute, null, React.createElement(ErrorBoundary, null, React.createElement(UserProfilePage, null))) }),
+      
+      React.createElement(Route, { path: "/admin", element: React.createElement(AdminRoute, null, React.createElement(ErrorBoundary, null, React.createElement(AdminPage, null))) }),
 
-    React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
+      React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
+    )
   );
 };
 

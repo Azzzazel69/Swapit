@@ -12,8 +12,6 @@ import EmptyState from '../components/EmptyState.tsx';
 import AdBanner from '../components/AdBanner.tsx';
 import { ICONS } from '../constants.tsx';
 
-const PAGE_SIZE = 12;
-
 interface ItemGroupProps {
     title: string;
     icon: string;
@@ -147,36 +145,41 @@ const HomePage = () => {
   const [columnLayout, setColumnLayout] = useState<number | 'auto'>('auto');
   const [data, setData] = useState({ exploreItems: [], directMatches: [], recommended: [], nearItems: [], favoriteItems: [], popularItems: [], totalExploreItems: 0 });
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('articles'); 
 
-  const fetchItems = async (p = 1, append = false) => {
+  const fetchItems = async () => {
     try {
-      if (!append) {
-        setLoading(true);
-        const res = await api.getHomePageData(user?.id);
-        setData(res);
-      }
-      setPage(p);
+      setLoading(true);
+      const res = await api.getHomePageData(user?.id);
+      setData(res);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchItems(1, false); }, [user, viewMode]);
+  useEffect(() => { fetchItems(); }, [user, viewMode]);
 
   const handleToggleFavorite = async (itemId) => {
     try {
-        const updated = await api.toggleFavorite(itemId);
-        const updater = (prev) => prev.map(i => i.id === itemId ? { ...i, ...updated } : i);
-        setData(d => ({ 
-            ...d, 
-            exploreItems: updater(d.exploreItems), 
-            directMatches: updater(d.directMatches), 
-            recommended: updater(d.recommended), 
-            favoriteItems: updater(d.favoriteItems),
-            nearItems: updater(d.nearItems),
-            popularItems: updater(d.popularItems)
-        }));
+        const res = await api.toggleFavorite(itemId);
+        if (!res || !res.item) return;
+        const updater = (prev) => prev.map(i => i.id === itemId ? { ...i, ...res.item } : i);
+        setData(d => {
+            let newFavs = [...d.favoriteItems];
+            if (res.isFavorite) {
+                if (!newFavs.some(i => i.id === itemId)) newFavs.push(res.item);
+            } else {
+                newFavs = newFavs.filter(i => i.id !== itemId);
+            }
+            return { 
+                ...d, 
+                exploreItems: updater(d.exploreItems), 
+                directMatches: updater(d.directMatches), 
+                recommended: updater(d.recommended), 
+                favoriteItems: newFavs,
+                nearItems: updater(d.nearItems),
+                popularItems: updater(d.popularItems)
+            };
+        });
     } catch (e) { console.error(e); }
   };
 
@@ -197,7 +200,7 @@ const HomePage = () => {
       explore: applySearch(data.exploreItems, searchQuery, searchType)
   }), [data, searchQuery, searchType]);
 
-  if (loading && page === 1) {
+  if (loading) {
     return (
         React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4" }, 
             [...Array(8)].map((_, i) => React.createElement(ItemCardSkeleton, { key: i }))
@@ -208,12 +211,12 @@ const HomePage = () => {
   const renderCurrentView = () => {
       if (viewMode === 'landing') {
           return React.createElement(React.Fragment, null,
-            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
-            React.createElement(ItemGroup, { title: "Tus Favoritos", icon: "❤️", items: filtered.favs.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
-            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
-            React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
-            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true })
+            React.createElement(ItemGroup, { title: "Matches Directos", icon: "⚡️", items: filtered.matches, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: "Tus Favoritos", icon: "❤️", items: filtered.favs, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Para tus Intereses", icon: "✨", items: filtered.rec, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: `Cerca de ${user?.location?.city || 'ti'}`, icon: "📍", items: filtered.near, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true }),
+            React.createElement(ItemGroup, { title: "Más Visitados", icon: "🔥", items: filtered.popular, onToggleFavorite: handleToggleFavorite, columns: columnLayout }),
+            React.createElement(ItemGroup, { title: "Novedades", icon: "🌍", items: filtered.explore, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true })
           );
       }
 
@@ -230,20 +233,14 @@ const HomePage = () => {
               title: "No hay artículos disponibles",
               message: "Parece que no hay nada por aquí todavía. Prueba a recargar o vuelve más tarde.",
               actionButton: React.createElement("div", { className: "flex flex-col gap-3" },
-                React.createElement(Button, { onClick: () => fetchItems(1, false), children: "Recargar contenido" }),
+                React.createElement(Button, { onClick: () => fetchItems(), children: "Recargar contenido" }),
                 React.createElement(Button, { variant: "outline", onClick: () => setViewMode('landing'), children: "Volver a Descubrir" })
               )
           });
       }
 
-      return React.createElement(ItemGroup, { title: titles[viewMode], icon: icons[viewMode], items: activeItems.slice(0, page * PAGE_SIZE), onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true });
+      return React.createElement(ItemGroup, { title: titles[viewMode as keyof typeof titles], icon: icons[viewMode as keyof typeof icons], items: activeItems, onToggleFavorite: handleToggleFavorite, columns: columnLayout, showAds: true });
   };
-
-    const hasMore = viewMode === 'landing' 
-        ? filtered.explore.length > page * PAGE_SIZE
-        : (viewMode === 'cerca' ? filtered.near.length > page * PAGE_SIZE 
-        : (viewMode === 'favoritos' ? filtered.favs.length > page * PAGE_SIZE 
-        : filtered.explore.length > page * PAGE_SIZE));
 
     return React.createElement("div", { className: "pb-32 w-full" },
       React.createElement("div", { className: "mb-6 flex flex-col gap-4 w-full" },

@@ -121,8 +121,9 @@ const UserProfilePage = () => {
 
     const handleToggleFavorite = async (itemId) => {
         try {
-            const updatedItem = await api.toggleFavorite(itemId);
-            setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, ...updatedItem } : item));
+            const res = await api.toggleFavorite(itemId);
+            if (!res || !res.item) return;
+            setItems(prevItems => prevItems.map(item => item.id === itemId ? { ...item, ...res.item } : item));
         } catch (error) {
             showToast("No se pudo actualizar favoritos.", "error");
         }

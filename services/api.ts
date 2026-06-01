@@ -2,7 +2,7 @@ import { ExchangeStatus, ItemCondition } from '../types';
 import { CATEGORIES_WITH_SUBCATEGORIES, USER_CATEGORIES } from '../constants';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, sendEmailVerification, applyActionCode } from 'firebase/auth';
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, limit, writeBatch, arrayUnion, arrayRemove, documentId, increment, or } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, limit, writeBatch, arrayUnion, arrayRemove, documentId, increment, or, runTransaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, getStorage } from 'firebase/storage';
 import { db, auth, googleProvider, storage } from '../firebase';
 import { logAppEvent } from './analytics';
@@ -177,8 +177,8 @@ class ApiClient {
           }
           return { id: snap.id, ...data };
         } else {
-          // Solo recreamos un SUPER_ADMIN si es la cuenta seeder exacta
-          if (auth.currentUser?.email === 'admin_seeder_v5@test.com') {
+          // Solo recreamos un SUPER_ADMIN si es la cuenta seeder exacta y estamos en DEV
+          if (import.meta.env.DEV && auth.currentUser?.email === 'admin_seeder_v5@test.com') {
 
              const userDoc = {
                name: auth.currentUser?.displayName || 'Admin',
@@ -469,7 +469,7 @@ class ApiClient {
             const userDocRef = doc(db, 'users', cred.user.uid);
             const userSnap = await getDoc(userDocRef);
             
-            const isAdminEmail = email.includes('admin') || email.includes('seeder');
+            const isExactDemoSeederEmail = email === 'admin_seeder_v5@test.com';
             let displayName = email.split('@')[0].split('_')[0];
             if (email === 'pedro_troll_v5@test.com') displayName = 'Pedro Troll';
             else displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
@@ -480,7 +480,7 @@ class ApiClient {
                emailVerified: true,
                phoneVerified: true,
                identityVerified: true,
-               role: isAdminEmail ? 'SUPER_ADMIN' : 'USER',
+               role: isExactDemoSeederEmail ? 'SUPER_ADMIN' : 'USER',
                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
             };
             
@@ -869,8 +869,14 @@ class ApiClient {
     
     try {
       const currentUserRef = doc(db, 'users', uid);
+      const targetUserRef = doc(db, 'users', userIdToFollow);
       
-      const snap = await getDoc(currentUserRef);
+      const [snap, targetSnap] = await Promise.all([
+        getDoc(currentUserRef),
+        getDoc(targetUserRef)
+      ]);
+      
+      if (!targetSnap.exists()) throw new Error('El usuario a seguir no existe');
       if (!snap.exists()) throw new Error('Usuario no encontrado');
       
       const following = snap.data()?.following || [];
@@ -884,8 +890,7 @@ class ApiClient {
       
       return { success: true, isFollowing: !isFollowing };
     } catch (e) { 
-      console.error(e);
-      return { success: false, isFollowing: false }; 
+      handleFirestoreError(e, OperationType.UPDATE, 'users');
     }
   }
   async requestTrustVerification(platform: string, username: string): Promise<any> {
@@ -1351,28 +1356,39 @@ class ApiClient {
     }
   }
 
-  async toggleFavorite(itemId): Promise<any> {
+  async toggleFavorite(itemId: string): Promise<any> {
     const uid = this._getCurrentUserId();
     if (!uid) return;
     try {
-      const userRef = doc(db, 'users', uid as string);
+      const userRef = doc(db, 'users', uid);
       const itemRef = doc(db, 'items', itemId);
-      const snap = await getDoc(userRef);
-      const favs = snap.data()?.favorites || [];
-      const isFavorite = favs.includes(itemId);
       
-      const batch = writeBatch(db);
-      if (isFavorite) {
-        batch.update(userRef, { favorites: arrayRemove(itemId) });
-        batch.update(itemRef, { favoriteCount: increment(-1) });
-      } else {
-        batch.update(userRef, { favorites: arrayUnion(itemId) });
-        batch.update(itemRef, { favoriteCount: increment(1) });
-      }
-      await batch.commit();
-
-      return await this.getItemById(itemId);
-    } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'users'); }
+      const { isFavorite } = await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        const itemSnap = await transaction.get(itemRef);
+        
+        if (!userSnap.exists() || !itemSnap.exists()) {
+          throw new Error("User or Item does not exist");
+        }
+        
+        const favs = userSnap.data().favorites || [];
+        const isFav = favs.includes(itemId);
+        let currentCount = itemSnap.data().favoriteCount || 0;
+        
+        if (isFav) {
+          transaction.update(userRef, { favorites: arrayRemove(itemId) });
+          transaction.update(itemRef, { favoriteCount: Math.max(0, currentCount - 1) });
+        } else {
+          transaction.update(userRef, { favorites: arrayUnion(itemId) });
+          transaction.update(itemRef, { favoriteCount: currentCount + 1 });
+        }
+        
+        return { isFavorite: !isFav };
+      });
+      
+      const updatedItem = await this.getItemById(itemId);
+      return { item: updatedItem, isFavorite };
+    } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'favorites'); }
   }
 
   async getExplorationItems(): Promise<any> {
