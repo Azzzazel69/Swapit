@@ -13,18 +13,14 @@ import RegisterPage from './pages/RegisterPage.tsx';
 import ExchangesPage from './pages/ExchangesPage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
 import SwapSpinner from './components/SwapSpinner.tsx';
-import ItemDetailPage from './pages/ItemDetailPage.tsx';
 import OnboardingPage from './pages/OnboardingPage.tsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx';
 import TermsOfServicePage from './pages/TermsOfServicePage.tsx';
 import CookiePolicyPage from './pages/CookiePolicyPage.tsx';
 import { useColorTheme } from './hooks/useColorTheme.tsx';
-import UserProfilePage from './pages/UserProfilePage.tsx';
 import OfflineBanner from './components/OfflineBanner.tsx';
 import CookieBanner from './components/CookieBanner.tsx';
 import BottomNav from './components/BottomNav.tsx';
-import AddItemPage from './pages/AddItemPage.tsx';
-import RateExchangePage from './pages/RateExchangePage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx';
 import { initializePushNotifications } from './services/pushNotifications.ts';
 import { api } from './services/api.ts';
@@ -36,15 +32,15 @@ const AdminPage = lazy(() => import('./pages/AdminPage.tsx'));
 const ChatDetailPage = lazy(() => import('./pages/ChatDetailPage.tsx'));
 const MeetingMapPage = lazy(() => import('./pages/MeetingMapPage.tsx'));
 const ExplorationModePage = lazy(() => import('./pages/ExplorationModePage.tsx'));
-
-console.log("Checking components:", { AuthProvider, ColorThemeProvider, ConfettiProvider, ToastProvider, Header, HomePage, LoginPage, RegisterPage, ExchangesPage, ProfilePage, SwapSpinner, ItemDetailPage, OnboardingPage, ForgotPasswordPage, TermsOfServicePage, CookiePolicyPage, ChatDetailPage, UserProfilePage, OfflineBanner, CookieBanner, AddItemPage, RateExchangePage, AdminPage, VerifyEmailPage, MeetingMapPage, ExplorationModePage });
+const ItemDetailPage = lazy(() => import('./pages/ItemDetailPage.tsx'));
+const AddItemPage = lazy(() => import('./pages/AddItemPage.tsx'));
+const RateExchangePage = lazy(() => import('./pages/RateExchangePage.tsx'));
+const UserProfilePage = lazy(() => import('./pages/UserProfilePage.tsx'));
 
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 
 const App = () => {
-  console.log("App.tsx: Renderizando componente App");
   useEffect(() => {
-    console.log("App.tsx: useEffect inicial ejecutándose");
     if (Capacitor.isNativePlatform()) {
       StatusBar.setStyle({ style: Style.Dark });
       StatusBar.setBackgroundColor({ color: '#111827' }); 
@@ -216,7 +212,7 @@ const ProtectedRoute = ({ children }) => {
     if (!user.location || !user.location.city) missingSteps.push("Ubicación no configurada");
     if (!user.preferences || user.preferences.length === 0) missingSteps.push("Preferencias no seleccionadas");
     
-    console.log("ProtectedRoute: Redirigiendo a onboarding. Pasos pendientes:", missingSteps);
+    if (import.meta.env.DEV) console.log("ProtectedRoute: Redirigiendo a onboarding. Pasos pendientes:", missingSteps);
     
     return React.createElement(Navigate, { to: "/onboarding", state: { from: location }, replace: true });
   }
@@ -244,7 +240,7 @@ const OnboardingGuard = ({ children }) => {
     const fullyOnboarded = isUserFullyOnboarded(user);
 
     if (fullyOnboarded) {
-        console.log("OnboardingGuard: User already fully onboarded, redirecting to home");
+        if (import.meta.env.DEV) console.log("OnboardingGuard: User already fully onboarded, redirecting to home");
         return React.createElement(Navigate, { replace: true, to: "/" });
     }
 

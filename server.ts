@@ -20,6 +20,13 @@ async function startServer() {
 
   // Limite IPs rudimentario en memoria (para no añadir Redis ni deps complejas)
   const ipStore = new Map<string, { count: number, resetAt: number }>();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, stats] of ipStore.entries()) {
+      if (stats.resetAt < now) ipStore.delete(ip);
+    }
+  }, 60000);
+
   app.use("/api", (req, res, next) => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
@@ -70,7 +77,10 @@ ${JSON.stringify(safeText)}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
-        config: { temperature: 0 }
+        config: { 
+            temperature: 0,
+            responseMimeType: "application/json"
+        }
       });
 
       const resultText = response.text?.trim() || "";
@@ -98,11 +108,11 @@ ${JSON.stringify(safeText)}`;
       const { otherItems, userItems } = req.body;
       
       if (!Array.isArray(otherItems) || !Array.isArray(userItems)) {
-         return res.status(400).json({ matchMap: {} });
+         return res.status(400).json({ matches: {}, aiFailed: true });
       }
       
       if (otherItems.length > 200 || userItems.length > 50) {
-         return res.status(400).json({ error: "Payload too large", matchMap: {} });
+         return res.status(400).json({ error: "Payload too large", matches: {}, aiFailed: true });
       }
 
       if (!otherItems || !otherItems.length || !userItems || !userItems.length) {
@@ -114,14 +124,28 @@ ${JSON.stringify(safeText)}`;
         return res.json({ matches: {}, aiFailed: true });
       }
 
+      const safeString = (val: any, max: number) => typeof val === 'string' ? val.substring(0, max) : '';
+
+      const safeUserItems = userItems.map((i: any) => ({
+         id: safeString(i.id, 50),
+         title: safeString(i.title, 120),
+         category: safeString(i.category, 80),
+         description: safeString(i.description, 500)
+      }));
+
+      const safeOtherItems = otherItems.map((i: any) => ({
+         id: safeString(i.id, 50),
+         wishedItem: safeString(i.wishedItem, 300)
+      }));
+
       const prompt = `Actúa como un motor de matching inteligente para una aplicación de trueque de segunda mano.
 Queremos saber qué usuarios de "Otros Artículos" estarían interesados en los artículos ofrecidos por el Usuario Actual, basándonos estricta e inteligentemente en su campo "wishedItem" (lo que están buscando a cambio).
 
 Aquí están los artículos que OFRECE el Usuario Actual:
-${JSON.stringify(userItems.map((i: any) => ({ id: i.id, title: i.title, category: i.category, description: i.description })))}
+${JSON.stringify(safeUserItems)}
 
 Aquí están los artículos de otros usuarios, listando QUÉ BUSCAN a cambio:
-${JSON.stringify(otherItems.map((i: any) => ({ id: i.id, wishedItem: i.wishedItem })))}
+${JSON.stringify(safeOtherItems)}
 
 Instrucciones: Revisa cada uno de los elementos buscados ("wishedItem") y determina si la descripción y características del "wishedItem" encajan SEMÁNTICA y LÓGICAMENTE con alguno de los artículos ofrecidos.
 REGLAS ESTRICTAS:

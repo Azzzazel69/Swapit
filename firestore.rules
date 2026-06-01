@@ -163,7 +163,10 @@ service cloud.firestore {
                       (isOwner(userId) || isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'updatedAt'])) && 
                       (isAdmin() || (isValidUser(request.resource.data) && 
                                      request.resource.data.role == resource.data.role &&
-                                     request.resource.data.createdAt == resource.data.createdAt));
+                                     request.resource.data.createdAt == resource.data.createdAt &&
+                                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['identityVerified'])) &&
+                                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['identityVerificationStatus']) || request.resource.data.identityVerificationStatus == 'PENDING' || request.resource.data.identityVerificationStatus == resource.data.identityVerificationStatus)
+                                     ));
                       
       allow delete: if isAdmin();
     }
@@ -233,7 +236,18 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAdmin();
+      
+      // Users can only create notifications if they are part of a valid exchange related to it
+      function isExchangeParticipantForNotif() {
+         let exchangeId = request.resource.data.data.exchangeId;
+         let exchange = getAfter(/databases/$(database)/documents/exchanges/$(exchangeId));
+         return exchange != null 
+             && (exchange.data.ownerId == request.auth.uid || exchange.data.requesterId == request.auth.uid) 
+             && (exchange.data.ownerId == request.resource.data.userId || exchange.data.requesterId == request.resource.data.userId)
+             && request.auth.uid != request.resource.data.userId;
+      }
+      
+      allow create: if isAdmin() || (isAuthenticated() && isValidNotification(request.resource.data) && isExchangeParticipantForNotif());
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && (isAdmin() || isValidNotification(request.resource.data));
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
@@ -253,10 +267,11 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.uid == uid
         && request.resource.data.status in ['PENDING_USER_ACTION', 'PENDING']
-        && request.resource.data.keys().hasOnly(['uid','platform','username','verificationCode','status','createdAt', 'verifiedAt']);
+        && request.resource.data.keys().hasOnly(['uid','platform','username','verificationCode','status','createdAt']);
         
       allow update: if isAuthenticated()
         && request.auth.uid == uid
+        && !(resource.data.status in ['VERIFIED', 'REJECTED']) 
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
         && request.resource.data.status == 'PENDING';
         
