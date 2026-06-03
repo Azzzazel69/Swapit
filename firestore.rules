@@ -164,14 +164,49 @@ service cloud.firestore {
                       (request.auth.uid == userId || isAdmin()) && 
                       (isAdmin() || (isValidUser(request.resource.data) && request.resource.data.role == 'USER'));
                       
-      allow update: if isAuthenticated() && 
-                      (isOwner(userId) || isAdmin()) && 
-                      (isAdmin() || (isValidUser(request.resource.data) && 
-                                     request.resource.data.role == resource.data.role &&
-                                     request.resource.data.createdAt == resource.data.createdAt &&
-                                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['identityVerified'])) &&
-                                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['identityVerificationStatus']) || request.resource.data.identityVerificationStatus == 'PENDING' || request.resource.data.identityVerificationStatus == resource.data.identityVerificationStatus)
-                                     ));
+      function userImmutableFieldsPreserved() {
+         return request.resource.data.role == resource.data.role
+             && request.resource.data.createdAt == resource.data.createdAt
+             && request.resource.data.email == resource.data.email
+             && request.resource.data.emailVerified == resource.data.emailVerified
+             && request.resource.data.phoneVerified == resource.data.phoneVerified
+             && request.resource.data.identityVerified == resource.data.identityVerified
+             && request.resource.data.status == resource.data.status
+             && request.resource.data.isBanned == resource.data.isBanned
+             && request.resource.data.banReason == resource.data.banReason;
+      }
+
+      function isProfileUpdate() {
+         return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name','avatarUrl','location','preferences','phone','updatedAt'
+         ]);
+      }
+
+      function isFavoritesUpdate() {
+         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favorites']);
+      }
+
+      function isFollowingUpdate() {
+         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['following']);
+      }
+
+      function isFcmTokenUpdate() {
+         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken','updatedAt']);
+      }
+
+      function isIdentityPendingUpdate() {
+         return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['identityVerificationStatus','updatedAt'])
+             && resource.data.identityVerificationStatus != 'VERIFIED'
+             && request.resource.data.identityVerificationStatus == 'PENDING';
+      }
+
+      allow update: if isAdmin() || (
+         isAuthenticated()
+         && isOwner(userId)
+         && isValidUser(request.resource.data)
+         && userImmutableFieldsPreserved()
+         && (isProfileUpdate() || isFavoritesUpdate() || isFollowingUpdate() || isFcmTokenUpdate() || isIdentityPendingUpdate())
+      );
                       
       allow delete: if isAdmin();
     }
@@ -179,6 +214,10 @@ service cloud.firestore {
     match /items/{itemId} {
       allow read: if isAuthenticated();
       
+      // DEBT(MVP): favoriteCount and likes are updated via client side increments.
+      // This is non-authoritative and vulnerable to manipulation.
+      // In a production environment, these should be handled via a Cloud Function
+      // triggered by deterministic documents (e.g., favorites/{uid_itemId}).
       allow create: if isAuthenticated() && 
                       (request.resource.data.userId == request.auth.uid || isAdmin()) && 
                       (isAdmin() || isValidItem(request.resource.data));
@@ -259,11 +298,11 @@ service cloud.firestore {
          let affected = request.resource.data.diff(resource.data).affectedKeys();
          let isMessageUpdate = affected.hasOnly(['lastMessage', 'lastMessageAt', 'unreadCount', 'updatedAt']);
          let isStatusUpdate = affected.hasOnly(['status', 'cancelReason', 'updatedAt']) && request.resource.data.status != resource.data.status;
-         let isRatingUpdate = affected.hasOnly(['status', 'ratedBy', 'updatedAt']) && request.resource.data.status == 'COMPLETED' && request.auth.uid in request.resource.data.ratedBy;
+         let isRatingUpdate = affected.hasOnly(['status', 'ratedBy', 'updatedAt']) && request.resource.data.status == 'COMPLETED' && request.auth.uid in request.resource.data.ratedBy && request.resource.data.ratedBy.size() == resource.data.ratedBy.size() + 1 && request.resource.data.ratedBy.hasAll(resource.data.ratedBy);
          let isMeetingUpdate = affected.hasOnly(['status', 'meetingLocation', 'meetingType', 'updatedAt']) && request.resource.data.status == 'MEETING_ACCEPTED' && request.resource.data.meetingType is string && request.resource.data.meetingType.size() <= 100 && request.resource.data.meetingLocation is string && request.resource.data.meetingLocation.size() <= 500;
          
-         let isOwnerProfileUpdate = affected.hasOnly(['ownerName', 'ownerAvatarUrl']) && isExchangeOwner();
-         let isRequesterProfileUpdate = affected.hasOnly(['requesterName', 'requesterAvatarUrl']) && isExchangeRequester();
+         let isOwnerProfileUpdate = affected.hasOnly(['ownerName', 'ownerAvatarUrl']) && isExchangeOwner() && (!('ownerName' in request.resource.data) || request.resource.data.ownerName is string && request.resource.data.ownerName.size() <= 100);
+         let isRequesterProfileUpdate = affected.hasOnly(['requesterName', 'requesterAvatarUrl']) && isExchangeRequester() && (!('requesterName' in request.resource.data) || request.resource.data.requesterName is string && request.resource.data.requesterName.size() <= 100);
 
          return isMessageUpdate || isStatusUpdate || isRatingUpdate || isMeetingUpdate || isOwnerProfileUpdate || isRequesterProfileUpdate;
       }
@@ -289,6 +328,9 @@ service cloud.firestore {
         return exchange != null && (exchange.data.ownerId == request.auth.uid || exchange.data.requesterId == request.auth.uid);
       }
       allow read: if isAuthenticated() && (isParticipant() || isAdmin());
+      // DEBT(MVP): Chat messages are stored in a single array. This is susceptible to participants
+      // overwriting or deleting historical messages. In production, this should be migrated
+      // to a subcollection (e.g. /chats/{exchangeId}/messages/{messageId}).
       allow create: if isAuthenticated() && (isParticipantAfter() || isAdmin()) && isValidChat(request.resource.data, exchangeId);
       allow update: if isAuthenticated() && (isParticipant() || isAdmin()) && isValidChat(request.resource.data, exchangeId);
       allow delete: if isAdmin();
@@ -337,6 +379,9 @@ service cloud.firestore {
          return exchange != null && (isValidAccepted || isValidRejected || isValidCancelled || isValidCompleted);
       }
       
+      // DEBT(MVP): NEW_MESSAGE notifications can be created without verifying if a chat message was actually sent.
+      // This allows potential notification spam. In production, chat messages should be a subcollection
+      // and notifications should be generated by a Cloud Function triggered by new messages.
       allow create: if isAdmin() || (isAuthenticated() && 
                     isValidNotification(request.resource.data) && 
                     request.resource.data.read == false &&
@@ -381,6 +426,7 @@ service cloud.firestore {
 
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
+                    !exists(/databases/$(database)/documents/ratings/$(ratingId)) &&
                     ratingId == request.resource.data.exchangeId + '_' + request.auth.uid &&
                     isValidRatingForExchange() &&
                     request.resource.data.keys().hasOnly(['exchangeId', 'fromUserId', 'toUserId', 'rating', 'comment', 'createdAt']) &&

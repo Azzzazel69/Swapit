@@ -648,6 +648,9 @@ class ApiClient {
       ownerAvatarUrl: ownerData.avatarUrl || item.ownerAvatarUrl || DEFAULT_AVATAR_NEUTRAL,
       ownerLocation: finalLocation,
       location: item.location || finalLocation,
+      // DEBT(MVP): ownerData.ratings is often not populated when fetching items, 
+      // as ratings are now in their own collection. This returns 0 by default.
+      // In production, user stats should be aggregated in the user document by a Cloud Function.
       ownerRating: this._calculateUserStats(ownerData).averageRating || 0
     };
   }
@@ -1379,6 +1382,9 @@ class ApiClient {
     }
   }
 
+  // DEBT(MVP): This updates the user's favorites array and the item's favoriteCount in a client-side transaction.
+  // Firestore rules validate these updates independently, leaving room for counter manipulation.
+  // In production, favorites should be in a separate collection triggering a Cloud Function to update counts.
   async toggleFavorite(itemId: string): Promise<any> {
     const uid = this._getCurrentUserId();
     if (!uid) return;
@@ -1474,8 +1480,8 @@ class ApiClient {
     const uid = this._getCurrentUserId();
     const normalizedType = type.toLowerCase();
     try {
-      // Record the swipe
-      await addDoc(collection(db, 'swipes'), {
+      // Record the swipe to prevent duplicates
+      await setDoc(doc(db, 'swipes', `${uid}_${itemId}`), {
         userId: uid,
         itemId: itemId,
         type: normalizedType, // 'like' or 'dislike'

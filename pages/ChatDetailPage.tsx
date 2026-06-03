@@ -277,7 +277,7 @@ const ChatDetailPage = () => {
 
     // Debug logging para el usuario
     useEffect(() => {
-        if (exchange && currentUser) {
+        if (exchange && currentUser && import.meta.env.DEV) {
             console.log("ChatDetailPage State:", {
                 exchangeId,
                 status: exchange.status,
