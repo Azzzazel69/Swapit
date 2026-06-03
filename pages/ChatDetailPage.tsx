@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api, DEFAULT_AVATAR_NEUTRAL } from '../services/api.ts';
 import { db } from '../firebase.ts';
-import { onSnapshot, doc } from 'firebase/firestore';
+import { onSnapshot, doc, query, collection, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../hooks/useAuth.tsx';
 import SwapSpinner from '../components/SwapSpinner.tsx';
 import Button from '../components/Button.tsx';
@@ -146,9 +146,19 @@ const ChatDetailPage = () => {
         const partnerId = exchange.ownerId === currentUser.id ? exchange.requesterId : exchange.ownerId;
         if (!partnerId) return;
 
-        const unsubPartner = onSnapshot(doc(db, 'users', partnerId), (snap) => {
+        const unsubPartner = onSnapshot(doc(db, 'users', partnerId), async (snap) => {
             if (snap.exists()) {
-                const partnerData = { id: snap.id, ...snap.data() };
+                const partnerData = { id: snap.id, ...snap.data() } as any;
+                try {
+                    const ratingsQ = query(collection(db, 'ratings'), where('toUserId', '==', partnerId));
+                    const ratingsSnap = await getDocs(ratingsQ);
+                    if (!ratingsSnap.empty) {
+                        partnerData.ratings = ratingsSnap.docs.map(d => d.data());
+                    }
+                } catch(err) {
+                    console.warn("Could not fetch ratings for partner");
+                }
+                
                 setExchange(prev => {
                     if (!prev) return prev;
                     const isOwner = prev.ownerId === currentUser.id;

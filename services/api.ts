@@ -175,7 +175,19 @@ class ApiClient {
              data.name = displayName;
              data.avatarUrl = newAvatar;
           }
-          return { id: snap.id, ...data };
+          
+          let ratings = data.ratings || [];
+          try {
+             const ratingsQ = query(collection(db, 'ratings'), where('toUserId', '==', uid));
+             const ratingsSnap = await getDocs(ratingsQ);
+             if (!ratingsSnap.empty) {
+                ratings = ratingsSnap.docs.map(d => d.data());
+             }
+          } catch(err) {
+             console.warn("Could not fetch ratings collection", err);
+          }
+
+          return { id: snap.id, ...data, ratings };
         } else {
           // Solo recreamos un SUPER_ADMIN si es la cuenta seeder exacta y estamos en DEV
           if (import.meta.env.DEV && auth.currentUser?.email === 'admin_seeder_v5@test.com') {
@@ -654,9 +666,21 @@ class ApiClient {
            data.name = displayName;
            data.avatarUrl = newAvatar;
         }
+
+        let ratings = data.ratings || [];
+        try {
+           const ratingsQ = query(collection(db, 'ratings'), where('toUserId', '==', uid));
+           const ratingsSnap = await getDocs(ratingsQ);
+           if (!ratingsSnap.empty) {
+              ratings = ratingsSnap.docs.map(d => d.data());
+           }
+        } catch(err) {
+           console.warn("Could not fetch ratings collection", err);
+        }
+
         const items = await this.getUserItems(uid);
         const updatedItems = items.map(item => this._enrichItemWithOwnerInfo(item, data));
-        return { id: snap.id, ...data, items: updatedItems };
+        return { id: snap.id, ...data, ratings, items: updatedItems };
       }
       throw new Error('Usuario no encontrado');
     } catch (e) { handleFirestoreError(e, OperationType.GET, 'users'); }
@@ -1784,7 +1808,7 @@ class ApiClient {
          title = "Propuesta Rechazada";
          message = "Lamentablemente tu propuesta no ha sido aceptada.";
          notifType = "EXCHANGE_REJECTED";
-         // Free items back to AVAILABLE
+         // Free items back to AVAILABLE. Note: exchangeId acts as 'lastExchangeId' historically.
          if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() });
          if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() });
          if (exchangeData.offeredItemIds && exchangeData.offeredItemIds.length > 0) {
@@ -2147,7 +2171,7 @@ class ApiClient {
       }
       
       // Add rating to target user via new collection
-      const ratingRef = doc(collection(db, 'ratings'), `${exchangeId}_${targetUserId}`);
+      const ratingRef = doc(collection(db, 'ratings'), `${exchangeId}_${uid}`);
       batch.set(ratingRef, {
         exchangeId,
         fromUserId: uid,
@@ -2164,6 +2188,10 @@ class ApiClient {
   }
   async acceptMeetingLocation(id, address, type): Promise<any> {
     try {
+      const exSnap = await getDoc(doc(db, 'exchanges', id));
+      if (!exSnap.exists()) throw new Error('Exchange no encontrado');
+      if (exSnap.data()?.status !== 'ACCEPTED') throw new Error('El intercambio no está en un estado válido para aceptar el punto de encuentro');
+      
       await updateDoc(doc(db, 'exchanges', id), {
         meetingLocation: address,
         meetingType: type,

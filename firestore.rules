@@ -201,6 +201,8 @@ service cloud.firestore {
                         isAdmin() ||
                         (resource.data.userId == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['exchangeId'])) || 
                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) && request.resource.data.viewCount == resource.data.viewCount + 1) || 
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) && request.resource.data.likes == resource.data.likes + 1) || 
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favoriteCount']) && (request.resource.data.favoriteCount == resource.data.favoriteCount + 1 || request.resource.data.favoriteCount == resource.data.favoriteCount - 1) && request.resource.data.favoriteCount >= 0) || 
                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'exchangeId', 'updatedAt']) && isExchangeStatusValidForItems())
                       ) && 
                       (isAdmin() || (isValidItem(request.resource.data) &&
@@ -257,10 +259,13 @@ service cloud.firestore {
          let affected = request.resource.data.diff(resource.data).affectedKeys();
          let isMessageUpdate = affected.hasOnly(['lastMessage', 'lastMessageAt', 'unreadCount', 'updatedAt']);
          let isStatusUpdate = affected.hasOnly(['status', 'cancelReason', 'updatedAt']) && request.resource.data.status != resource.data.status;
-         let isRatingUpdate = affected.hasOnly(['status', 'ratedBy', 'updatedAt']) && request.resource.data.status == 'COMPLETED';
-         let isMeetingUpdate = affected.hasOnly(['status', 'meetingLocation', 'meetingType', 'updatedAt']) && request.resource.data.status == 'MEETING_ACCEPTED';
+         let isRatingUpdate = affected.hasOnly(['status', 'ratedBy', 'updatedAt']) && request.resource.data.status == 'COMPLETED' && request.auth.uid in request.resource.data.ratedBy;
+         let isMeetingUpdate = affected.hasOnly(['status', 'meetingLocation', 'meetingType', 'updatedAt']) && request.resource.data.status == 'MEETING_ACCEPTED' && request.resource.data.meetingType is string && request.resource.data.meetingType.size() <= 100 && request.resource.data.meetingLocation is string && request.resource.data.meetingLocation.size() <= 500;
          
-         return isMessageUpdate || isStatusUpdate || isRatingUpdate || isMeetingUpdate;
+         let isOwnerProfileUpdate = affected.hasOnly(['ownerName', 'ownerAvatarUrl']) && isExchangeOwner();
+         let isRequesterProfileUpdate = affected.hasOnly(['requesterName', 'requesterAvatarUrl']) && isExchangeRequester();
+
+         return isMessageUpdate || isStatusUpdate || isRatingUpdate || isMeetingUpdate || isOwnerProfileUpdate || isRequesterProfileUpdate;
       }
 
       allow update: if isAdmin() || (isAuthenticated() && 
@@ -324,11 +329,12 @@ service cloud.firestore {
       function isExchangeStatusNotif() {
          let exchangeId = request.resource.data.data.exchangeId;
          let exchange = getAfter(/databases/$(database)/documents/exchanges/$(exchangeId));
-         return exchange != null &&
-                (request.auth.uid == exchange.data.ownerId || request.auth.uid == exchange.data.requesterId) &&
-                request.resource.data.userId != request.auth.uid &&
-                (request.resource.data.userId == exchange.data.ownerId || request.resource.data.userId == exchange.data.requesterId) &&
-                request.resource.data.type in ['EXCHANGE_ACCEPTED','EXCHANGE_REJECTED','EXCHANGE_CANCELLED','EXCHANGE_COMPLETED'];
+         let type = request.resource.data.type;
+         let isValidAccepted = type == 'EXCHANGE_ACCEPTED' && request.auth.uid == exchange.data.ownerId && request.resource.data.userId == exchange.data.requesterId && exchange.data.status == 'ACCEPTED';
+         let isValidRejected = type == 'EXCHANGE_REJECTED' && request.auth.uid == exchange.data.ownerId && request.resource.data.userId == exchange.data.requesterId && exchange.data.status == 'REJECTED';
+         let isValidCancelled = type == 'EXCHANGE_CANCELLED' && (request.auth.uid == exchange.data.ownerId || request.auth.uid == exchange.data.requesterId) && request.resource.data.userId != request.auth.uid && (request.resource.data.userId == exchange.data.ownerId || request.resource.data.userId == exchange.data.requesterId) && exchange.data.status == 'CANCELLED';
+         let isValidCompleted = type == 'EXCHANGE_COMPLETED' && (request.auth.uid == exchange.data.ownerId || request.auth.uid == exchange.data.requesterId) && request.resource.data.userId != request.auth.uid && (request.resource.data.userId == exchange.data.ownerId || request.resource.data.userId == exchange.data.requesterId) && exchange.data.status == 'COMPLETED';
+         return exchange != null && (isValidAccepted || isValidRejected || isValidCancelled || isValidCompleted);
       }
       
       allow create: if isAdmin() || (isAuthenticated() && 
@@ -358,11 +364,29 @@ service cloud.firestore {
     }
 
     match /ratings/{ratingId} {
+      function ratingExchange() {
+         return getAfter(/databases/$(database)/documents/exchanges/$(request.resource.data.exchangeId));
+      }
+
+      function isValidRatingForExchange() {
+         let ex = ratingExchange();
+         return ex != null
+         && ex.data.status == 'COMPLETED'
+         && request.resource.data.fromUserId == request.auth.uid
+         && (
+            (request.auth.uid == ex.data.ownerId && request.resource.data.toUserId == ex.data.requesterId) ||
+            (request.auth.uid == ex.data.requesterId && request.resource.data.toUserId == ex.data.ownerId)
+         );
+      }
+
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
-                    request.resource.data.fromUserId == request.auth.uid &&
-                    request.resource.data.toUserId != request.auth.uid &&
-                    request.resource.data.keys().hasAll(['exchangeId', 'fromUserId', 'toUserId', 'rating', 'createdAt']) &&
+                    ratingId == request.resource.data.exchangeId + '_' + request.auth.uid &&
+                    isValidRatingForExchange() &&
+                    request.resource.data.keys().hasOnly(['exchangeId', 'fromUserId', 'toUserId', 'rating', 'comment', 'createdAt']) &&
+                    request.resource.data.createdAt is timestamp &&
+                    (!('comment' in request.resource.data) || (request.resource.data.comment is string && request.resource.data.comment.size() <= 1000)) &&
+                    request.resource.data.rating is number &&
                     request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
       allow update, delete: if isAdmin();
     }
