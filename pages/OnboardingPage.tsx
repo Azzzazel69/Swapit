@@ -182,26 +182,29 @@ const OnboardingPage = () => {
         setIsLoading(true); setError('');
         
         const fullPhone = `${countryCode}${phone}`;
-        const isRegistered = await api.checkPhoneInUse(fullPhone);
-        
-        if (isRegistered) {
-            setError(
-                <span>
-                    Ese número de teléfono ya está registrado en otra cuenta. ¿Es tuyo?{' '}
-                    <Link to="/login" className="font-medium text-blue-500 hover:underline">
-                        Inicia sesión aquí
-                    </Link>
-                </span>
-            );
-            setIsLoading(false);
-            return;
-        }
-        
-        setTimeout(() => {
+        try {
+            const isRegistered = await api.checkPhoneInUse(fullPhone);
+            if (isRegistered) {
+                setError(
+                    <span>
+                        Ese número de teléfono ya está registrado en otra cuenta. ¿Es tuyo?{' '}
+                        <Link to="/login" className="font-medium text-blue-500 hover:underline">
+                            Inicia sesión aquí
+                        </Link>
+                    </span>
+                );
+                setIsLoading(false);
+                return;
+            }
+            
+            await api.sendPhoneVerificationCode(fullPhone);
             setCodeSent(true);
             setIsLoading(false);
-            showToast("Código SMS enviado a " + fullPhone, "success");
-        }, 1200);
+            showToast(import.meta.env.DEV ? "Modo DEV: Usa el código 1234" : "Código SMS enviado a " + fullPhone, "success");
+        } catch (err: any) {
+            setError(err.message || "Error al enviar SMS");
+            setIsLoading(false);
+        }
     };
 
     const handleVerifyPhoneCode = async (e) => {

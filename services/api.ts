@@ -1,7 +1,7 @@
 import { ExchangeStatus, ItemCondition } from '../types';
 import { CATEGORIES_WITH_SUBCATEGORIES, USER_CATEGORIES } from '../constants';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, sendEmailVerification, applyActionCode } from 'firebase/auth';
+import { getAuth, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, sendEmailVerification, applyActionCode, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, limit, writeBatch, arrayUnion, arrayRemove, documentId, increment, or, runTransaction } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL, getStorage } from 'firebase/storage';
 import { db, auth, googleProvider, storage } from '../firebase';
@@ -829,8 +829,8 @@ class ApiClient {
       if (auth.currentUser.emailVerified) {
         const docRef = doc(db, 'users', auth.currentUser.uid);
         const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          await updateDoc(docRef, { emailVerified: true });
+        if (snap.exists() && !snap.data().emailVerified) {
+          await updateDoc(docRef, { emailVerified: true, updatedAt: serverTimestamp() });
         }
         return { verified: true };
       }
@@ -840,7 +840,11 @@ class ApiClient {
   }
 
   async sendPhoneVerificationCode(phone: string): Promise<any> { 
-    const { RecaptchaVerifier, linkWithPhoneNumber } = await import('firebase/auth');
+    if (import.meta.env.DEV) {
+      console.warn("DEMO MODE: phone auth logic bypassed.");
+      return Promise.resolve({ success: true });
+    }
+    const { linkWithPhoneNumber } = await import('firebase/auth');
     if (!auth.currentUser) throw new Error("No usuario logueado.");
     
     if (!(window as any).recaptchaVerifier) {
@@ -866,10 +870,13 @@ class ApiClient {
   }
 
   async verifyPhoneCode(code: string): Promise<any> { 
+    if (import.meta.env.DEV && code === '1234') {
+      return true;
+    }
     const confirmationResult = (window as any).confirmationResult;
-    if (!confirmationResult) throw new Error("No se ha enviado ningún código.");
+    if (!confirmationResult && !import.meta.env.DEV) throw new Error("No se ha enviado ningún código.");
     try {
-      await confirmationResult.confirm(code);
+      if (confirmationResult) await confirmationResult.confirm(code);
       return true;
     } catch (e: any) {
       throw new Error("Código inválido o ha expirado.");
@@ -1536,9 +1543,9 @@ class ApiClient {
                 offeredOtherItems: [],
                 cashPlus: 0,
                 status: 'PENDING',
-                createdAt: new Date().toISOString(),
-                lastMessage: '¡Es un match! Empezad a hablar sobre el intercambio.',
-                lastMessageAt: new Date().toISOString()
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                ratedBy: [],
               };
               const exchangeRef = await addDoc(collection(db, 'exchanges'), exchangeData);
 
@@ -1720,6 +1727,7 @@ class ApiClient {
         cashPlus: data.cashPlus || 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        ratedBy: [],
         ownerName: ownerSnap.data()?.name || 'Usuario',
         ownerAvatarUrl: ownerSnap.data()?.avatarUrl || null,
         requesterName: (user as any)?.name || 'Usuario',
