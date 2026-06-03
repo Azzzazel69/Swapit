@@ -165,7 +165,7 @@ service cloud.firestore {
                       (isAdmin() || (isValidUser(request.resource.data) && request.resource.data.role == 'USER'));
                       
       allow update: if isAuthenticated() && 
-                      (isOwner(userId) || isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratings', 'updatedAt'])) && 
+                      (isOwner(userId) || isAdmin()) && 
                       (isAdmin() || (isValidUser(request.resource.data) && 
                                      request.resource.data.role == resource.data.role &&
                                      request.resource.data.createdAt == resource.data.createdAt &&
@@ -183,8 +183,26 @@ service cloud.firestore {
                       (request.resource.data.userId == request.auth.uid || isAdmin()) && 
                       (isAdmin() || isValidItem(request.resource.data));
                       
+      function isExchangeStatusValidForItems() {
+         let exId = request.resource.data.exchangeId;
+         let ex = getAfter(/databases/$(database)/documents/exchanges/$(exId));
+         let isValidParticipant = ex != null && (ex.data.ownerId == request.auth.uid || ex.data.requesterId == request.auth.uid);
+         let isItemInvolved = ex != null && (ex.data.requestedItemId == itemId || (ex.data.offeredItemIds != null && itemId in ex.data.offeredItemIds) || (ex.data.offeredItemId != null && ex.data.offeredItemId == itemId));
+         let itemStatus = request.resource.data.status;
+         return isValidParticipant && isItemInvolved && (
+            (itemStatus == 'RESERVED' && ex.data.status == 'ACCEPTED') ||
+            (itemStatus == 'AVAILABLE' && ex.data.status in ['CANCELLED', 'REJECTED']) ||
+            (itemStatus == 'EXCHANGED' && ex.data.status == 'COMPLETED')
+         );
+      }
+      
       allow update: if isAuthenticated() && 
-                      (resource.data.userId == request.auth.uid || isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])) && 
+                      (
+                        isAdmin() ||
+                        (resource.data.userId == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['exchangeId'])) || 
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) && request.resource.data.viewCount == resource.data.viewCount + 1) || 
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'exchangeId', 'updatedAt']) && isExchangeStatusValidForItems())
+                      ) && 
                       (isAdmin() || (isValidItem(request.resource.data) &&
                                      request.resource.data.userId == resource.data.userId &&
                                      request.resource.data.createdAt == resource.data.createdAt));
@@ -235,11 +253,21 @@ service cloud.firestore {
                 (oldStatus == 'MEETING_ACCEPTED' && newStatus == 'COMPLETED');
       }
 
+      function isUpdateTypeAllowed() {
+         let affected = request.resource.data.diff(resource.data).affectedKeys();
+         let isMessageUpdate = affected.hasOnly(['lastMessage', 'lastMessageAt', 'unreadCount', 'updatedAt']);
+         let isStatusUpdate = affected.hasOnly(['status', 'cancelReason', 'updatedAt']) && request.resource.data.status != resource.data.status;
+         let isRatingUpdate = affected.hasOnly(['status', 'ratedBy', 'updatedAt']) && request.resource.data.status == 'COMPLETED';
+         let isMeetingUpdate = affected.hasOnly(['status', 'meetingLocation', 'meetingType', 'updatedAt']) && request.resource.data.status == 'MEETING_ACCEPTED';
+         
+         return isMessageUpdate || isStatusUpdate || isRatingUpdate || isMeetingUpdate;
+      }
+
       allow update: if isAdmin() || (isAuthenticated() && 
                     (isExchangeOwner() || isExchangeRequester()) && 
-                    isValidExchange(request.resource.data) &&
-                    immutableFieldsPreserved() &&
                     isValidStatusTransition() && 
+                    isUpdateTypeAllowed() &&
+                    immutableFieldsPreserved() && 
                     !(resource.data.status in ['REJECTED', 'CANCELLED', 'COMPLETED'] && resource.data.status != request.resource.data.status)
                     );
                       
@@ -312,7 +340,11 @@ service cloud.firestore {
       allow update: if isAdmin() || (isAuthenticated() && 
                     resource.data.userId == request.auth.uid && 
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read','readAt']) &&
-                    request.resource.data.userId == resource.data.userId);
+                    request.resource.data.userId == resource.data.userId &&
+                    request.resource.data.type == resource.data.type &&
+                    request.resource.data.data == resource.data.data &&
+                    (!('read' in request.resource.data) || request.resource.data.read is bool) &&
+                    (!('readAt' in request.resource.data) || request.resource.data.readAt is timestamp));
 
       allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
@@ -325,6 +357,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /ratings/{ratingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                    request.resource.data.fromUserId == request.auth.uid &&
+                    request.resource.data.toUserId != request.auth.uid &&
+                    request.resource.data.keys().hasAll(['exchangeId', 'fromUserId', 'toUserId', 'rating', 'createdAt']) &&
+                    request.resource.data.rating >= 1 && request.resource.data.rating <= 5;
+      allow update, delete: if isAdmin();
+    }
+
     match /trust_verifications/{uid} {
       allow read: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
       
@@ -332,6 +374,7 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.uid == uid
         && request.resource.data.status == 'PENDING_USER_ACTION'
+        && request.resource.data.createdAt is timestamp
         && request.resource.data.keys().hasOnly(['uid','platform','username','verificationCode','status','createdAt']);
         
       allow update: if isAuthenticated()

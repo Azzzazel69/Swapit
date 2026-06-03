@@ -907,7 +907,7 @@ class ApiClient {
         username,
         verificationCode,
         status: 'PENDING_USER_ACTION',
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       };
       
       await setDoc(doc(db, 'trust_verifications', uid), verificationRequest);
@@ -928,8 +928,8 @@ class ApiClient {
       if (!snap.exists()) throw new Error('No hay una solicitud pendiente');
       
       // Verification should be done in backend
-      await updateDoc(docRef, { status: 'PENDING' });
-      await updateDoc(doc(db, 'users', uid), { identityVerificationStatus: 'PENDING' });
+      await updateDoc(docRef, { status: 'PENDING', updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'users', uid), { identityVerificationStatus: 'PENDING', updatedAt: serverTimestamp() });
       
       const userRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userRef);
@@ -1663,11 +1663,13 @@ class ApiClient {
     
     try {
       const itemSnap = await getDoc(doc(db, 'items', data.requestedItemId));
+      if (!itemSnap.exists()) throw new Error("Artículo no encontrado");
       const requestedItem = itemSnap.data();
       if (requestedItem?.status === 'RESERVED' || requestedItem?.status === 'EXCHANGED') {
         throw new Error("El artículo ya no está disponible para intercambio.");
       }
       const ownerId = requestedItem?.userId;
+      if (!ownerId) throw new Error("Propietario no encontrado");
       
       if (ownerId === uid) {
         throw new Error("No puedes proponer un intercambio por tu propio artículo.");
@@ -1773,30 +1775,30 @@ class ApiClient {
          notifType = "EXCHANGE_ACCEPTED";
          
          // Mark items as RESERVED
-         if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'RESERVED' });
-         if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'RESERVED' });
+         if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'RESERVED', exchangeId: exchangeId, updatedAt: serverTimestamp() });
+         if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'RESERVED', exchangeId: exchangeId, updatedAt: serverTimestamp() });
          if (exchangeData.offeredItemIds && exchangeData.offeredItemIds.length > 0) {
-           exchangeData.offeredItemIds.forEach((id: string) => batch.update(doc(db, 'items', id), { status: 'RESERVED' }));
+           exchangeData.offeredItemIds.forEach((id: string) => batch.update(doc(db, 'items', id), { status: 'RESERVED', exchangeId: exchangeId, updatedAt: serverTimestamp() }));
          }
       } else if (String(status).toUpperCase() === 'REJECTED') {
          title = "Propuesta Rechazada";
          message = "Lamentablemente tu propuesta no ha sido aceptada.";
          notifType = "EXCHANGE_REJECTED";
          // Free items back to AVAILABLE
-         if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'AVAILABLE' });
-         if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'AVAILABLE' });
+         if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() });
+         if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() });
          if (exchangeData.offeredItemIds && exchangeData.offeredItemIds.length > 0) {
-           exchangeData.offeredItemIds.forEach((id: string) => batch.update(doc(db, 'items', id), { status: 'AVAILABLE' }));
+           exchangeData.offeredItemIds.forEach((id: string) => batch.update(doc(db, 'items', id), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() }));
          }
       } else if (String(status).toUpperCase() === 'CANCELLED') {
          title = "Propuesta Cancelada";
          message = "La transacción ha sido cancelada." + (cancelReason ? ` Motivo: ${cancelReason}` : "");
          notifType = "EXCHANGE_CANCELLED";
          // Free items back to AVAILABLE
-         if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'AVAILABLE' });
-         if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'AVAILABLE' });
+         if (exchangeData.requestedItemId) batch.update(doc(db, 'items', exchangeData.requestedItemId), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() });
+         if (exchangeData.offeredItemId) batch.update(doc(db, 'items', exchangeData.offeredItemId), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() });
          if (exchangeData.offeredItemIds && exchangeData.offeredItemIds.length > 0) {
-           exchangeData.offeredItemIds.forEach((id: string) => batch.update(doc(db, 'items', id), { status: 'AVAILABLE' }));
+           exchangeData.offeredItemIds.forEach((id: string) => batch.update(doc(db, 'items', id), { status: 'AVAILABLE', exchangeId: exchangeId, updatedAt: serverTimestamp() }));
          }
       } else if (String(status).toUpperCase() === 'COMPLETED') {
          title = "Intercambio Completado";
@@ -2127,31 +2129,32 @@ class ApiClient {
       // Update exchange status and ratedBy
       batch.update(doc(db, 'exchanges', exchangeId), { 
         status: 'COMPLETED',
-        ratedBy: arrayUnion(uid)
+        ratedBy: arrayUnion(uid),
+        updatedAt: serverTimestamp()
       });
       
       // Mark items as EXCHANGED
       if (exchange.requestedItemId) {
-        batch.update(doc(db, 'items', exchange.requestedItemId), { status: 'EXCHANGED' });
+        batch.update(doc(db, 'items', exchange.requestedItemId), { status: 'EXCHANGED', exchangeId: exchangeId, updatedAt: serverTimestamp() });
       }
       if (exchange.offeredItemId) {
-        batch.update(doc(db, 'items', exchange.offeredItemId), { status: 'EXCHANGED' });
+        batch.update(doc(db, 'items', exchange.offeredItemId), { status: 'EXCHANGED', exchangeId: exchangeId, updatedAt: serverTimestamp() });
       }
       if (exchange.offeredItemIds && Array.isArray(exchange.offeredItemIds)) {
         for (const itemId of exchange.offeredItemIds) {
-          batch.update(doc(db, 'items', itemId), { status: 'EXCHANGED' });
+          batch.update(doc(db, 'items', itemId), { status: 'EXCHANGED', exchangeId: exchangeId, updatedAt: serverTimestamp() });
         }
       }
       
-      // Add rating to target user
-      const targetUserRef = doc(db, 'users', targetUserId);
-      batch.update(targetUserRef, {
-        ratings: arrayUnion({
-          rating: ratingData.rating,
-          comment: ratingData.comment,
-          fromUserId: uid,
-          timestamp: new Date().toISOString()
-        })
+      // Add rating to target user via new collection
+      const ratingRef = doc(collection(db, 'ratings'), `${exchangeId}_${targetUserId}`);
+      batch.set(ratingRef, {
+        exchangeId,
+        fromUserId: uid,
+        toUserId: targetUserId,
+        rating: ratingData.rating,
+        comment: ratingData.comment,
+        createdAt: serverTimestamp()
       });
       
       await batch.commit();
@@ -2164,7 +2167,8 @@ class ApiClient {
       await updateDoc(doc(db, 'exchanges', id), {
         meetingLocation: address,
         meetingType: type,
-        status: 'MEETING_ACCEPTED'
+        status: 'MEETING_ACCEPTED',
+        updatedAt: serverTimestamp()
       });
       return { success: true };
     } catch (e) { handleFirestoreError(e, OperationType.UPDATE, 'exchanges'); }

@@ -138,6 +138,10 @@ ${JSON.stringify(safeText)}`;
          wishedItem: safeString(i.wishedItem, 300)
       })).filter(i => i.id);
 
+      if (!safeUserItems.length || !safeOtherItems.length) {
+          return res.json({ matches: {} });
+      }
+
       const prompt = `Actúa como un motor de matching inteligente para una aplicación de trueque de segunda mano.
 Queremos saber qué usuarios de "Otros Artículos" estarían interesados en los artículos ofrecidos por el Usuario Actual, basándonos estricta e inteligentemente en su campo "wishedItem" (lo que están buscando a cambio).
 
