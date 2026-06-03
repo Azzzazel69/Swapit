@@ -128,10 +128,15 @@ service cloud.firestore {
     }
 
     function isValidNotification(data) {
-      return data.userId is string && data.userId.size() > 0 &&
-             data.type is string && data.type.size() > 0 && data.type.size() <= 100 &&
+      return data.keys().hasAll(['userId', 'type', 'title', 'read', 'data']) &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.type in ['EXCHANGE_PROPOSAL','EXCHANGE_ACCEPTED','EXCHANGE_REJECTED','EXCHANGE_CANCELLED','EXCHANGE_COMPLETED','NEW_MESSAGE'] &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.read is bool;
+             (!('message' in data) || (data.message is string && data.message.size() <= 500)) &&
+             data.read is bool &&
+             data.data is map &&
+             data.data.exchangeId is string &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
     }
 
     function isValidSwipe(data) {
@@ -200,12 +205,43 @@ service cloud.firestore {
                       request.resource.data.ownerId != request.resource.data.requesterId &&
                       (isAdmin() || isValidExchange(request.resource.data));
                       
-      allow update: if isAuthenticated() && 
-                      (resource.data.ownerId == request.auth.uid || resource.data.requesterId == request.auth.uid || isAdmin()) && 
-                      (isAdmin() || (isValidExchange(request.resource.data) &&
-                                     request.resource.data.ownerId == resource.data.ownerId &&
-                                     request.resource.data.requesterId == resource.data.requesterId &&
-                                     request.resource.data.createdAt == resource.data.createdAt));
+      function isExchangeOwner() {
+         return resource.data.ownerId == request.auth.uid;
+      }
+
+      function isExchangeRequester() {
+         return resource.data.requesterId == request.auth.uid;
+      }
+
+      function immutableFieldsPreserved() {
+         return request.resource.data.ownerId == resource.data.ownerId &&
+                request.resource.data.requesterId == resource.data.requesterId &&
+                request.resource.data.createdAt == resource.data.createdAt &&
+                request.resource.data.requestedItemId == resource.data.requestedItemId;
+      }
+
+      function isValidStatusTransition() {
+         let oldStatus = resource.data.status;
+         let newStatus = request.resource.data.status;
+         
+         return (oldStatus == newStatus) ||
+                (oldStatus == 'PENDING' && newStatus == 'ACCEPTED' && isExchangeOwner()) ||
+                (oldStatus == 'PENDING' && newStatus == 'REJECTED' && isExchangeOwner()) ||
+                (oldStatus == 'PENDING' && newStatus == 'CANCELLED' && isExchangeRequester()) ||
+                (oldStatus == 'ACCEPTED' && newStatus == 'CANCELLED') ||
+                (oldStatus == 'MEETING_ACCEPTED' && newStatus == 'CANCELLED') ||
+                (oldStatus == 'ACCEPTED' && newStatus == 'MEETING_ACCEPTED') ||
+                (oldStatus == 'ACCEPTED' && newStatus == 'COMPLETED') ||
+                (oldStatus == 'MEETING_ACCEPTED' && newStatus == 'COMPLETED');
+      }
+
+      allow update: if isAdmin() || (isAuthenticated() && 
+                    (isExchangeOwner() || isExchangeRequester()) && 
+                    isValidExchange(request.resource.data) &&
+                    immutableFieldsPreserved() &&
+                    isValidStatusTransition() && 
+                    !(resource.data.status in ['REJECTED', 'CANCELLED', 'COMPLETED'] && resource.data.status != request.resource.data.status)
+                    );
                       
       allow delete: if isAdmin();
     }
@@ -237,19 +273,48 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       
-      // Users can only create notifications if they are part of a valid exchange related to it
-      function isExchangeParticipantForNotif() {
+      function isExchangeProposalNotif() {
          let exchangeId = request.resource.data.data.exchangeId;
          let exchange = getAfter(/databases/$(database)/documents/exchanges/$(exchangeId));
-         return exchange != null 
-             && (exchange.data.ownerId == request.auth.uid || exchange.data.requesterId == request.auth.uid) 
-             && (exchange.data.ownerId == request.resource.data.userId || exchange.data.requesterId == request.resource.data.userId)
-             && request.auth.uid != request.resource.data.userId;
+         return exchange != null &&
+                request.auth.uid == exchange.data.requesterId &&
+                request.resource.data.userId == exchange.data.ownerId &&
+                request.resource.data.type == 'EXCHANGE_PROPOSAL' &&
+                exchange.data.status == 'PENDING';
+      }
+
+      function isNewMessageNotif() {
+         let exchangeId = request.resource.data.data.exchangeId;
+         let exchange = getAfter(/databases/$(database)/documents/exchanges/$(exchangeId));
+         return exchange != null &&
+                (request.auth.uid == exchange.data.ownerId || request.auth.uid == exchange.data.requesterId) &&
+                request.resource.data.userId != request.auth.uid &&
+                (request.resource.data.userId == exchange.data.ownerId || request.resource.data.userId == exchange.data.requesterId) &&
+                request.resource.data.type == 'NEW_MESSAGE';
+      }
+
+      function isExchangeStatusNotif() {
+         let exchangeId = request.resource.data.data.exchangeId;
+         let exchange = getAfter(/databases/$(database)/documents/exchanges/$(exchangeId));
+         return exchange != null &&
+                (request.auth.uid == exchange.data.ownerId || request.auth.uid == exchange.data.requesterId) &&
+                request.resource.data.userId != request.auth.uid &&
+                (request.resource.data.userId == exchange.data.ownerId || request.resource.data.userId == exchange.data.requesterId) &&
+                request.resource.data.type in ['EXCHANGE_ACCEPTED','EXCHANGE_REJECTED','EXCHANGE_CANCELLED','EXCHANGE_COMPLETED'];
       }
       
-      allow create: if isAdmin() || (isAuthenticated() && isValidNotification(request.resource.data) && isExchangeParticipantForNotif());
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && (isAdmin() || isValidNotification(request.resource.data));
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin() || (isAuthenticated() && 
+                    isValidNotification(request.resource.data) && 
+                    request.resource.data.read == false &&
+                    request.resource.data.keys().hasOnly(['userId', 'type', 'title', 'message', 'data', 'read', 'createdAt']) &&
+                    (isExchangeProposalNotif() || isNewMessageNotif() || isExchangeStatusNotif()));
+                    
+      allow update: if isAdmin() || (isAuthenticated() && 
+                    resource.data.userId == request.auth.uid && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read','readAt']) &&
+                    request.resource.data.userId == resource.data.userId);
+
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
     match /swipes/{swipeId} {
@@ -266,14 +331,15 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.auth.uid == uid
         && request.resource.data.uid == uid
-        && request.resource.data.status in ['PENDING_USER_ACTION', 'PENDING']
+        && request.resource.data.status == 'PENDING_USER_ACTION'
         && request.resource.data.keys().hasOnly(['uid','platform','username','verificationCode','status','createdAt']);
         
       allow update: if isAuthenticated()
         && request.auth.uid == uid
-        && !(resource.data.status in ['VERIFIED', 'REJECTED']) 
+        && resource.data.status == 'PENDING_USER_ACTION' 
+        && request.resource.data.status == 'PENDING'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
-        && request.resource.data.status == 'PENDING';
+        && request.resource.data.updatedAt is timestamp;
         
       allow create, update, delete: if isAdmin();
     }

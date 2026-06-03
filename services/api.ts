@@ -1128,8 +1128,7 @@ class ApiClient {
   /**
    * Obtiene los datos para la página principal.
    * TODO: Implementar paginación real de Firestore (cursores con startAfter)
-   * Actualmente se utiliza un limit(100) estático y el botón de "Cargar más"
-   * recarga los datos desde el cliente o reejecuta la misma consulta, 
+   * Actualmente se utiliza un limit(100) temporal sin paginación visible, 
    * lo cual no pagina verdaderamente los resultados en el backend.
    */
   async getHomePageData(params: any = {}): Promise<any> {

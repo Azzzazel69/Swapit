@@ -108,7 +108,7 @@ ${JSON.stringify(safeText)}`;
       const { otherItems, userItems } = req.body;
       
       if (!Array.isArray(otherItems) || !Array.isArray(userItems)) {
-         return res.status(400).json({ matches: {}, aiFailed: true });
+         return res.status(400).json({ matches: {}, aiFailed: true, error: "Invalid payload format" });
       }
       
       if (otherItems.length > 200 || userItems.length > 50) {
@@ -131,12 +131,12 @@ ${JSON.stringify(safeText)}`;
          title: safeString(i.title, 120),
          category: safeString(i.category, 80),
          description: safeString(i.description, 500)
-      }));
+      })).filter(i => i.id);
 
       const safeOtherItems = otherItems.map((i: any) => ({
          id: safeString(i.id, 50),
          wishedItem: safeString(i.wishedItem, 300)
-      }));
+      })).filter(i => i.id);
 
       const prompt = `Actúa como un motor de matching inteligente para una aplicación de trueque de segunda mano.
 Queremos saber qué usuarios de "Otros Artículos" estarían interesados en los artículos ofrecidos por el Usuario Actual, basándonos estricta e inteligentemente en su campo "wishedItem" (lo que están buscando a cambio).
@@ -171,7 +171,17 @@ Devuelve ÚNICAMENTE código JSON.`;
       });
 
       const text = response.text || "{}";
-      const matchDict = JSON.parse(text);
+      const rawMatchDict = JSON.parse(text);
+      const matchDict: Record<string, string> = {};
+      const validOtherIds = new Set(safeOtherItems.map(i => i.id));
+      const validUserIds = new Set(safeUserItems.map(i => i.id));
+
+      for (const [otherId, userId] of Object.entries(rawMatchDict)) {
+         if (validOtherIds.has(otherId) && typeof userId === 'string' && validUserIds.has(userId)) {
+             matchDict[otherId] = userId;
+         }
+      }
+
       res.json({ matches: matchDict });
     } catch (e: any) {
       const errorString = (e.message || e.toString() || "").toLowerCase();
